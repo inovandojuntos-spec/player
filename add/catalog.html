@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shop - Catálogo</title>
+
+  <style>
+    :root{
+      --bg:#000;
+      --panel:#0a0a0a;
+      --panel2:#101010;
+      --edge:rgba(255,255,255,0.10);
+      --edge2:rgba(255,255,255,0.16);
+      --text:rgba(255,255,255,0.92);
+      --muted:rgba(255,255,255,0.62);
+      --shadow: rgba(0,0,0,0.78);
+      --accent: rgba(255,255,255,0.18);
+      --accent2: rgba(255,255,255,0.26);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden; /* estilo app */
+    }
+
+    .app{
+      height:100vh;
+      width:100vw;
+      display:flex;
+      align-items:stretch;
+      justify-content:center;
+      padding:12px;
+      box-sizing:border-box;
+    }
+
+    .shell{
+      width:min(560px, 100%);
+      height:100%;
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      box-shadow:0 28px 90px var(--shadow);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      position:relative;
+    }
+
+    .topbar{
+      position: relative;
+      padding:8px 12px;
+      border-bottom:1px solid rgba(255,255,255,0.06);
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.00));
+    }
+
+    .topbar-nav{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .topbar-navBtn{
+      width:44px;
+      height:44px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+      color:rgba(255,255,255,0.92);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow:0 18px 44px rgba(0,0,0,0.70);
+      transition: transform .10s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .topbar-navBtn:hover{
+      border-color: rgba(255,255,255,0.26);
+      background:rgba(0,0,0,0.50);
+      transform: scale(1.02);
+    }
+    .topbar-navBtn:active{ transform: scale(0.98); }
+    .topbar-navBtn[disabled]{ opacity:.40; cursor:not-allowed; transform:none !important; }
+
+    .logo-center{
+      display:flex;
+      justify-content:center;
+      flex: 1 1 auto;
+    }
+    .logo-center img{
+      width:150px;
+      height:150px;
+      object-fit:contain;
+      background:transparent;
+      box-shadow:none;
+    }
+
+    .stage{
+      position:relative;
+      flex: 1 1 auto;
+      min-height:0;
+      background: radial-gradient(90% 70% at 50% 40%, rgba(255,255,255,0.06), rgba(255,255,255,0.00) 70%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+
+    .mediaBox{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+
+    .mediaBox img,
+    .mediaBox video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      background:#000;
+    }
+
+    .bottom{
+      flex: 0 0 auto;
+      padding:12px;
+      background:linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.60) 30%, rgba(0,0,0,0.85) 100%);
+      border-top:1px solid rgba(255,255,255,0.08);
+    }
+
+    .infoCard{
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 6px 2px;   /* mantiene aire pero sin “caja” */
+      box-shadow: none;
+    }
+
+    .row1{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+
+    .pTitle{
+      font-weight:900;
+      letter-spacing:.4px;
+      font-size:14px;
+      text-transform:uppercase;
+      line-height:1.2;
+      margin:0;
+    }
+    .pCat{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 42ch;
+    }
+
+    /* Contenedor donde antes iba el short */
+    .pShort{
+      margin-top:10px;
+      width:100%;
+      max-width:100%;
+    }
+
+    /* Mini reproductor */
+    .audioCard{
+      border:none;
+      background:#000;
+      border-radius:0;
+      padding:0;
+      box-shadow:none;
+    }
+    .audioTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .audioLabel{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.3px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.85);
+    }
+    .audioHint{
+      font-size:11px;
+      color:rgba(255,255,255,0.60);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 34ch;
+    }
+    /* Mini reproductor */
+    audio{
+      width:100%;
+      height:34px;
+      background:transparent;
+      border-radius:12px;
+      outline:none;
+
+      /* Mantiene iconos claros */
+      filter: invert(1) hue-rotate(180deg);
+    }
+
+    /* Quita el “panel” (rectángulo) y lo vuelve transparente (Chrome/Edge/Safari) */
+    audio::-webkit-media-controls-panel{
+      background-color: transparent !important;
+    }
+    audio::-webkit-media-controls-enclosure{
+      background-color: transparent !important;
+      border-radius:12px;
+    }
+
+    /* A veces el “fondo” viene de aquí en algunos builds */
+    audio::-webkit-media-controls{
+      background-color: transparent !important;
+    }
+
+    .unlockBtn{
+      margin-top:10px;
+      width:100%;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
+      color:rgba(255,255,255,0.92);
+      font-weight:900;
+      letter-spacing:.3px;
+      cursor:pointer;
+      box-shadow:0 14px 30px rgba(0,0,0,0.65);
+    }
+    .unlockBtn[hidden]{ display:none; }
+
+    .priceBox{
+      text-align:right;
+      min-width: 92px;
+    }
+    .price{
+      font-weight:900;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .currency{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+
+    .meta{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .pill{
+      padding:8px 10px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.04);
+      color:rgba(255,255,255,0.78);
+      font-size:12px;
+      max-width:100%;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    #pPresentation,
+    #pIndex{
+      background:transparent !important;
+      border:none !important;
+      box-shadow:none !important;
+      padding:0 !important;
+      border-radius:0 !important;
+      color:rgba(255,255,255,0.78);
+      display: none;
+    }
+
+    .actions{
+      margin-top:12px;
+    }
+    .actionBar{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      align-items:stretch;
+    }
+    .iconBtn{
+      position:relative;
+      width:100%;
+      padding:10px 10px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.05) 100%);
+      color:rgba(255,255,255,0.92);
+      cursor:pointer;
+      box-shadow:0 16px 38px rgba(0,0,0,0.72);
+      transition: transform .10s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      min-height:54px;
+    }
+    .iconBtn:hover{
+      border-color: rgba(255,255,255,0.24);
+      background:linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%);
+      transform: translateY(-1px);
+    }
+    .iconBtn:active{ transform: translateY(0px); }
+    .iconBtn[disabled]{ opacity:.55; cursor:not-allowed; transform:none !important; }
+
+    .iconBtn .ico{
+      font-size:18px;
+      line-height:1;
+    }
+    .iconBtn .lbl{
+      font-size:11px;
+      letter-spacing:.3px;
+      font-weight:800;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.82);
+    }
+    .badge{
+      position:absolute;
+      top:8px;
+      right:10px;
+      min-width:18px;
+      height:18px;
+      padding:0 6px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      font-weight:900;
+      color:rgba(255,255,255,0.92);
+      box-shadow:0 12px 28px rgba(0,0,0,0.70);
+    }
+
+    .toast{
+      position:absolute;
+      left:12px;
+      right:12px;
+      bottom:110px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      color:rgba(255,255,255,0.88);
+      font-size:12px;
+      display:none;
+      box-shadow:0 16px 38px rgba(0,0,0,0.70);
+    }
+    .toast.show{ display:block; }
+
+    @media (max-height: 720px){
+      .toast{ bottom:120px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="shell">
+
+      <div class="topbar">
+        <div class="topbar-nav">
+          <button class="topbar-navBtn" id="prevBtn" aria-label="Anterior">‹</button>
+
+          <div class="logo-center">
+            <img src="images/logo.png" alt="iNOVANDO JUNTOS">
+          </div>
+
+          <button class="topbar-navBtn" id="nextBtn" aria-label="Siguiente">›</button>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="mediaBox" id="mediaBox"></div>
+        <div class="toast" id="toast">Agregado al carrito ✓</div>
+      </div>
+
+      <div class="bottom">
+        <div class="infoCard">
+          <div class="row1">
+            <div style="min-width:0; flex:1">
+              <p class="pTitle" id="pTitle">Cargando…</p>
+              <div class="pCat" id="pCat"></div>
+            </div>
+            <div class="priceBox">
+              <div class="price" id="pPrice">—</div>
+              <div class="currency" id="pCurrency"></div>
+            </div>
+          </div>
+
+          <!-- AQUÍ VA EL MINI PLAYER (reemplaza el short) -->
+          <div class="pShort" id="pShort"></div>
+
+          <div class="meta">
+            <div class="pill" id="pPresentation">Presentación: —</div>
+            <div class="pill" id="pIndex">Producto: —</div>
+          </div>
+
+          <div class="actions">
+            <div class="actionBar">
+              <button class="iconBtn" id="cartBtn" aria-label="Carrito">
+                <span class="ico">🛒</span>
+                <span class="lbl">Carrito</span>
+                <span class="badge" id="cartBadge">0</span>
+              </button>
+
+              <button class="iconBtn" id="addBtn" aria-label="Agregar al carrito">
+                <span class="ico">＋</span>
+                <span class="lbl">Agregar</span>
+              </button>
+
+              <button class="iconBtn" id="exitBtn" aria-label="Salir">
+                <span class="ico">⟵</span>
+                <span class="lbl">Salir</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+(() => {
+  // =============================
+  // CONFIG
+  // =============================
+  const PRODUCTS_JSON_URL = "content/products.json";
+  const CART_KEY = "shop_cart_v1";
+  const LAST_VIEW_KEY = "shop_last_view_v1";
+
+  // =============================
+  // DOM
+  // =============================
+  const mediaBox = document.getElementById("mediaBox");
+  const prevBtn  = document.getElementById("prevBtn");
+  const nextBtn  = document.getElementById("nextBtn");
+  const addBtn   = document.getElementById("addBtn");
+  const cartBtn  = document.getElementById("cartBtn");
+  const exitBtn  = document.getElementById("exitBtn");
+  const toast    = document.getElementById("toast");
+
+  const pTitle = document.getElementById("pTitle");
+  const pCat   = document.getElementById("pCat");
+  const pShort = document.getElementById("pShort"); // ahora será contenedor del player
+  const pPrice = document.getElementById("pPrice");
+  const pCurrency = document.getElementById("pCurrency");
+  const pPresentation = document.getElementById("pPresentation");
+  const pIndex = document.getElementById("pIndex");
+  const cartBadge = document.getElementById("cartBadge");
+
+  // =============================
+  // STATE
+  // =============================
+  let products = [];
+  let idx = 0;
+
+  // bloqueo hasta que termine audio (ya no se usa para deshabilitar navegación)
+  let audioLocked = true;
+  let currentAudioEl = null;
+
+  function safeJSONParse(s){ try { return JSON.parse(s); } catch { return null; } }
+  function isVideo(path){
+    const p = (path || "").toLowerCase();
+    return p.endsWith(".mp4") || p.endsWith(".webm") || p.endsWith(".ogg");
+  }
+  function money(v){
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "—";
+    return n.toFixed(2);
+  }
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1100);
+  }
+
+  function getCart(){
+    const c = safeJSONParse(localStorage.getItem(CART_KEY));
+    return Array.isArray(c) ? c : [];
+  }
+  function setCart(cart){
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    if (cartBadge) cartBadge.textContent = String(cart.length);
+  }
+  function addToCart(product){
+    const cart = getCart();
+    cart.push({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      currency: product.currency || "",
+      ts: new Date().toISOString()
+    });
+    setCart(cart);
+  }
+
+  function setLastViewed(product){
+    localStorage.setItem(LAST_VIEW_KEY, JSON.stringify({
+      id: product.id,
+      ts: new Date().toISOString()
+    }));
+  }
+
+  function setNavLocked(locked){
+    audioLocked = !!locked; // lo dejamos por si quieres usarlo después
+    // PERO ya NO deshabilitamos navegación
+    prevBtn.disabled = products.length <= 1;
+    nextBtn.disabled = products.length <= 1;
+
+    // opcional: feedback
+    //if (locked) showToast("Escucha el audio para continuar");
+  }
+
+  function stopCurrentAudio(){
+    if (!currentAudioEl) return;
+    try{
+      currentAudioEl.pause();
+      currentAudioEl.currentTime = 0;
+    }catch{}
+  }
+
+  function renderMedia(product){
+    mediaBox.innerHTML = "";
+
+    const src = product.media || "";
+    if (!src){
+      const fallback = document.createElement("div");
+      fallback.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.65);font-size:12px;";
+      fallback.textContent = "Sin media";
+      mediaBox.appendChild(fallback);
+      return;
+    }
+
+    if (isVideo(src)){
+      const v = document.createElement("video");
+      v.src = src;
+      v.autoplay = true;
+      v.muted = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.controls = true;
+      mediaBox.appendChild(v);
+      return;
+    }
+
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = product.title || "Producto";
+    mediaBox.appendChild(img);
+  }
+
+  function renderInfo(product){
+    pTitle.textContent = (product.title || "Producto").toString();
+    pCat.textContent = (product.category || "").toString();
+    pPrice.textContent = money(product.price);
+    pCurrency.textContent = (product.currency || "").toString();
+    pPresentation.textContent = `Presentación: ${(product.presentation || "—").toString()}`;
+    pIndex.textContent = `Producto: ${(product.sku || product.id || "—").toString()}`;
+  }
+
+  function renderAudioPlayer(product){
+    // limpia
+    pShort.innerHTML = "";
+
+    const wrap = document.createElement("div");
+    wrap.className = "audioCard";
+
+    const top = document.createElement("div");
+    top.className = "audioTop";
+
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.preload = "auto";
+    audio.playsInline = true;
+
+    // fuente
+    const aSrc = (product.audio || "").toString().trim();
+    if (aSrc) audio.src = aSrc;
+
+    // intenta autoplay cuando el audio ya puede reproducirse
+    audio.addEventListener("canplay", () => {
+      audio.play().catch(() => {});
+    }, { once: true });
+
+    // eventos
+    audio.addEventListener("ended", () => {
+      setNavLocked(false);
+    });
+
+    wrap.appendChild(audio);
+    pShort.appendChild(wrap);
+
+    // guardar refs globales para frenar al cambiar
+    currentAudioEl = audio;
+
+    // (ya no bloquea navegación, pero se mantiene el estado)
+    setNavLocked(true);
+
+    // intentar autoplay (puede fallar por políticas)
+    setTimeout(() => {
+      if (!aSrc){
+        setNavLocked(false);
+        return;
+      }
+      audio.play().catch(()=>{});
+    }, 80);
+  }
+
+  function updateNav(){
+    // navegación siempre disponible (solo se deshabilita si hay 0/1 productos)
+    prevBtn.disabled = products.length <= 1;
+    nextBtn.disabled = products.length <= 1;
+  }
+
+  function clampIdx(){
+    if (!products.length) { idx = 0; return; }
+    if (idx < 0) idx = products.length - 1;
+    if (idx >= products.length) idx = 0;
+  }
+
+  function render(){
+    if (!products.length){
+      mediaBox.innerHTML = "";
+      const fallback = document.createElement("div");
+      fallback.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.65);font-size:12px;padding:20px;text-align:center;";
+      fallback.textContent = "No hay productos para mostrar.";
+      mediaBox.appendChild(fallback);
+
+      pTitle.textContent = "Sin productos";
+      pCat.textContent = "";
+      pShort.innerHTML = "";
+      pPrice.textContent = "—";
+      pCurrency.textContent = "";
+      pPresentation.textContent = "Presentación: —";
+      pIndex.textContent = "Producto: —";
+      setNavLocked(false);
+      return;
+    }
+
+    clampIdx();
+    const product = products[idx];
+
+    // CLAVE: al cambiar, detener el audio actual
+    stopCurrentAudio();
+
+    renderMedia(product);
+    renderInfo(product);
+    renderAudioPlayer(product);
+    setLastViewed(product);
+    updateNav();
+  }
+
+  function loadLast(){
+    const last = safeJSONParse(localStorage.getItem(LAST_VIEW_KEY));
+    if (!last || !last.id) return;
+
+    const found = products.findIndex(p => String(p.id) === String(last.id));
+    if (found >= 0) idx = found;
+  }
+
+  async function loadProducts(){
+    try{
+      const res = await fetch(PRODUCTS_JSON_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+
+      const arr = Array.isArray(json) ? json : (Array.isArray(json.products) ? json.products : []);
+
+      products = arr
+        .filter(Boolean)
+        .map((p, i) => ({
+          id: p.id ?? i + 1,
+          title: p.title ?? p.name ?? `Producto ${i+1}`,
+          category: p.category ?? "",
+          short: p.short ?? "",
+          description: p.description ?? "",
+          price: p.price ?? "",
+          currency: p.currency ?? "",
+          presentation: p.presentation ?? "",
+          sku: p.sku ?? "",
+          media: p.media ?? p.image ?? "",
+          audio: p.audio ?? ""
+        }));
+
+      setCart(getCart());
+      loadLast();
+      render();
+    }catch(err){
+      console.error("Error loading products:", err);
+      products = [];
+      setCart(getCart());
+      render();
+    }
+  }
+
+  // =============================
+  // EVENTS
+  // =============================
+  prevBtn.addEventListener("click", () => {
+    idx--;
+    render(); // render() ya llama stopCurrentAudio()
+  });
+
+  nextBtn.addEventListener("click", () => {
+    idx++;
+    render(); // render() ya llama stopCurrentAudio()
+  });
+
+  addBtn.addEventListener("click", () => {
+    if (!products.length) return;
+    const p = products[idx];
+    addToCart(p);
+    showToast("Agregado al carrito ✓");
+  });
+
+  cartBtn.addEventListener("click", () => {
+    const cart = getCart();
+    showToast(`Carrito: ${cart.length}`);
+  });
+
+  exitBtn.addEventListener("click", () => {
+    stopCurrentAudio();
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = "index.html";
+  });
+
+  // Swipe
+  const stage = document.getElementById("stage");
+  let sx = 0, sy = 0, tracking = false;
+
+  stage.addEventListener("touchstart", (e) => {
+    if (!e.touches || !e.touches[0]) return;
+    tracking = true;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+
+  stage.addEventListener("touchend", (e) => {
+    if (!tracking) return;
+    tracking = false;
+
+    const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+    if (!t) return;
+
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+
+    if (dx > 0) idx--;
+    else idx++;
+
+    render();
+  }, { passive: true });
+
+  // Wheel
+  let wheelLock = false;
+  stage.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    if (!products.length) return;
+    if (wheelLock) return;
+
+    const dy = e.deltaY || 0;
+    if (Math.abs(dy) < 8) return;
+
+    wheelLock = true;
+    if (dy > 0) idx++; else idx--;
+    render();
+    setTimeout(() => (wheelLock = false), 220);
+  }, { passive: false });
+
+  // =============================
+  // INIT
+  // =============================
+  loadProducts();
+})();
+</script>
+
+</body>
+</html>

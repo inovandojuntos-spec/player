@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shop - Categorías</title>
+
+  <style>
+    :root{
+      --bg:#000;
+      --panel:#0a0a0a;
+      --panel2:#101010;
+      --edge:rgba(255,255,255,0.10);
+      --edge2:rgba(255,255,255,0.16);
+      --text:rgba(255,255,255,0.92);
+      --muted:rgba(255,255,255,0.60);
+      --shadow: rgba(0,0,0,0.75);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      box-sizing:border-box;
+    }
+
+    .card{
+      width:min(520px,100%);
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      padding:14px;
+      box-shadow:0 28px 90px var(--shadow);
+      position:relative;
+    }
+
+    .logoHeader{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:14px 0 12px;
+      margin:-14px -14px 0;
+      background:#000;
+      border-top-left-radius:22px;
+      border-top-right-radius:22px;
+    }
+
+    .logoHeader img{
+      width:42vw;
+      max-width:160px;
+      height:auto;
+    }
+
+    .subtitle{
+      margin:10px 6px 14px;
+      color:rgba(255,255,255,0.70);
+      font-size:13px;
+      line-height:1.35;
+      text-align:center;
+    }
+
+    /* Mobile-first: 1 columna */
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+      margin-top:10px;
+    }
+
+    /* + ancho: 2 columnas */
+    @media (min-width: 520px){
+      .grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .catBtn{
+      width:100%;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,0.12);
+      background:linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+      border-radius:18px;
+      padding:18px 14px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      min-height:78px;
+
+      text-align:center;
+      box-shadow:0 16px 38px rgba(0,0,0,0.78);
+      transition: transform .10s ease, border-color .12s ease, background .12s ease, box-shadow .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .catBtn:hover{
+      border-color: rgba(255,255,255,0.22);
+      background:linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
+      box-shadow:0 18px 44px rgba(0,0,0,0.86);
+      transform: translateY(-1px);
+    }
+
+    .catBtn:active{
+      transform: translateY(0px);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .catBtn:focus{
+      outline:none;
+      border-color: rgba(255,255,255,0.26);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.08), 0 16px 38px rgba(0,0,0,0.78);
+    }
+
+    .catBtn[disabled]{
+      opacity:.55;
+      cursor:not-allowed;
+      transform:none !important;
+    }
+
+    .catTitle{
+      font-weight:900;
+      letter-spacing:.6px;
+      font-size:14px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.92);
+      padding:0 6px;
+      line-height:1.2;
+    }
+
+    .catHint{
+      margin-top:6px;
+      font-size:12px;
+      color:rgba(255,255,255,0.55);
+    }
+
+    .statusLine{
+      margin:12px 10px 0;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.04);
+      color:rgba(255,255,255,0.70);
+      font-size:12px;
+      display:none;
+      text-align:center;
+    }
+    .statusLine.show{ display:block; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+
+      <div class="logoHeader">
+        <img src="images/logo.png" alt="Shop">
+      </div>
+
+      <div class="subtitle">
+        Bem-vindo ao SexShop Innovando Juntos.
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <div id="status" class="statusLine">Conectando…</div>
+
+    </div>
+  </div>
+
+<script>
+/* =========================
+   SUPABASE EDGE FUNCTION (IJ_events)
+   ========================= */
+const EVENTS_ENDPOINT = "https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/IJ_events";
+const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
+
+/* =========================
+   STORAGE KEYS
+   ========================= */
+const PROFILE_KEY  = "player_profile";
+const SESSION_KEY  = "player_session";
+const SNAPSHOT_KEY = "innovandojuntos_shop_snapshot_v1";
+
+function uuid(){
+  return (crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + "-" + Math.random().toString(16).slice(2)
+  );
+}
+function safeJSONParse(s){ try { return JSON.parse(s); } catch { return null; } }
+function nowISO(){ return new Date().toISOString(); }
+
+function getProfile(){ return safeJSONParse(localStorage.getItem(PROFILE_KEY)); }
+function getSession(){ return safeJSONParse(sessionStorage.getItem(SESSION_KEY)); }
+
+function ensureSession(){
+  let s = getSession();
+  if (!s){
+    s = { session_id: uuid(), started_at: nowISO() };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  }
+  return s;
+}
+
+function getOrCreateSnapshotBase(){
+  let snap = safeJSONParse(localStorage.getItem(SNAPSHOT_KEY));
+  const session = ensureSession();
+  const profile = getProfile();
+
+  if (!snap || !snap.player_id || !snap.session_id){
+    snap = {
+      player_id: (profile && profile.player_id) ? profile.player_id : uuid(),
+      session_id: session.session_id,
+
+      profile_name: (profile && profile.name) ? profile.name : null,
+      profile_contact: (profile && profile.contact) ? profile.contact : null,
+
+      last_category_id: null,
+      last_category_name: null,
+      last_category_page: null,
+
+      created_at: nowISO(),
+      updated_at: nowISO(),
+      session_started_at_ms: performance.now()
+    };
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
+    return snap;
+  }
+
+  if (profile){
+    if (profile.player_id) snap.player_id = profile.player_id;
+    snap.profile_name = profile.name || snap.profile_name || null;
+    snap.profile_contact = profile.contact || snap.profile_contact || null;
+  }
+  snap.session_id = session.session_id;
+
+  snap.updated_at = nowISO();
+  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
+  return snap;
+}
+
+function updateSnapshot(patch){
+  const snap = getOrCreateSnapshotBase();
+  const next = { ...snap, ...patch, updated_at: nowISO() };
+  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(next));
+  return next;
+}
+
+async function postEventToSupabase(eventPayload){
+  try{
+    const res = await fetch(EVENTS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(eventPayload),
+    });
+
+    const text = await res.text();
+    if (!res.ok){
+      console.error("IJ_events post failed:", { status: res.status, statusText: res.statusText, body: text });
+      return { ok:false, body:text };
+    }
+    return { ok:true, body:text };
+  } catch(e){
+    console.error("IJ_events post error:", e);
+    return { ok:false, body:String(e) };
+  }
+}
+
+function buildCategoryClickEvent({ category_id, category_name, target_page }){
+  const p = getProfile();
+  const snap = getOrCreateSnapshotBase();
+
+  const profileName =
+    (p && p.name && String(p.name).trim()) ? String(p.name).trim() : (snap.profile_name || null);
+
+  const profileContact =
+    (p && p.contact && String(p.contact).trim()) ? String(p.contact).trim() : (snap.profile_contact || null);
+
+  return {
+    player_id: snap.player_id,
+    session_id: snap.session_id,
+
+    profile_name: profileName || null,
+    profile_contact: profileContact || null,
+
+    event_type: "shop",
+    event_name: "category_click",
+
+    event_source: "shop=01.html",
+    event_version: 1,
+
+    page_url: window.location.href,
+    referrer: document.referrer || null,
+
+    data1: "shop",
+    data2: String(category_id),
+    data3: String(category_name),
+
+    payload: {
+      category: { id: category_id, name: category_name, page: target_page }
+    }
+  };
+}
+
+/* =========================
+   CATEGORIES (tus nombres)
+   🔧 Ajusta los href a tus páginas reales
+   ========================= */
+const CATEGORIES = [
+  { id:"cat_01", title:"Aceites & Lubricantes", href:"aceites.html" },
+  { id:"cat_02", title:"Accesorios Íntimo",     href:"accesorios.html" },
+  { id:"cat_03", title:"Bondage",               href:"bondage.html" },
+  { id:"cat_04", title:"Otros",                 href:"otros.html" },
+];
+
+const gridEl = document.getElementById("grid");
+const statusEl = document.getElementById("status");
+
+function setBusy(isBusy){
+  if (isBusy) statusEl.classList.add("show");
+  else statusEl.classList.remove("show");
+
+  const btns = gridEl.querySelectorAll("button.catBtn");
+  btns.forEach(b => b.disabled = isBusy);
+}
+
+function render(){
+  gridEl.innerHTML = "";
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "catBtn";
+    btn.type = "button";
+    btn.innerHTML = `
+      <div class="catTitle">${cat.title}</div>
+      <div class="catHint">Ver productos</div>
+    `;
+
+    btn.addEventListener("click", async () => {
+      setBusy(true);
+
+      updateSnapshot({
+        last_category_id: cat.id,
+        last_category_name: cat.title,
+        last_category_page: cat.href
+      });
+
+      const eventPayload = buildCategoryClickEvent({
+        category_id: cat.id,
+        category_name: cat.title,
+        target_page: cat.href
+      });
+
+      await postEventToSupabase(eventPayload);
+      window.location.href = cat.href;
+    });
+
+    gridEl.appendChild(btn);
+  });
+}
+
+getOrCreateSnapshotBase();
+render();
+</script>
+</body>
+</html>
