@@ -9,28 +9,5 @@
     "currency": "",
     "media": "images/MASSAGEM.mp4",
     "audio": "audios/Desafio01=04.mp3"
-  },
-  {
-    "id": "acc_001",
-    "category": "Accesorios",
-    "title": "Vibrador de Calzinha",
-    "short": "Compacto y práctico.",
-    "presentation": "1 pc",
-    "price": 350,
-    "currency": "BR",
-    "media": "images/Vibrador.webp",
-    "audio": "audios/producto1.mp3"
-  },
-
-    {
-    "id": "pr01",
-    "category": "Aceites & Lubricantes ",
-    "title": "Vela de masaje comestible",
-    "short": "Compacto y práctico.",
-    "presentation": "1 pc",
-    "price": 50,
-    "currency": "BR",
-    "media": "images/vela01.png",
-    "audio": "audios/producto1.mp3"
   }
 ]
