@@ -57,6 +57,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <div class="video-container" id="container">
@@ -75,32 +76,167 @@
   </div>
 
   <script>
-    async function activarExperiencia() {
-      const v = document.getElementById("vid");
-      const overlay = document.getElementById("startOverlay");
-      const container = document.getElementById("container");
+    // =========================
+    // CONFIG
+    // =========================
+    const EVENTS_ENDPOINT = "https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/IJ_events";
+    const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
 
+    const PROFILE_KEY = "player_profile";
+    const SESSION_KEY = "player_session";
+
+    // =========================
+    // UTILS
+    // =========================
+    function uuid() {
+      return (crypto.randomUUID
+        ? crypto.randomUUID()
+        : String(Date.now()) + "-" + Math.random().toString(16).slice(2));
+    }
+
+    function safeJSONParse(v){
+      try { return JSON.parse(v); } catch { return null; }
+    }
+
+    function getProfile(){
+      return safeJSONParse(localStorage.getItem(PROFILE_KEY));
+    }
+
+    function getSession(){
+      return safeJSONParse(sessionStorage.getItem(SESSION_KEY));
+    }
+
+    function ensureSession(){
+      let s = getSession();
+      if (!s || !s.session_id){
+        s = {
+          session_id: uuid(),
+          started_at: new Date().toISOString()
+        };
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+      }
+      return s;
+    }
+
+    function getOrCreatePlayerId(){
+      const profile = getProfile();
+
+      if (profile && profile.player_id){
+        return profile.player_id;
+      }
+
+      let id = localStorage.getItem("ij_player_id");
+      if (!id){
+        id = uuid();
+        localStorage.setItem("ij_player_id", id);
+      }
+
+      return id;
+    }
+
+    async function sendEvent(eventName, extraPayload = {}) {
       try {
-        // Asegura audio habilitado
+        const profile = getProfile();
+        const session = ensureSession();
+
+        const payload = {
+          player_id: getOrCreatePlayerId(),
+          session_id: session.session_id,
+
+          profile_name: profile?.name || null,
+          profile_contact: profile?.contact || null,
+
+          event_type: "video",
+          event_name: eventName,
+
+          event_source: "video=index.html",
+          event_version: 1,
+
+          page_url: window.location.href,
+          referrer: document.referrer || null,
+
+          data1: "inovando_video",
+          data2: new Date().toISOString(),
+
+          payload: {
+            video_src: document.getElementById("vid").currentSrc,
+            ...extraPayload
+          }
+        };
+
+        const res = await fetch(EVENTS_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok){
+          const txt = await res.text();
+          console.error("Error backend:", res.status, txt);
+        }
+
+      } catch (e) {
+        console.error("Error enviando evento:", e);
+      }
+    }
+
+    // =========================
+    // VIDEO LOGIC
+    // =========================
+    const v = document.getElementById("vid");
+    const overlay = document.getElementById("startOverlay");
+    const container = document.getElementById("container");
+
+    let playSent = false;
+
+    async function activarExperiencia() {
+      try {
         v.muted = false;
         v.volume = 1;
 
-        // Inicia reproducción a partir de gesto del usuario
         await v.play();
 
-        // Oculta overlay luego de iniciar
         overlay.style.display = "none";
 
-        // Fullscreen opcional
+        // 🔥 SOLO UNA VEZ
+        if (!playSent){
+          playSent = true;
+          sendEvent("video_play", {
+            current_time: v.currentTime,
+            duration: v.duration || null
+          });
+        }
+
+        // fullscreen
         if (container.requestFullscreen) {
           await container.requestFullscreen();
         } else if (container.webkitRequestFullscreen) {
           container.webkitRequestFullscreen();
         }
+
       } catch (error) {
         console.error("No se pudo iniciar la experiencia:", error);
+
+        sendEvent("video_error", {
+          message: String(error)
+        });
       }
     }
+
+    // =========================
+    // EVENTO: VIDEO TERMINADO
+    // =========================
+    v.addEventListener("ended", () => {
+      sendEvent("video_completed", {
+        duration: v.duration,
+        final_time: v.currentTime
+      });
+    });
+
   </script>
 
 </body>
