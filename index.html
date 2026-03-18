@@ -1,82 +1,107 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Inovando Juntos</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Inovando Juntos</title>
 
-<style>
-  html, body{
-    margin:0;
-    padding:0;
-    height:100%;
-    background:#000;
-    overflow:hidden;
-  }
+  <style>
+    html, body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      background:#000;
+      overflow:hidden;
+    }
 
-  .video-container{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100vw;
-    height:100dvh; /* mejor que 100vh en móvil */
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#000;
-  }
+    .video-container{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100dvh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+    }
 
-  video{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-  }
+    video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
 
-  /* overlay invisible para interacción */
-  .overlay{
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    z-index:10;
-    cursor:pointer;
-  }
-</style>
+    .start-overlay{
+      position:absolute;
+      inset:0;
+      z-index:10;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,0.20);
+      cursor:pointer;
+    }
+
+    .start-button{
+      border:1px solid rgba(255,255,255,0.25);
+      background:rgba(0,0,0,0.55);
+      color:#fff;
+      padding:14px 22px;
+      border-radius:999px;
+      font-size:16px;
+      font-family:Arial, sans-serif;
+      letter-spacing:0.4px;
+      backdrop-filter:blur(4px);
+    }
+  </style>
 </head>
-
 <body>
 
-<div class="video-container">
+  <div class="video-container" id="container">
+    <video
+      id="vid"
+      src="images/InovandoJuntos.mp4"
+      loop
+      playsinline
+      webkit-playsinline
+      preload="metadata">
+    </video>
 
-  <video 
-    id="vid"
-    src="images/InovandoJuntos.mp4"
-    loop
-    playsinline
-    webkit-playsinline>
-  </video>
+    <div class="start-overlay" id="startOverlay" onclick="activarExperiencia()">
+      <div class="start-button">Tocar para iniciar</div>
+    </div>
+  </div>
 
-  <div class="overlay" onclick="activarExperiencia()"></div>
+  <script>
+    async function activarExperiencia() {
+      const v = document.getElementById("vid");
+      const overlay = document.getElementById("startOverlay");
+      const container = document.getElementById("container");
 
-</div>
+      try {
+        // Asegura audio habilitado
+        v.muted = false;
+        v.volume = 1;
 
-<script>
-function activarExperiencia(){
-  const v = document.getElementById("vid");
+        // Inicia reproducción a partir de gesto del usuario
+        await v.play();
 
-  // 🔊 activar sonido
-  v.muted = false;
-  v.play().catch(()=>{});
+        // Oculta overlay luego de iniciar
+        overlay.style.display = "none";
 
-  // 🖥 fullscreen (si el navegador lo permite)
-  if (v.requestFullscreen) {
-    v.requestFullscreen().catch(()=>{});
-  } else if (v.webkitRequestFullscreen) { // Safari
-    v.webkitRequestFullscreen();
-  }
-}
-</script>
+        // Fullscreen opcional
+        if (container.requestFullscreen) {
+          await container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        }
+      } catch (error) {
+        console.error("No se pudo iniciar la experiencia:", error);
+      }
+    }
+  </script>
 
 </body>
 </html>
