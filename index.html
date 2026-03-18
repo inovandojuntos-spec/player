@@ -19,7 +19,7 @@
     top:0;
     left:0;
     width:100vw;
-    height:100vh;
+    height:100dvh; /* mejor que 100vh en móvil */
     display:flex;
     align-items:center;
     justify-content:center;
@@ -29,7 +29,18 @@
   video{
     width:100%;
     height:100%;
-    object-fit:cover; /* clave para look premium */
+    object-fit:cover;
+  }
+
+  /* overlay invisible para interacción */
+  .overlay{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    z-index:10;
+    cursor:pointer;
   }
 </style>
 </head>
@@ -37,15 +48,37 @@
 <body>
 
 <div class="video-container">
+
   <video 
-    src="images/InovandoJuntos.mp4" 
-    autoplay 
-   
-    loop 
-    playsinline 
-    controls>
+    id="vid"
+    src="images/InovandoJuntos.mp4"
+    autoplay
+    muted
+    loop
+    playsinline
+    webkit-playsinline>
   </video>
+
+  <div class="overlay" onclick="activarExperiencia()"></div>
+
 </div>
+
+<script>
+function activarExperiencia(){
+  const v = document.getElementById("vid");
+
+  // 🔊 activar sonido
+  v.muted = false;
+  v.play().catch(()=>{});
+
+  // 🖥 fullscreen (si el navegador lo permite)
+  if (v.requestFullscreen) {
+    v.requestFullscreen().catch(()=>{});
+  } else if (v.webkitRequestFullscreen) { // Safari
+    v.webkitRequestFullscreen();
+  }
+}
+</script>
 
 </body>
 </html>
