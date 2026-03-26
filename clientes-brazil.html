@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Cadastro Comercial | Inovando Juntos</title>
+
+  <style>
+    :root{
+      --bg:#000000;
+      --card:#0a0a0a;
+      --line:rgba(255,255,255,.10);
+      --line-2:rgba(255,255,255,.16);
+      --text:rgba(255,255,255,.94);
+      --muted:rgba(255,255,255,.58);
+      --ok:#1f9d55;
+      --warn:#d69e2e;
+      --error:#e53e3e;
+      --shadow:0 28px 80px rgba(0,0,0,.72);
+      --radius:22px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+    }
+
+    body{
+      min-height:100vh;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,.05), transparent 28%),
+        linear-gradient(180deg, #050505 0%, #000000 100%);
+      color:var(--text);
+      padding:14px;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+    }
+
+    .wrap{
+      width:min(760px,100%);
+      margin:0 auto;
+    }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.03) 0%, rgba(255,255,255,.015) 100%);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      backdrop-filter:blur(6px);
+    }
+
+    .hero{
+      padding:22px 16px 14px;
+      border-bottom:1px solid var(--line);
+      text-align:center;
+      background:linear-gradient(180deg, rgba(255,255,255,.03) 0%, rgba(255,255,255,0) 100%);
+    }
+
+    .logo{
+      font-size:1.3rem;
+      font-weight:900;
+      letter-spacing:.3px;
+      margin:0 0 8px;
+    }
+
+    .subtitle{
+      margin:0 auto;
+      color:var(--muted);
+      font-size:.95rem;
+      line-height:1.5;
+      max-width:520px;
+    }
+
+    form{
+      padding:16px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+
+    .grid-2{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+
+    @media (min-width: 700px){
+      .grid-2{
+        grid-template-columns:1fr 1fr;
+      }
+      .hero{
+        padding:24px 18px 16px;
+      }
+      form{
+        padding:18px;
+      }
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    label{
+      font-size:.92rem;
+      font-weight:700;
+      color:var(--text);
+    }
+
+    .hint{
+      font-size:.8rem;
+      color:var(--muted);
+      margin-top:-2px;
+      line-height:1.4;
+    }
+
+    input:not([type="checkbox"]), textarea{
+      width:100%;
+      border:1px solid var(--line-2);
+      background:rgba(255,255,255,.035);
+      color:var(--text);
+      border-radius:16px;
+      padding:14px 14px;
+      font-size:16px;
+      outline:none;
+      transition:.18s ease;
+      appearance:none;
+    }
+
+    input::placeholder,
+    textarea::placeholder{
+      color:rgba(255,255,255,.34);
+    }
+
+    input:not([type="checkbox"]):focus, textarea:focus{
+      border-color:rgba(255,255,255,.28);
+      background:rgba(255,255,255,.055);
+      box-shadow:0 0 0 3px rgba(255,255,255,.06);
+    }
+
+    textarea{
+      min-height:120px;
+      resize:vertical;
+    }
+
+    .checks{
+      display:grid;
+      gap:10px;
+      margin-top:4px;
+    }
+
+    .check{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:.95rem;
+      font-weight:500;
+      color:var(--text);
+      padding:12px 14px;
+      border:1px solid var(--line-2);
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      cursor:pointer;
+    }
+
+    .check input[type="checkbox"]{
+      width:18px;
+      height:18px;
+      margin:0;
+      padding:0;
+      accent-color:#ffffff;
+      flex:0 0 auto;
+    }
+
+    .char-info{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-size:.8rem;
+      color:var(--muted);
+      margin-top:4px;
+      flex-wrap:wrap;
+    }
+
+    .actions{
+      margin-top:18px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .btn{
+      width:100%;
+      border:none;
+      border-radius:18px;
+      padding:16px 18px;
+      font-size:1rem;
+      font-weight:900;
+      letter-spacing:.4px;
+      cursor:pointer;
+      transition:.18s ease;
+    }
+
+    .btn-primary{
+      color:#000;
+      background:#fff;
+      box-shadow:0 16px 34px rgba(255,255,255,.10);
+    }
+
+    .btn-primary:hover{ transform:translateY(-1px); }
+    .btn-primary:active{ transform:translateY(1px); }
+
+    .btn[disabled]{
+      opacity:.62;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .status{
+      display:none;
+      margin-top:16px;
+      border-radius:18px;
+      padding:15px 16px;
+      border:1px solid var(--line);
+      line-height:1.45;
+      font-size:.95rem;
+    }
+
+    .status.show{ display:block; }
+
+    .status.success{
+      background:rgba(31,157,85,.14);
+      border-color:rgba(31,157,85,.45);
+      color:#d8ffe7;
+    }
+
+    .status.exists{
+      background:rgba(214,158,46,.14);
+      border-color:rgba(214,158,46,.45);
+      color:#fff1c7;
+    }
+
+    .status.error{
+      background:rgba(229,62,62,.14);
+      border-color:rgba(229,62,62,.45);
+      color:#ffd8d8;
+    }
+
+    .footer-note{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:.8rem;
+      text-align:center;
+      line-height:1.45;
+    }
+
+    .required{
+      color:#fff;
+      opacity:.88;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="hero">
+        <div class="logo-center">
+          <img src="images\logo.png" alt="Inovando Juntos">
+        </div>
+        <p class="subtitle">
+          Cadastro comercial para parceiros interessados no lançamento:
+        </p>
+      </div>
+
+      <form id="clienteForm" novalidate>
+        <div class="grid">
+          <div class="grid-2">
+            <div class="field">
+              <label for="nome_loja">Nome da loja <span class="required">*</span></label>
+              <input
+                id="nome_loja"
+                name="nome_loja"
+                type="text"
+                placeholder="Ex.: Loja Exemplo"
+                maxlength="120"
+                required
+              />
+            </div>
+
+            <div class="field">
+              <label for="email">E-mail <span class="required">*</span></label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="contato@empresa.com"
+                maxlength="160"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="whatsapp">WhatsApp</label>
+              <input
+                id="whatsapp"
+                name="whatsapp"
+                type="tel"
+                inputmode="numeric"
+                placeholder="Ex.: +55 (11) 99999-9999"
+                maxlength="20"
+              />
+              <div class="hint"></div>
+            </div>
+
+            <div class="field">
+              <label for="cnpj">CNPJ</label>
+              <input
+                id="cnpj"
+                name="cnpj"
+                type="text"
+                inputmode="numeric"
+                placeholder="00.000.000/0000-00"
+                maxlength="18"
+                pattern="^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$"
+              />
+              <div class="hint"></div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="cidade">Cidade</label>
+              <input
+                id="cidade"
+                name="cidade"
+                type="text"
+                placeholder="Ex.: São Paulo"
+                maxlength="80"
+              />
+            </div>
+
+            <div class="field">
+              <label for="estado">Estado</label>
+              <input
+                id="estado"
+                name="estado"
+                type="text"
+                maxlength="2"
+                placeholder="Ex.: SP"
+              />
+              <div class="hint"></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="instagram">Instagram</label>
+            <input
+              id="instagram"
+              name="instagram"
+              type="text"
+              placeholder="@nomedaloja"
+              maxlength="60"
+            />
+          </div>
+
+          <div class="field">
+            <label>Personalizacao</label>
+
+            <div class="checks">
+              <label class="check">
+                <input id="personalizacao" name="personalizacao" type="checkbox" />
+                <span>Interesse em personalizações</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="observacoes">Dejenos seus comentarios</label>
+            <textarea
+              id="observacoes"
+              name="observacoes"
+              maxlength="500"
+              placeholder="Escreva aqui seus comentários, observações comerciais, perfil da loja ou detalhes que queira compartilhar."
+            ></textarea>
+            <div class="char-info">
+              <span></span>
+              <span id="charCounter">0 / 500</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" class="btn btn-primary" type="submit">
+            Registrar cliente
+          </button>
+        </div>
+
+        <div id="statusBox" class="status" role="status" aria-live="polite"></div>
+
+        <p class="footer-note">
+          Campos marcados com <span class="required">*</span> são obrigatórios.
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_FUNCTION_URL = "https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/registrar-cliente-brazil";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
+
+    const form = document.getElementById("clienteForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusBox = document.getElementById("statusBox");
+    const observacoes = document.getElementById("observacoes");
+    const charCounter = document.getElementById("charCounter");
+
+    const whatsappInput = document.getElementById("whatsapp");
+    const cnpjInput = document.getElementById("cnpj");
+    const estadoInput = document.getElementById("estado");
+
+    function showStatus(type, message){
+      statusBox.className = `status show ${type}`;
+      statusBox.innerHTML = message;
+      statusBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function clearStatus(){
+      statusBox.className = "status";
+      statusBox.innerHTML = "";
+    }
+
+    function normalizeText(value){
+      return String(value || "").trim();
+    }
+
+    function onlyDigits(value){
+      return String(value || "").replace(/\D/g, "");
+    }
+
+    function normalizeInstagram(value){
+      value = normalizeText(value);
+      if (!value) return "";
+      if (!value.startsWith("@")) return "@" + value;
+      return value;
+    }
+
+    function updateCounter(){
+      const max = observacoes.maxLength || 500;
+      const current = observacoes.value.length;
+      charCounter.textContent = `${current} / ${max}`;
+    }
+
+    function maskWhatsApp(value){
+      let v = String(value || "");
+
+      if (v.startsWith("+")) {
+        const digits = "+" + v.slice(1).replace(/\D/g, "");
+        const base = digits.slice(0, 14);
+        const raw = base.replace("+", "");
+
+        if (raw.length <= 2) return "+" + raw;
+        if (raw.length <= 4) return `+${raw.slice(0,2)} (${raw.slice(2)}`;
+        if (raw.length <= 9) return `+${raw.slice(0,2)} (${raw.slice(2,4)}) ${raw.slice(4)}`;
+        return `+${raw.slice(0,2)} (${raw.slice(2,4)}) ${raw.slice(4,9)}-${raw.slice(9,13)}`;
+      }
+
+      const digits = onlyDigits(v).slice(0, 13);
+
+      if (digits.length <= 2) return digits;
+      if (digits.length <= 7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+      if (digits.length <= 11) return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+
+      return `+${digits.slice(0,2)} (${digits.slice(2,4)}) ${digits.slice(4,9)}-${digits.slice(9,13)}`;
+    }
+
+    function maskCNPJ(value){
+      const digits = onlyDigits(value).slice(0, 14);
+      let out = "";
+
+      if (digits.length > 0) out += digits.slice(0, 2);
+      if (digits.length >= 3) out += "." + digits.slice(2, 5);
+      if (digits.length >= 6) out += "." + digits.slice(5, 8);
+      if (digits.length >= 9) out += "/" + digits.slice(8, 12);
+      if (digits.length >= 13) out += "-" + digits.slice(12, 14);
+
+      return out;
+    }
+
+    function isValidCNPJ(cnpj){
+      const digits = onlyDigits(cnpj);
+
+      if (digits.length !== 14) return false;
+      if (/^(\d)\1{13}$/.test(digits)) return false;
+
+      let length = 12;
+      let numbers = digits.substring(0, length);
+      let sum = 0;
+      let pos = length - 7;
+
+      for (let i = length; i >= 1; i--) {
+        sum += Number(numbers.charAt(length - i)) * pos--;
+        if (pos < 2) pos = 9;
+      }
+
+      let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+      if (result !== Number(digits.charAt(12))) return false;
+
+      length = 13;
+      numbers = digits.substring(0, length);
+      sum = 0;
+      pos = length - 7;
+
+      for (let i = length; i >= 1; i--) {
+        sum += Number(numbers.charAt(length - i)) * pos--;
+        if (pos < 2) pos = 9;
+      }
+
+      result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+      return result === Number(digits.charAt(13));
+    }
+
+    function isValidWhatsApp(value){
+      if (!normalizeText(value)) return true;
+      const digits = onlyDigits(value);
+      return digits.length >= 10 && digits.length <= 13;
+    }
+
+    function buildPayload(){
+      return {
+        nome_loja: normalizeText(document.getElementById("nome_loja").value),
+        email: normalizeText(document.getElementById("email").value).toLowerCase(),
+        whatsapp: normalizeText(document.getElementById("whatsapp").value),
+        cnpj: normalizeText(document.getElementById("cnpj").value),
+        cidade: normalizeText(document.getElementById("cidade").value),
+        estado: normalizeText(document.getElementById("estado").value).toUpperCase(),
+        instagram: normalizeInstagram(document.getElementById("instagram").value),
+        personalizacao: document.getElementById("personalizacao").checked,
+        observacoes: normalizeText(document.getElementById("observacoes").value)
+      };
+    }
+
+    function validatePayload(payload){
+      if (!payload.nome_loja) {
+        showStatus("error", "Por favor, informe o <strong>nome da loja</strong>.");
+        return false;
+      }
+
+      if (!payload.email) {
+        showStatus("error", "Por favor, informe o <strong>e-mail</strong>.");
+        return false;
+      }
+
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email);
+      if (!emailOk) {
+        showStatus("error", "O <strong>e-mail</strong> informado não parece válido.");
+        return false;
+      }
+
+      if (payload.whatsapp && !isValidWhatsApp(payload.whatsapp)) {
+        showStatus("error", "O <strong>WhatsApp</strong> informado não parece válido.");
+        return false;
+      }
+
+      if (payload.cnpj) {
+        if (!/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(payload.cnpj)) {
+          showStatus("error", "O <strong>CNPJ</strong> deve estar no formato 00.000.000/0000-00.");
+          return false;
+        }
+        if (!isValidCNPJ(payload.cnpj)) {
+          showStatus("error", "O <strong>CNPJ</strong> informado não é válido.");
+          return false;
+        }
+      }
+
+      if (payload.estado && payload.estado.length !== 2) {
+        showStatus("error", "O campo <strong>Estado</strong> deve conter a sigla UF com 2 letras.");
+        return false;
+      }
+
+      return true;
+    }
+
+    async function safeReadJson(response){
+      const text = await response.text();
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch {
+        return { raw: text };
+      }
+    }
+
+    function detectAlreadyExists(data){
+      const text = JSON.stringify(data || {}).toLowerCase();
+
+      if (data?.exists === true) return true;
+      if (data?.already_registered === true) return true;
+      if (data?.alreadyExists === true) return true;
+      if (data?.duplicate === true) return true;
+      if (data?.status === "exists") return true;
+      if (text.includes("ya registrado")) return true;
+      if (text.includes("já registrado")) return true;
+      if (text.includes("already registered")) return true;
+      if (text.includes("already exists")) return true;
+      if (text.includes("duplicate")) return true;
+      if (text.includes("registro existente")) return true;
+
+      return false;
+    }
+
+    function detectSuccess(data, responseOk){
+      if (responseOk && !detectAlreadyExists(data)) return true;
+      if (data?.success === true) return true;
+      if (data?.registered === true) return true;
+      if (data?.created === true) return true;
+      if (data?.status === "success") return true;
+      return false;
+    }
+
+    whatsappInput.addEventListener("input", (e) => {
+      e.target.value = maskWhatsApp(e.target.value);
+    });
+
+    cnpjInput.addEventListener("input", (e) => {
+      e.target.value = maskCNPJ(e.target.value);
+    });
+
+    estadoInput.addEventListener("input", (e) => {
+      e.target.value = e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+    });
+
+    observacoes.addEventListener("input", updateCounter);
+    updateCounter();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearStatus();
+
+      const payload = buildPayload();
+
+      if (!validatePayload(payload)) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Registrando...";
+
+      try {
+        const response = await fetch(SUPABASE_FUNCTION_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await safeReadJson(response);
+        console.log("Resposta da função:", data);
+
+        if (detectAlreadyExists(data)) {
+          showStatus(
+            "exists",
+            "Este cliente <strong>já possui registro</strong> em nossa base. Se desejar, podemos revisar ou atualizar os dados existentes."
+          );
+          return;
+        }
+
+        if (detectSuccess(data, response.ok)) {
+          showStatus(
+            "success",
+            "Cliente <strong>registrado com sucesso</strong>. Os dados foram enviados corretamente."
+          );
+          form.reset();
+          updateCounter();
+          return;
+        }
+
+        const backendMessage =
+          data?.message ||
+          data?.error ||
+          data?.msg ||
+          data?.raw ||
+          "Não foi possível concluir o cadastro.";
+
+        showStatus(
+          "error",
+          `O sistema retornou uma resposta não esperada.<br><strong>Detalhe:</strong> ${backendMessage}`
+        );
+
+      } catch (error) {
+        console.error(error);
+        showStatus(
+          "error",
+          "Erro de conexão ao tentar registrar o cliente. Verifique a função no Supabase, CORS e os headers de autorização."
+        );
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Registrar cliente";
+      }
+    });
+  </script>
+</body>
+</html>
