@@ -1,107 +1,1177 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Inovando Juntos</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Player</title>
 
   <style>
-    html, body{
-      margin:0;
-      padding:0;
-      width:100%;
+    :root{
+      --bg:#000;
+      --panel:#0a0a0a;
+      --panel2:#101010;
+      --edge:rgba(255,255,255,0.10);
+      --edge2:rgba(255,255,255,0.16);
+      --text:rgba(255,255,255,0.92);
+      --muted:rgba(255,255,255,0.62);
+      --shadow: rgba(0,0,0,0.78);
+      --accent: rgba(255,255,255,0.18);
+      --accent2: rgba(255,255,255,0.26);
+    }
+
+    html,body{
       height:100%;
-      background:#000;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
       overflow:hidden;
     }
 
-    .video-container{
-      position:fixed;
-      inset:0;
+    .app{
+      height:100vh;
       width:100vw;
-      height:100dvh;
+      display:flex;
+      align-items:stretch;
+      justify-content:center;
+      padding:12px;
+      box-sizing:border-box;
+    }
+
+    .shell{
+      width:min(560px, 100%);
+      height:100%;
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      box-shadow:0 28px 90px var(--shadow);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      position:relative;
+    }
+
+    .topbar{
+      position: relative;
+      padding:8px 12px;
+      border-bottom:1px solid rgba(255,255,255,0.06);
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.00));
+    }
+
+    .topbar-nav{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .topbar-navBtn{
+      width:44px;
+      height:44px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+      color:rgba(255,255,255,0.92);
       display:flex;
       align-items:center;
       justify-content:center;
-      background:#000;
+      cursor:pointer;
+      box-shadow:0 18px 44px rgba(0,0,0,0.70);
+      transition: transform .10s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    video{
+    .topbar-navBtn:hover{
+      border-color: rgba(255,255,255,0.26);
+      background:rgba(0,0,0,0.50);
+      transform: scale(1.02);
+    }
+
+    .topbar-navBtn:active{ transform: scale(0.98); }
+    .topbar-navBtn[disabled]{ opacity:.40; cursor:not-allowed; transform:none !important; }
+
+    .logo-center{
+      display:flex;
+      justify-content:center;
+      flex: 1 1 auto;
+    }
+
+    .logo-center img{
+      width:150px;
+      height:150px;
+      object-fit:contain;
+      background:transparent;
+      box-shadow:none;
+    }
+
+    .stage{
+      position:relative;
+      flex: 1 1 auto;
+      min-height:0;
+      background: radial-gradient(90% 70% at 50% 40%, rgba(255,255,255,0.06), rgba(255,255,255,0.00) 70%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+
+    .mediaBox{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+
+    .mediaBox img,
+    .mediaBox video{
       width:100%;
       height:100%;
       object-fit:cover;
       display:block;
+      background:#000;
     }
 
-    .start-overlay{
+    .bottom{
+      flex: 0 0 auto;
+      padding:12px;
+      background:linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.60) 30%, rgba(0,0,0,0.85) 100%);
+      border-top:1px solid rgba(255,255,255,0.08);
+    }
+
+    .infoCard{
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 6px 2px;
+      box-shadow: none;
+    }
+
+    .row1{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+
+    .pTitle{
+      font-weight:900;
+      letter-spacing:.4px;
+      font-size:14px;
+      text-transform:uppercase;
+      line-height:1.2;
+      margin:0;
+    }
+
+    .pCat{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 42ch;
+    }
+
+    .pShort{
+      margin-top:10px;
+      width:100%;
+      max-width:100%;
+      max-height:34vh;
+      overflow:auto;
+      padding-right:4px;
+    }
+
+    .audioCard{
+      border:none;
+      background:#000;
+      border-radius:0;
+      padding:0;
+      box-shadow:none;
+    }
+
+    .descBox{
+      margin-top:10px;
+      font-size:12px;
+      color:rgba(255,255,255,0.78);
+      line-height:1.45;
+    }
+
+    .audioTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+
+    .audioLabel{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.3px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.85);
+    }
+
+    .audioHint{
+      font-size:11px;
+      color:rgba(255,255,255,0.60);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 34ch;
+    }
+
+    audio{
+      width:100%;
+      height:34px;
+      background:transparent;
+      border-radius:12px;
+      outline:none;
+      filter: invert(1) hue-rotate(180deg);
+    }
+
+    audio::-webkit-media-controls-panel{
+      background-color: transparent !important;
+    }
+
+    audio::-webkit-media-controls-enclosure{
+      background-color: transparent !important;
+      border-radius:12px;
+    }
+
+    audio::-webkit-media-controls{
+      background-color: transparent !important;
+    }
+
+    .unlockBtn{
+      margin-top:10px;
+      width:100%;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
+      color:rgba(255,255,255,0.92);
+      font-weight:900;
+      letter-spacing:.3px;
+      cursor:pointer;
+      box-shadow:0 14px 30px rgba(0,0,0,0.65);
+    }
+
+    .unlockBtn[hidden]{ display:none; }
+
+    .meta{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .pill{
+      padding:8px 10px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.04);
+      color:rgba(255,255,255,0.78);
+      font-size:12px;
+      max-width:100%;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    #pPresentation,
+    #pIndex{
+      background:transparent !important;
+      border:none !important;
+      box-shadow:none !important;
+      padding:0 !important;
+      border-radius:0 !important;
+      color:rgba(255,255,255,0.78);
+      display:none;
+    }
+
+    .actions{
+      margin-top:12px;
+    }
+
+    .actionBar{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      align-items:stretch;
+    }
+
+    .iconBtn{
+      position:relative;
+      width:100%;
+      padding:10px 10px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.05) 100%);
+      color:rgba(255,255,255,0.92);
+      cursor:pointer;
+      box-shadow:0 16px 38px rgba(0,0,0,0.72);
+      transition: transform .10s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      min-height:62px;
+    }
+
+    .iconBtn:hover{
+      border-color: rgba(255,255,255,0.24);
+      background:linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%);
+      transform: translateY(-1px);
+    }
+
+    .iconBtn:active{ transform: translateY(0px); }
+    .iconBtn[disabled]{ opacity:.55; cursor:not-allowed; transform:none !important; }
+
+    .iconBtn .ico{
+      font-size:18px;
+      line-height:1;
+    }
+
+    .iconBtn .lbl{
+      font-size:10px;
+      letter-spacing:.2px;
+      font-weight:800;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.82);
+      text-align:center;
+      line-height:1.15;
+    }
+
+    .badge{
       position:absolute;
-      inset:0;
-      z-index:10;
+      top:8px;
+      right:10px;
+      min-width:18px;
+      height:18px;
+      padding:0 6px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
       display:flex;
       align-items:center;
       justify-content:center;
-      background:rgba(0,0,0,0.20);
+      font-size:11px;
+      font-weight:900;
+      color:rgba(255,255,255,0.92);
+      box-shadow:0 12px 28px rgba(0,0,0,0.70);
+    }
+
+    .toast{
+      position:absolute;
+      left:12px;
+      right:12px;
+      bottom:110px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      color:rgba(255,255,255,0.88);
+      font-size:12px;
+      display:none;
+      box-shadow:0 16px 38px rgba(0,0,0,0.70);
+      z-index:20;
+    }
+
+    .toast.show{ display:block; }
+
+    .itemsPanel{
+      position:absolute;
+      left:12px;
+      right:12px;
+      top:12px;
+      bottom:12px;
+      z-index:25;
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:18px;
+      background:rgba(0,0,0,0.88);
+      backdrop-filter: blur(12px);
+      box-shadow:0 20px 50px rgba(0,0,0,0.75);
+      display:none;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .itemsPanel.show{
+      display:flex;
+    }
+
+    .itemsHeader{
+      padding:12px;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .itemsTitle{
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.3px;
+      text-transform:uppercase;
+    }
+
+    .itemsClose{
+      width:38px;
+      height:38px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.06);
+      color:#fff;
       cursor:pointer;
     }
 
-    .start-button{
-      border:1px solid rgba(255,255,255,0.25);
-      background:rgba(0,0,0,0.55);
-      color:#fff;
-      padding:14px 22px;
-      border-radius:999px;
-      font-size:16px;
-      font-family:Arial, sans-serif;
-      letter-spacing:0.4px;
-      backdrop-filter:blur(4px);
+    .itemsBody{
+      flex:1 1 auto;
+      overflow:auto;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .itemCard{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:16px;
+      padding:10px;
+      background:rgba(255,255,255,0.04);
+      cursor:pointer;
+      transition: transform .10s ease, border-color .12s ease, background .12s ease;
+    }
+
+    .itemCard:hover{
+      border-color: rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.07);
+      transform: translateY(-1px);
+    }
+
+    .itemCard:active{
+      transform: scale(0.99);
+    }
+
+    .itemMedia{
+      flex:0 0 84px;
+      width:84px;
+      height:84px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.03);
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .itemMedia img,
+    .itemMedia video{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      display:block;
+      background:transparent;
+    }
+
+    .itemContent{
+      flex:1 1 auto;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .itemName{
+      font-size:18px;
+      font-weight:900;
+      letter-spacing:.2px;
+      line-height:1.15;
+      margin:0 0 6px 0;
+      text-transform:none;
+    }
+
+    .itemDesc{
+      font-size:13px;
+      color:rgba(255,255,255,0.74);
+      line-height:1.4;
+      margin:0;
+    }
+
+    .itemCategory{
+      font-size:15px;
+      font-weight:800;
+      color:rgba(255,255,255,0.92);
+      line-height:1.2;
+      margin:0 0 6px 0;
+    }
+
+    
+    @media (max-height: 720px){
+      .toast{ bottom:120px; }
+      .pShort{ max-height:28vh; }
     }
   </style>
 </head>
+
 <body>
+  <div class="app">
+    <div class="shell">
 
-  <div class="video-container" id="container">
-    <video
-      id="vid"
-      src="images/InovandoJuntos.mp4"
-      loop
-      playsinline
-      webkit-playsinline
-      preload="metadata">
-    </video>
+      <div class="topbar">
+        <div class="topbar-nav">
+          <button class="topbar-navBtn" id="prevBtn" aria-label="Anterior">‹</button>
 
-    <div class="start-overlay" id="startOverlay" onclick="activarExperiencia()">
-      <div class="start-button">Tocar para iniciar</div>
+          <div class="logo-center">
+            <img src="images/logo.png" alt="iNOVANDO JUNTOS">
+          </div>
+
+          <button class="topbar-navBtn" id="nextBtn" aria-label="Siguiente">›</button>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="mediaBox" id="mediaBox"></div>
+        <div class="toast" id="toast">Acción realizada ✓</div>
+
+        <div class="itemsPanel" id="itemsPanel">
+          <div class="itemsHeader">
+            <div class="itemsTitle">Items recomendados</div>
+            <button class="itemsClose" id="itemsCloseBtn" aria-label="Cerrar">✕</button>
+          </div>
+          <div class="itemsBody" id="itemsBody"></div>
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="infoCard">
+          <div class="row1">
+            <div style="min-width:0; flex:1">
+              <p class="pTitle" id="pTitle">Cargando…</p>
+              <div class="pCat" id="pCat"></div>
+            </div>
+          </div>
+
+          <div class="pShort" id="pShort"></div>
+
+          
+
+          <div class="actions">
+            <div class="actionBar">
+              <button class="iconBtn" id="cartBtn" aria-label="Items Eroticos">
+                <span class="ico">🔥</span>
+                <span class="lbl">Items Eroticos</span>
+                <span class="badge" id="cartBadge">0</span>
+              </button>
+
+              <button class="iconBtn" id="infoBtn" aria-label="Desafio">
+                <span class="ico">🎯</span>
+                <span class="lbl">Desafio</span>
+              </button> 
+
+              <button class="iconBtn" id="exitBtn" aria-label="Voltar">
+                <span class="ico">⟵</span>
+                <span class="lbl">Voltar</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <script>
-    async function activarExperiencia() {
-      const v = document.getElementById("vid");
-      const overlay = document.getElementById("startOverlay");
-      const container = document.getElementById("container");
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-      try {
-        // Asegura audio habilitado
-        v.muted = false;
-        v.volume = 1;
+    (() => {
+      // =============================
+      // CONFIG
+      // =============================
+      const SUPABASE_URL = "https://rsordtljnvxonaygyuxd.supabase.co";
+      const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
+      const RPC_NAME = "get_challenge_full";
 
-        // Inicia reproducción a partir de gesto del usuario
-        await v.play();
+      const LAST_VIEW_KEY = "shop_last_view_v2";
 
-        // Oculta overlay luego de iniciar
-        overlay.style.display = "none";
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Fullscreen opcional
-        if (container.requestFullscreen) {
-          await container.requestFullscreen();
-        } else if (container.webkitRequestFullscreen) {
-          container.webkitRequestFullscreen();
-        }
-      } catch (error) {
-        console.error("No se pudo iniciar la experiencia:", error);
+      // =============================
+      // DOM
+      // =============================
+      const mediaBox = document.getElementById("mediaBox");
+      const prevBtn  = document.getElementById("prevBtn");
+      const nextBtn  = document.getElementById("nextBtn");
+      const infoBtn  = document.getElementById("infoBtn");
+      const cartBtn  = document.getElementById("cartBtn");
+      const exitBtn  = document.getElementById("exitBtn");
+      const toast    = document.getElementById("toast");
+
+      const pTitle = document.getElementById("pTitle");
+      const pCat   = document.getElementById("pCat");
+      const pShort = document.getElementById("pShort");
+      const cartBadge = document.getElementById("cartBadge");
+
+      const itemsPanel = document.getElementById("itemsPanel");
+      const itemsBody = document.getElementById("itemsBody");
+      const itemsCloseBtn = document.getElementById("itemsCloseBtn");
+
+      // =============================
+      // STATE
+      // =============================
+      let challenge = null;
+      let currentAudioEl = null;
+      let currentMediaVideoEl = null;
+
+      // =============================
+      // HELPERS
+      // =============================
+      function safeJSONParse(s){
+        try { return JSON.parse(s); }
+        catch { return null; }
       }
-    }
-  </script>
 
+      function getParam(name, fallback = ""){
+        const value = new URLSearchParams(window.location.search).get(name);
+        return value ? value.trim() : fallback;
+      }
+
+      function isVideo(path){
+        const p = (path || "").toLowerCase();
+        return p.endsWith(".mp4") || p.endsWith(".webm") || p.endsWith(".ogg") || p.includes(".mp4?") || p.includes(".webm?") || p.includes(".ogg?");
+      }
+
+      function showToast(msg){
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 1600);
+      }
+
+      function setLastViewed(data){
+        if (!data) return;
+        localStorage.setItem(LAST_VIEW_KEY, JSON.stringify({
+          slug: data.slug || getParam("id", ""),
+          title: data.title || "",
+          ts: new Date().toISOString()
+        }));
+      }
+
+      function stopCurrentAudio(){
+        if (!currentAudioEl) return;
+        try{
+          currentAudioEl.pause();
+          currentAudioEl.currentTime = 0;
+        }catch{}
+      }
+
+      function stopCurrentMediaVideo(){
+        if (!currentMediaVideoEl) return;
+        try{
+          currentMediaVideoEl.pause();
+          currentMediaVideoEl.currentTime = 0;
+        }catch{}
+      }
+
+      function syncVideoToAudio(audioEl, videoEl){
+        if (!audioEl || !videoEl) return;
+
+        const startVideo = () => {
+          videoEl.play().catch(() => {});
+        };
+
+        const pauseVideo = () => {
+          try {
+            videoEl.pause();
+          } catch {}
+        };
+
+        const resetVideo = () => {
+          try {
+            videoEl.pause();
+            videoEl.currentTime = 0;
+          } catch {}
+        };
+
+        // Solo sincronización start / stop
+        audioEl.addEventListener("play", startVideo);
+        audioEl.addEventListener("pause", pauseVideo);
+        audioEl.addEventListener("ended", resetVideo);
+
+        // Si el video termina antes que el audio, que vuelva a empezar solo
+        videoEl.addEventListener("ended", () => {
+          if (!audioEl.paused && !audioEl.ended) {
+            try {
+              videoEl.currentTime = 0;
+            } catch {}
+            videoEl.play().catch(() => {});
+          }
+        });
+      }
+
+      function normalizeChallenge(raw, slug){
+        if (!raw || typeof raw !== "object") return null;
+
+        return {
+          slug,
+          title: raw.title ?? "Desafío",
+          category: raw.category ?? "",
+          description: raw.description ?? "",
+          presentation: raw.presentation ?? "",
+          sku: raw.sku ?? "",
+          media: raw.media ?? "",
+          audio: raw.audio ?? "",
+          back: raw.back ?? "index.html",
+          next: raw.next ?? "",
+          items: Array.isArray(raw.items) ? raw.items : []
+        };
+      }
+
+      async function loadChallengeBySlug(slug){
+        const { data, error } = await supabase.rpc(RPC_NAME, {
+          p_slug: slug
+        });
+
+        if (error) throw error;
+        return normalizeChallenge(data, slug);
+      }
+
+      // =============================
+      // RENDER
+      // =============================
+      function renderMedia(data){
+        mediaBox.innerHTML = "";
+        currentMediaVideoEl = null;
+
+        const src = data?.media || "";
+        if (!src){
+          const fallback = document.createElement("div");
+          fallback.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.65);font-size:12px;";
+          fallback.textContent = "Sin media";
+          mediaBox.appendChild(fallback);
+          return;
+        }
+
+        if (isVideo(src)){
+          const v = document.createElement("video");
+          v.src = src;
+          v.muted = true;
+          v.autoplay = true;
+          v.loop = false;
+          v.playsInline = true;
+          v.controls = false;
+          v.preload = "auto";
+          v.setAttribute("controlsList", "nodownload nofullscreen noremoteplayback");
+          v.disablePictureInPicture = true;
+          mediaBox.appendChild(v);
+          currentMediaVideoEl = v;
+          return;
+        }
+
+        const img = document.createElement("img");
+        img.src = src;
+        img.alt = data.title || "Desafío";
+        mediaBox.appendChild(img);
+      }
+
+      function renderInfo(data){
+        pTitle.textContent = (data.title || "Desafío").toString();
+        pCat.textContent = "";
+
+      }
+
+      function renderAudioPlayer(data){
+        pShort.innerHTML = "";
+
+        const hasAudio = !!(data.audio || "").trim();
+        const hasDescription = !!(data.description || "").trim();
+
+        if (hasAudio){
+          const wrap = document.createElement("div");
+          wrap.className = "audioCard";
+
+          const audioTop = document.createElement("div");
+          audioTop.className = "audioTop";
+          audioTop.innerHTML = `
+            <div class="audioLabel">${data.description || ""}</div>
+          `;
+
+          const audio = document.createElement("audio");
+          audio.controls = true;
+          audio.preload = "auto";
+          audio.playsInline = true;
+          audio.src = data.audio;
+
+          audio.addEventListener("canplay", () => {
+            audio.play().catch(() => {});
+          }, { once: true });
+
+          wrap.appendChild(audioTop);
+          wrap.appendChild(audio);
+          pShort.appendChild(wrap);
+
+          currentAudioEl = audio;
+
+          if (currentMediaVideoEl){
+            syncVideoToAudio(audio, currentMediaVideoEl);
+          }
+
+          setTimeout(() => {
+            audio.play().catch(() => {});
+          }, 100);
+
+
+
+        } else {
+          currentAudioEl = null;
+        }
+
+        if (hasDescription && !hasAudio){
+          const desc = document.createElement("div");
+          desc.className = "descBox";
+          desc.textContent = data.description;
+          pShort.appendChild(desc);
+        }
+      }
+     function renderItems(items){
+        itemsBody.innerHTML = "";
+
+        if (!Array.isArray(items) || !items.length){
+          itemsBody.innerHTML = `<div style="font-size:12px;color:rgba(255,255,255,0.72);">
+            No hay items recomendados
+          </div>`;
+          return;
+        }
+
+        // =========================
+        // GROUP BY CATEGORY
+        // =========================
+        const groups = {};
+
+        for (const item of items){
+          const cat = item.category || "Otros";
+          if (!groups[cat]) groups[cat] = [];
+          groups[cat].push(item);
+        }
+
+        // =========================
+        // RENDER GROUPS
+        // =========================
+        Object.keys(groups).forEach(category => {
+
+          const title = document.createElement("div");
+          title.style.cssText = `
+            font-size:18px;
+            font-weight:900;
+            margin-top:10px;
+            margin-bottom:2px;
+            color:rgba(255,255,255,0.96);
+            letter-spacing:.2px;
+          `;
+          title.textContent = category;
+          itemsBody.appendChild(title);
+          groups[category].forEach(item => {
+
+            const card = document.createElement("div");
+            card.className = "itemCard";
+
+            // 🔥 CLICK = seleccionar item
+            card.style.cursor = "pointer";
+            card.addEventListener("click", () => selectItem(item));
+
+            const media = document.createElement("div");
+            media.className = "itemMedia";
+
+            const src = item.image || "";
+
+            if (src){
+              if (isVideo(src)){
+                const v = document.createElement("video");
+                v.src = src;
+                v.muted = true;
+                v.loop = true;
+                v.autoplay = true;
+                media.appendChild(v);
+              } else {
+                const img = document.createElement("img");
+                img.src = src;
+                media.appendChild(img);
+              }
+            }
+
+            const content = document.createElement("div");
+            content.className = "itemContent";
+
+            content.innerHTML = `
+              <p class="itemName">${item.name || ""}</p>
+              <p class="itemCategory">${item.category || ""}</p>
+              <p class="itemDesc">${item.description || ""}</p>
+            `;
+
+            card.appendChild(media);
+            card.appendChild(content);
+            itemsBody.appendChild(card);
+          });
+        });
+      }
+
+      function selectItem(item){
+
+          // cerrar panel
+          closeItemsPanel();
+
+          // detener lo actual
+          stopCurrentAudio();
+          stopCurrentMediaVideo();
+
+          // =========================
+          // VIDEO / IMAGE
+          // =========================
+          const mediaSrc = item.video || item.image || "";
+
+          if (mediaSrc){
+            renderMedia({
+              media: mediaSrc,
+              title: item.name
+            });
+          }
+
+          // =========================
+          // AUDIO
+          // =========================
+          if (item.audio){
+            renderAudioPlayer({
+              audio: item.audio,
+              description: item.description
+            });
+          } else {
+            pShort.innerHTML = `<div class="descBox">${item.description || ""}</div>`;
+          }
+
+          // =========================
+          // INFO
+          // =========================
+          pTitle.textContent = item.name || "Item";
+          pCat.textContent = item.category || "";
+
+          showToast("Item cargado");
+        }
+
+      function openItemsPanel(){
+        renderItems(challenge?.items || []);
+        itemsPanel.classList.add("show");
+      }
+
+      function closeItemsPanel(){
+        itemsPanel.classList.remove("show");
+      }
+
+      function updateBadge(){
+        const count = Array.isArray(challenge?.items) ? challenge.items.length : 0;
+        cartBadge.textContent = String(count);
+      }
+
+      function updateNavigation(){
+        const hasNext = !!(challenge?.next || "").trim();
+        nextBtn.disabled = !hasNext;
+
+        prevBtn.disabled = false;
+      }
+
+      function renderChallenge(){
+        if (!challenge){
+          mediaBox.innerHTML = "";
+          const fallback = document.createElement("div");
+          fallback.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.65);font-size:12px;padding:20px;text-align:center;";
+          fallback.textContent = "No se pudo cargar el desafío.";
+          mediaBox.appendChild(fallback);
+
+          pTitle.textContent = "Sin datos";
+          pCat.textContent = "";
+          pShort.innerHTML = "";
+          pPresentation.style.display = "none";
+          pIndex.style.display = "none";
+          cartBadge.textContent = "0";
+          nextBtn.disabled = true;
+          return;
+        }
+
+        stopCurrentAudio();
+        stopCurrentMediaVideo();
+
+        renderMedia(challenge);
+        renderInfo(challenge);
+        renderAudioPlayer(challenge);
+        renderItems(challenge.items || []);
+        updateBadge();
+        updateNavigation();
+        setLastViewed(challenge);
+      }
+
+      // =============================
+      // EVENTS
+      // =============================
+      prevBtn.addEventListener("click", () => {
+        stopCurrentAudio();
+        stopCurrentMediaVideo();
+
+        if (window.history.length > 1){
+          window.history.back();
+          return;
+        }
+
+        const backUrl = challenge?.back || "index.html";
+        window.location.href = backUrl;
+      });
+
+      nextBtn.addEventListener("click", () => {
+        const nextSlug = (challenge?.next || "").trim();
+        if (!nextSlug) return;
+        window.location.href = `player.html?id=${encodeURIComponent(nextSlug)}`;
+      });
+
+      cartBtn.addEventListener("click", () => {
+        const count = Array.isArray(challenge?.items) ? challenge.items.length : 0;
+
+        if (!count){
+          showToast("No hay items recomendados");
+          return;
+        }
+
+        openItemsPanel();
+      });
+
+      itemsCloseBtn.addEventListener("click", closeItemsPanel);
+
+      infoBtn.addEventListener("click", () => {
+        if (!challenge) return;
+
+        stopCurrentAudio();
+        stopCurrentMediaVideo();
+
+        renderMedia(challenge);
+        renderInfo(challenge);
+        renderAudioPlayer(challenge);
+        updateBadge();
+        closeItemsPanel();
+
+        showToast("Volviendo al desafio");
+      });
+
+      exitBtn.addEventListener("click", () => {
+        stopCurrentAudio();
+        stopCurrentMediaVideo();
+
+        const backUrl = challenge?.back || "index.html";
+        window.location.href = backUrl;
+      });
+
+      const stage = document.getElementById("stage");
+      let sx = 0, sy = 0, tracking = false;
+
+      stage.addEventListener("touchstart", (e) => {
+        if (itemsPanel.classList.contains("show")) return;
+        if (!e.touches || !e.touches[0]) return;
+        tracking = true;
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+      }, { passive: true });
+
+      stage.addEventListener("touchend", (e) => {
+        if (itemsPanel.classList.contains("show")) return;
+        if (!tracking) return;
+        tracking = false;
+
+        const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+        if (!t) return;
+
+        const dx = t.clientX - sx;
+        const dy = t.clientY - sy;
+
+        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+
+        if (dx < 0 && challenge?.next){
+          window.location.href = `player.html?id=${encodeURIComponent(challenge.next)}`;
+          return;
+        }
+
+        if (dx > 0){
+          if (window.history.length > 1) window.history.back();
+        }
+      }, { passive: true });
+
+      let wheelLock = false;
+      stage.addEventListener("wheel", (e) => {
+        if (itemsPanel.classList.contains("show")) return;
+
+        e.preventDefault();
+        if (wheelLock) return;
+
+        const dy = e.deltaY || 0;
+        if (Math.abs(dy) < 8) return;
+
+        wheelLock = true;
+
+        if (dy > 0 && challenge?.next){
+          window.location.href = `player.html?id=${encodeURIComponent(challenge.next)}`;
+        } else if (dy < 0) {
+          if (window.history.length > 1) window.history.back();
+        }
+
+        setTimeout(() => {
+          wheelLock = false;
+        }, 220);
+      }, { passive: false });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && itemsPanel.classList.contains("show")){
+          closeItemsPanel();
+        }
+      });
+
+      // =============================
+      // INIT
+      // =============================
+      async function init(){
+        try{
+          const slug = getParam("id", "");
+          if (!slug){
+            throw new Error("Falta el parámetro ?id=slug_del_desafio");
+          }
+
+          challenge = await loadChallengeBySlug(slug);
+
+          if (!challenge){
+            throw new Error(`No se encontró el desafío con slug: ${slug}`);
+          }
+
+          renderChallenge();
+        }catch(err){
+          console.error("Error loading challenge:", err);
+          challenge = null;
+          renderChallenge();
+          showToast("Error cargando desafío");
+        }
+      }
+
+      init();
+    })();
+  </script>
 </body>
 </html>
