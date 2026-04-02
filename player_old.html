@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Player</title>
 
   <style>
@@ -29,22 +29,22 @@
     }
 
     .app{
-      height:100dvh;
+      height:100vh;
       width:100vw;
       display:flex;
       align-items:stretch;
       justify-content:center;
-      padding:0;
+      padding:12px;
       box-sizing:border-box;
     }
 
     .shell{
       width:min(560px, 100%);
-      height:100dvh;
+      height:100%;
       background:#000;
-      border:none;
-      border-radius:0;
-      box-shadow:none;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      box-shadow:0 28px 90px var(--shadow);
       display:flex;
       flex-direction:column;
       overflow:hidden;
@@ -53,33 +53,54 @@
 
     .topbar{
       position: relative;
-      padding:6px 10px 2px;
-      border-bottom:none;
-      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00));
-      flex:0 0 auto;
+      padding:8px 12px;
+      border-bottom:1px solid rgba(255,255,255,0.06);
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.00));
     }
 
     .topbar-nav{
       display:flex;
       align-items:center;
-      justify-content:center;
-      gap:0;
+      justify-content:space-between;
+      gap:10px;
     }
 
     .topbar-navBtn{
-      display:none !important;
+      width:44px;
+      height:44px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+      color:rgba(255,255,255,0.92);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow:0 18px 44px rgba(0,0,0,0.70);
+      transition: transform .10s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
+
+    .topbar-navBtn:hover{
+      border-color: rgba(255,255,255,0.26);
+      background:rgba(0,0,0,0.50);
+      transform: scale(1.02);
+    }
+
+    .topbar-navBtn:active{ transform: scale(0.98); }
+    .topbar-navBtn[disabled]{ opacity:.40; cursor:not-allowed; transform:none !important; }
 
     .logo-center{
       display:flex;
       justify-content:center;
-      align-items:center;
-      flex:0 0 auto;
+      flex: 1 1 auto;
     }
 
     .logo-center img{
-      width:92px;
-      height:92px;
+      width:150px;
+      height:150px;
       object-fit:contain;
       background:transparent;
       box-shadow:none;
@@ -89,7 +110,6 @@
       position:relative;
       flex: 1 1 auto;
       min-height:0;
-      max-height:42dvh;
       background: radial-gradient(90% 70% at 50% 40%, rgba(255,255,255,0.06), rgba(255,255,255,0.00) 70%);
       display:flex;
       align-items:center;
@@ -116,12 +136,10 @@
     }
 
     .bottom{
-      flex: 1 1 auto;
-      min-height:0;
-      padding:10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-      background:linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.60) 30%, rgba(0,0,0,0.88) 100%);
-      border-top:1px solid rgba(255,255,255,0.06);
-      overflow:auto;
+      flex: 0 0 auto;
+      padding:12px;
+      background:linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.60) 30%, rgba(0,0,0,0.85) 100%);
+      border-top:1px solid rgba(255,255,255,0.08);
     }
 
     .infoCard{
@@ -159,10 +177,10 @@
     }
 
     .pShort{
-      margin-top:8px;
+      margin-top:10px;
       width:100%;
       max-width:100%;
-      max-height:18dvh;
+      max-height:34vh;
       overflow:auto;
       padding-right:4px;
     }
@@ -284,21 +302,21 @@
 
     .actionBar{
       display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap:8px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
       align-items:stretch;
     }
 
     .iconBtn{
       position:relative;
       width:100%;
-      padding:8px 8px;
-      border-radius:14px;
+      padding:10px 10px;
+      border-radius:16px;
       border:1px solid rgba(255,255,255,0.14);
       background:linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.05) 100%);
       color:rgba(255,255,255,0.92);
       cursor:pointer;
-      box-shadow:0 12px 24px rgba(0,0,0,0.55);
+      box-shadow:0 16px 38px rgba(0,0,0,0.72);
       transition: transform .10s ease, border-color .12s ease, background .12s ease, opacity .12s ease;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
@@ -306,8 +324,8 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:3px;
-      min-height:56px;
+      gap:4px;
+      min-height:62px;
     }
 
     .iconBtn:hover{
@@ -358,7 +376,7 @@
       position:absolute;
       left:12px;
       right:12px;
-      bottom:calc(92px + env(safe-area-inset-bottom, 0px));
+      bottom:110px;
       padding:10px 12px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,0.12);
@@ -504,36 +522,10 @@
       margin:0 0 6px 0;
     }
 
+    
     @media (max-height: 720px){
-      .logo-center img{
-        width:78px;
-        height:78px;
-      }
-
-      .stage{
-        max-height:36dvh;
-      }
-
-      .pShort{
-        max-height:14dvh;
-      }
-
-      .iconBtn{
-        min-height:52px;
-        padding:7px 6px;
-      }
-
-      .iconBtn .ico{
-        font-size:16px;
-      }
-
-      .iconBtn .lbl{
-        font-size:9px;
-      }
-
-      .toast{
-        bottom:calc(86px + env(safe-area-inset-bottom, 0px));
-      }
+      .toast{ bottom:120px; }
+      .pShort{ max-height:28vh; }
     }
   </style>
 </head>
@@ -544,9 +536,13 @@
 
       <div class="topbar">
         <div class="topbar-nav">
+          <button class="topbar-navBtn" id="prevBtn" aria-label="Anterior">‹</button>
+
           <div class="logo-center">
             <img src="images/logo.png" alt="iNOVANDO JUNTOS">
           </div>
+
+          <button class="topbar-navBtn" id="nextBtn" aria-label="Siguiente">›</button>
         </div>
       </div>
 
@@ -574,6 +570,8 @@
 
           <div class="pShort" id="pShort"></div>
 
+          
+
           <div class="actions">
             <div class="actionBar">
               <button class="iconBtn" id="cartBtn" aria-label="Items Eroticos">
@@ -585,7 +583,7 @@
               <button class="iconBtn" id="infoBtn" aria-label="Desafio">
                 <span class="ico">🎯</span>
                 <span class="lbl">Desafio</span>
-              </button>
+              </button> 
 
               <button class="iconBtn" id="exitBtn" aria-label="Voltar">
                 <span class="ico">⟵</span>
@@ -795,6 +793,7 @@
       function renderInfo(data){
         pTitle.textContent = (data.title || "Desafío").toString();
         pCat.textContent = "";
+
       }
 
       function renderAudioPlayer(data){
@@ -837,6 +836,8 @@
             audio.play().catch(() => {});
           }, 100);
 
+
+
         } else {
           currentAudioEl = null;
         }
@@ -848,8 +849,7 @@
           pShort.appendChild(desc);
         }
       }
-
-      function renderItems(items){
+     function renderItems(items){
         itemsBody.innerHTML = "";
 
         if (!Array.isArray(items) || !items.length){
@@ -859,6 +859,9 @@
           return;
         }
 
+        // =========================
+        // GROUP BY CATEGORY
+        // =========================
         const groups = {};
 
         for (const item of items){
@@ -867,7 +870,11 @@
           groups[cat].push(item);
         }
 
+        // =========================
+        // RENDER GROUPS
+        // =========================
         Object.keys(groups).forEach(category => {
+
           const title = document.createElement("div");
           title.style.cssText = `
             font-size:18px;
@@ -879,10 +886,12 @@
           `;
           title.textContent = category;
           itemsBody.appendChild(title);
-
           groups[category].forEach(item => {
+
             const card = document.createElement("div");
             card.className = "itemCard";
+
+            // 🔥 CLICK = seleccionar item
             card.style.cursor = "pointer";
             card.addEventListener("click", () => selectItem(item));
 
@@ -898,7 +907,6 @@
                 v.muted = true;
                 v.loop = true;
                 v.autoplay = true;
-                v.playsInline = true;
                 media.appendChild(v);
               } else {
                 const img = document.createElement("img");
@@ -924,35 +932,46 @@
       }
 
       function selectItem(item){
-        closeItemsPanel();
 
-        stopCurrentAudio();
-        stopCurrentMediaVideo();
+          // cerrar panel
+          closeItemsPanel();
 
-        const mediaSrc = item.video || item.image || "";
+          // detener lo actual
+          stopCurrentAudio();
+          stopCurrentMediaVideo();
 
-        if (mediaSrc){
-          renderMedia({
-            media: mediaSrc,
-            title: item.name
-          });
+          // =========================
+          // VIDEO / IMAGE
+          // =========================
+          const mediaSrc = item.video || item.image || "";
+
+          if (mediaSrc){
+            renderMedia({
+              media: mediaSrc,
+              title: item.name
+            });
+          }
+
+          // =========================
+          // AUDIO
+          // =========================
+          if (item.audio){
+            renderAudioPlayer({
+              audio: item.audio,
+              description: item.description
+            });
+          } else {
+            pShort.innerHTML = `<div class="descBox">${item.description || ""}</div>`;
+          }
+
+          // =========================
+          // INFO
+          // =========================
+          pTitle.textContent = item.name || "Item";
+          pCat.textContent = item.category || "";
+
+          showToast("Item cargado");
         }
-
-        if (item.audio){
-          renderAudioPlayer({
-            audio: item.audio,
-            description: item.description
-          });
-        } else {
-          pShort.innerHTML = `<div class="descBox">${item.description || ""}</div>`;
-          currentAudioEl = null;
-        }
-
-        pTitle.textContent = item.name || "Item";
-        pCat.textContent = item.category || "";
-
-        showToast("Item cargado");
-      }
 
       function openItemsPanel(){
         renderItems(challenge?.items || []);
@@ -970,9 +989,9 @@
 
       function updateNavigation(){
         const hasNext = !!(challenge?.next || "").trim();
+        nextBtn.disabled = !hasNext;
 
-        if (nextBtn) nextBtn.disabled = !hasNext;
-        if (prevBtn) prevBtn.disabled = false;
+        prevBtn.disabled = false;
       }
 
       function renderChallenge(){
@@ -986,8 +1005,10 @@
           pTitle.textContent = "Sin datos";
           pCat.textContent = "";
           pShort.innerHTML = "";
+          pPresentation.style.display = "none";
+          pIndex.style.display = "none";
           cartBadge.textContent = "0";
-          if (nextBtn) nextBtn.disabled = true;
+          nextBtn.disabled = true;
           return;
         }
 
@@ -1006,28 +1027,24 @@
       // =============================
       // EVENTS
       // =============================
-      if (prevBtn){
-        prevBtn.addEventListener("click", () => {
-          stopCurrentAudio();
-          stopCurrentMediaVideo();
+      prevBtn.addEventListener("click", () => {
+        stopCurrentAudio();
+        stopCurrentMediaVideo();
 
-          if (window.history.length > 1){
-            window.history.back();
-            return;
-          }
+        if (window.history.length > 1){
+          window.history.back();
+          return;
+        }
 
-          const backUrl = challenge?.back || "index.html";
-          window.location.href = backUrl;
-        });
-      }
+        const backUrl = challenge?.back || "index.html";
+        window.location.href = backUrl;
+      });
 
-      if (nextBtn){
-        nextBtn.addEventListener("click", () => {
-          const nextSlug = (challenge?.next || "").trim();
-          if (!nextSlug) return;
-          window.location.href = `player.html?id=${encodeURIComponent(nextSlug)}`;
-        });
-      }
+      nextBtn.addEventListener("click", () => {
+        const nextSlug = (challenge?.next || "").trim();
+        if (!nextSlug) return;
+        window.location.href = `player.html?id=${encodeURIComponent(nextSlug)}`;
+      });
 
       cartBtn.addEventListener("click", () => {
         const count = Array.isArray(challenge?.items) ? challenge.items.length : 0;
