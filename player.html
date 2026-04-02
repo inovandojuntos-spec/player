@@ -40,6 +40,7 @@
 
     .shell{
       width:min(560px, 100%);
+      min-height:100dvh;
       height:100dvh;
       background:#000;
       border:none;
@@ -87,9 +88,9 @@
 
     .stage{
       position:relative;
-      flex: 1 1 auto;
-      min-height:0;
-      max-height:70dvh;
+      flex: 0 0 45dvh;
+      min-height: 300px;
+      max-height: 52dvh;
       background: radial-gradient(90% 70% at 50% 40%, rgba(255,255,255,0.06), rgba(255,255,255,0.00) 70%);
       display:flex;
       align-items:center;
@@ -117,8 +118,8 @@
 
     .bottom{
       flex: 1 1 auto;
-      min-height:0;
-      padding:10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+      min-height: 190px;
+      padding:10px 12px calc(24px + env(safe-area-inset-bottom, 0px));
       background:linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.60) 30%, rgba(0,0,0,0.88) 100%);
       border-top:1px solid rgba(255,255,255,0.06);
       overflow:auto;
@@ -506,21 +507,23 @@
 
     @media (max-height: 720px){
       .logo-center img{
-        width:78px;
-        height:78px;
+        width:84px;
+        height:84px;
       }
 
       .stage{
-        max-height:36dvh;
+        flex: 0 0 42dvh;
+        min-height: 270px;
+        max-height: 46dvh;
       }
 
       .pShort{
-        max-height:14dvh;
+        max-height:18dvh;
       }
 
       .iconBtn{
-        min-height:52px;
-        padding:7px 6px;
+        min-height:56px;
+        padding:8px 6px;
       }
 
       .iconBtn .ico{
@@ -532,7 +535,7 @@
       }
 
       .toast{
-        bottom:calc(86px + env(safe-area-inset-bottom, 0px));
+        bottom:calc(92px + env(safe-area-inset-bottom, 0px));
       }
     }
   </style>
