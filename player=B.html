@@ -54,6 +54,7 @@
       flex-direction:column;
       overflow:hidden;
       position:relative;
+      isolation:isolate;
     }
 
     .topbar{
@@ -61,6 +62,7 @@
       padding:10px 14px 4px;
       background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
       flex:0 0 auto;
+      z-index:1;
     }
 
     .topbar-nav{
@@ -77,7 +79,7 @@
     }
 
     .logo-center img{
-      width:75px; /* 58px * 1.30 aprox */
+      width:75px;
       height:75px;
       object-fit:contain;
       background:transparent;
@@ -95,6 +97,7 @@
       justify-content:center;
       overflow:hidden;
       padding:6px 18px 0;
+      z-index:1;
     }
 
     .mediaBox{
@@ -130,6 +133,7 @@
       background:
         linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 18%, rgba(0,0,0,0.92) 100%);
       overflow:auto;
+      z-index:1;
     }
 
     .infoCard{
@@ -349,7 +353,7 @@
       align-items:center;
       justify-content:center;
       box-shadow:none;
-    } 
+    }
 
     .iconBtn:hover{
       color:var(--text);
@@ -417,24 +421,51 @@
 
     .toast.show{ display:block; }
 
-    .itemsPanel{
+    .itemsOverlay{
       position:absolute;
-      left:12px;
-      right:12px;
-      top:12px;
-      bottom:12px;
-      z-index:25;
-      border:1px solid rgba(255,255,255,0.08);
-      border-radius:18px;
-      background:rgba(0,0,0,0.94);
-      box-shadow:0 20px 50px rgba(0,0,0,0.75);
+      inset:0;
+      z-index:60;
       display:none;
-      flex-direction:column;
-      overflow:hidden;
+      align-items:flex-end;
+      justify-content:center;
+      padding:0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+      background:linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.58));
     }
 
-    .itemsPanel.show{
+    .itemsOverlay.show{
       display:flex;
+    }
+
+    .itemsBackdrop{
+      position:absolute;
+      inset:0;
+      background:rgba(0,0,0,0.28);
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+    }
+
+    .itemsPanel{
+      position:relative;
+      width:100%;
+      max-width:100%;
+      height:min(86dvh, 920px);
+      max-height:min(86dvh, 920px);
+      z-index:1;
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:24px;
+      background:rgba(0,0,0,0.96);
+      box-shadow:0 30px 80px rgba(0,0,0,0.85);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      transform:translateY(16px);
+      opacity:0;
+      transition:transform .20s ease, opacity .20s ease;
+    }
+
+    .itemsOverlay.show .itemsPanel{
+      transform:translateY(0);
+      opacity:1;
     }
 
     .itemsHeader{
@@ -444,6 +475,7 @@
       align-items:center;
       justify-content:space-between;
       gap:10px;
+      flex:0 0 auto;
     }
 
     .itemsTitle{
@@ -471,6 +503,7 @@
       display:flex;
       flex-direction:column;
       gap:14px;
+      -webkit-overflow-scrolling:touch;
     }
 
     .itemCard{
@@ -560,6 +593,11 @@
       border:0;
     }
 
+    body.modal-open{
+      overflow:hidden;
+      touch-action:none;
+    }
+
     @media (max-height: 780px){
       .logo-center img{
         width:68px;
@@ -613,6 +651,16 @@
       .iconBtn .lbl{
         display:none;
       }
+
+      .itemsOverlay{
+        padding:0 10px calc(10px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .itemsPanel{
+        height:min(88dvh, 920px);
+        max-height:min(88dvh, 920px);
+        border-radius:22px;
+      }
     }
 
     @media (max-width: 390px){
@@ -638,6 +686,17 @@
         width:64px;
         height:64px;
       }
+
+      .itemsOverlay{
+        padding-left:8px;
+        padding-right:8px;
+      }
+
+      .itemsPanel{
+        height:min(90dvh, 920px);
+        max-height:min(90dvh, 920px);
+        border-radius:20px;
+      }
     }
   </style>
 </head>
@@ -657,14 +716,6 @@
       <div class="stage" id="stage">
         <div class="mediaBox" id="mediaBox"></div>
         <div class="toast" id="toast">Acción realizada ✓</div>
-
-        <div class="itemsPanel" id="itemsPanel">
-          <div class="itemsHeader">
-            <div class="itemsTitle">Items recomendados</div>
-            <button class="itemsClose" id="itemsCloseBtn" aria-label="Cerrar">✕</button>
-          </div>
-          <div class="itemsBody" id="itemsBody"></div>
-        </div>
       </div>
 
       <div class="bottom">
@@ -742,7 +793,18 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
+      <div class="itemsOverlay" id="itemsOverlay" aria-hidden="true">
+        <div class="itemsBackdrop" id="itemsBackdrop"></div>
+
+        <div class="itemsPanel" id="itemsPanel" role="dialog" aria-modal="true" aria-labelledby="itemsTitle">
+          <div class="itemsHeader">
+            <div class="itemsTitle" id="itemsTitle">Items recomendados</div>
+            <button class="itemsClose" id="itemsCloseBtn" aria-label="Cerrar">✕</button>
+          </div>
+          <div class="itemsBody" id="itemsBody"></div>
         </div>
       </div>
 
@@ -777,8 +839,10 @@
       const pShort = document.getElementById("pShort");
       const cartBadge = document.getElementById("cartBadge");
 
+      const itemsOverlay = document.getElementById("itemsOverlay");
       const itemsPanel = document.getElementById("itemsPanel");
       const itemsBody = document.getElementById("itemsBody");
+      const itemsBackdrop = document.getElementById("itemsBackdrop");
       const itemsCloseBtn = document.getElementById("itemsCloseBtn");
 
       const hiddenAudio = document.getElementById("hiddenAudio");
@@ -1107,11 +1171,19 @@
 
       function openItemsPanel(){
         renderItems(challenge?.items || []);
-        itemsPanel.classList.add("show");
+        itemsOverlay.classList.add("show");
+        itemsOverlay.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
       }
 
       function closeItemsPanel(){
-        itemsPanel.classList.remove("show");
+        itemsOverlay.classList.remove("show");
+        itemsOverlay.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("modal-open");
+      }
+
+      function isItemsPanelOpen(){
+        return itemsOverlay.classList.contains("show");
       }
 
       function updateBadge(){
@@ -1138,6 +1210,7 @@
           cartBadge.textContent = "0";
           nextBtn.disabled = true;
           playerWrap.hidden = true;
+          closeItemsPanel();
           return;
         }
 
@@ -1228,6 +1301,11 @@
       });
 
       itemsCloseBtn.addEventListener("click", closeItemsPanel);
+      itemsBackdrop.addEventListener("click", closeItemsPanel);
+
+      itemsPanel.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
 
       infoBtn.addEventListener("click", () => {
         if (!challenge) return;
@@ -1238,7 +1316,7 @@
       let sx = 0, sy = 0, tracking = false;
 
       stage.addEventListener("touchstart", (e) => {
-        if (itemsPanel.classList.contains("show")) return;
+        if (isItemsPanelOpen()) return;
         if (!e.touches || !e.touches[0]) return;
         tracking = true;
         sx = e.touches[0].clientX;
@@ -1246,7 +1324,7 @@
       }, { passive: true });
 
       stage.addEventListener("touchend", (e) => {
-        if (itemsPanel.classList.contains("show")) return;
+        if (isItemsPanelOpen()) return;
         if (!tracking) return;
         tracking = false;
 
@@ -1274,7 +1352,7 @@
 
       let wheelLock = false;
       stage.addEventListener("wheel", (e) => {
-        if (itemsPanel.classList.contains("show")) return;
+        if (isItemsPanelOpen()) return;
 
         e.preventDefault();
         if (wheelLock) return;
@@ -1300,7 +1378,7 @@
       }, { passive: false });
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && itemsPanel.classList.contains("show")){
+        if (e.key === "Escape" && isItemsPanelOpen()){
           closeItemsPanel();
         }
       });
