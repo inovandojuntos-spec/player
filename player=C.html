@@ -159,10 +159,11 @@
       line-height:1.08;
       margin:0;
       color:var(--text);
-      .pTitle.right-align{
-        text-align:right;
-        width:100%;
-      }
+    }
+
+    .pTitle.right-align{
+      text-align:right;
+      width:100%;
     }
 
     .pCat{
@@ -906,15 +907,17 @@
       let currentOverlayMode = "accessories";
       let isSeeking = false;
       let kamasutraTimer = null;
+      let kamasutraState = null;
 
       function clearKamasutraTimer(){
         if (kamasutraTimer){
           clearInterval(kamasutraTimer);
           kamasutraTimer = null;
         }
+        kamasutraState = null;
       }
 
-      function renderKamasutraPlayer(){
+      function renderKamasutraPlayer(audioSrc = ""){
         clearKamasutraTimer();
         mediaBox.innerHTML = "";
         pTitle.classList.add("right-align");
@@ -931,7 +934,6 @@
           background:#000;
         `;
 
-        
         const layerA = document.createElement("div");
         const layerB = document.createElement("div");
 
@@ -951,7 +953,6 @@
 
         stage.appendChild(layerA);
         stage.appendChild(layerB);
-       
         mediaBox.appendChild(stage);
 
         let currentLayer = layerA;
@@ -1047,6 +1048,24 @@
           }, 1500);
         }
 
+        function startLoop(){
+          if (kamasutraTimer || !posiciones.length) return;
+          kamasutraTimer = setInterval(transition, INTERVAL);
+        }
+
+        function stopLoop(){
+          if (kamasutraTimer){
+            clearInterval(kamasutraTimer);
+            kamasutraTimer = null;
+          }
+        }
+
+        kamasutraState = {
+          startLoop,
+          stopLoop,
+          isKamasutra: true
+        };
+
         (async () => {
           posiciones = await loadPosiciones();
 
@@ -1060,7 +1079,12 @@
           }
 
           await transition();
-          kamasutraTimer = setInterval(transition, INTERVAL);
+
+          if (audioSrc){
+            loadAudio(audioSrc, true);
+          } else {
+            startLoop();
+          }
         })();
       }
 
@@ -1223,9 +1247,11 @@
         }
 
         if (isKamasutraMedia(src)){
-          renderKamasutraPlayer();
+          renderKamasutraPlayer(data?.audio || "");
           return;
         }
+
+        pTitle.classList.remove("right-align");
 
         if (isVideo(src)){
           const v = document.createElement("video");
@@ -1251,12 +1277,34 @@
       }
 
       function renderInfo(data){
+        const isKamasutra = isKamasutraMedia(data?.media || "");
+
         pTitle.textContent = (data.title || "Desafío").toString();
-        pCat.textContent = (data.category || "").toString();
+
+        if (isKamasutra){
+          pCat.style.display = "none";
+        } else {
+          pCat.style.display = "";
+          pCat.textContent = (data.category || "").toString();
+        }
       }
 
       function renderDescription(text){
         pShort.innerHTML = "";
+
+        const activeMedia = currentMode === "item"
+          ? (currentItem?.video || currentItem?.image || "")
+          : (challenge?.media || "");
+
+        const isKamasutra = isKamasutraMedia(activeMedia);
+
+        if (isKamasutra){
+          pShort.style.display = "none";
+          return;
+        }
+
+        pShort.style.display = "";
+
         if (!text) return;
 
         const wrap = document.createElement("div");
@@ -1362,12 +1410,14 @@
             content.className = "itemContent";
 
             const hasActionLink = !!(item.action_link || "").trim();
+            const isInstruction = isInstructionItem(item);
+
             content.innerHTML = `
               <p class="itemName">${item.name || ""}</p>
-              <p class="itemCategory">${item.category || ""}</p>
-              <p class="itemDesc">${item.description || ""}</p>
+              ${isInstruction ? "" : `<p class="itemCategory">${item.category || ""}</p>`}
+              ${isInstruction ? "" : `<p class="itemDesc">${item.description || ""}</p>`}
               <div class="itemMetaRow">
-                ${hasActionLink ? '<span class="itemPill">Abrir enlace</span>' : '<span class="itemPill">Cargar contenido</span>'}
+                ${hasActionLink ? '<span class="itemPill">Abrir enlace</span>' : ''}
               </div>
             `;
 
@@ -1431,12 +1481,14 @@
 
         renderMedia({
           media: finalMedia,
-          title: item.name
+          title: item.name,
+          audio: item.audio || ""
         });
 
         renderInfo({
           title: item.name || "Item",
-          category: item.category || ""
+          category: item.category || "",
+          media: finalMedia
         });
 
         renderPlayer({
@@ -1544,12 +1596,26 @@
         updatePlayUI();
       });
 
-      hiddenAudio.addEventListener("play", updatePlayUI);
-      hiddenAudio.addEventListener("pause", updatePlayUI);
+      hiddenAudio.addEventListener("play", () => {
+        updatePlayUI();
+        if (kamasutraState?.isKamasutra){
+          kamasutraState.startLoop();
+        }
+      });
+
+      hiddenAudio.addEventListener("pause", () => {
+        updatePlayUI();
+        if (kamasutraState?.isKamasutra){
+          kamasutraState.stopLoop();
+        }
+      });
 
       hiddenAudio.addEventListener("ended", () => {
         progress.value = 0;
         updatePlayUI();
+        if (kamasutraState?.isKamasutra){
+          kamasutraState.stopLoop();
+        }
       });
 
       progress.addEventListener("input", () => {
