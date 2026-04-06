@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVG Blur Transition (Slow)</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #0b0b0b;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #stage {
+      width: min(92vw, 1100px);
+      height: min(92vh, 800px);
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .layer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      filter: blur(12px);
+      will-change: opacity, filter;
+      pointer-events: none;
+    }
+
+    .layer svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      transform-origin: center center;
+    }
+
+    /* ✅ TRANSICIÓN 2s (DOBLE) */
+    .layer.active {
+      opacity: 1;
+      filter: blur(0px);
+      transition: opacity 2s ease, filter 2s ease;
+    }
+
+    .layer.fade-out {
+      opacity: 0;
+      filter: blur(12px);
+      transition: opacity 2s ease, filter 2s ease;
+    }
+
+    #msg {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      color: #bdbdbd;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 20;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="stage">
+    <div id="layerA" class="layer"></div>
+    <div id="layerB" class="layer"></div>
+  </div>
+
+  <div id="msg">Cargando...</div>
+
+  <script>
+    const files = ["posicion_01.svg", "posicion_02.svg"];
+    const msg = document.getElementById("msg");
+
+    const layerA = document.getElementById("layerA");
+    const layerB = document.getElementById("layerB");
+
+    let currentLayer = layerA;
+    let nextLayer = layerB;
+
+    /* 🔧 CONTROL CENTRAL */
+    const TRANSITION_TIME = 2000; // 2 segundos (blur)
+    const HOLD_TIME = 2000;       // tiempo visible
+
+    async function loadSVG(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`No se pudo cargar ${url}`);
+      return await res.text();
+    }
+
+    function parseSVG(svgText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgText, "image/svg+xml");
+      const svg = doc.querySelector("svg");
+      if (!svg) throw new Error("El archivo no contiene <svg>");
+      return svg;
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function setLayerSVG(layer, file) {
+      const svgText = await loadSVG(file);
+      const svg = parseSVG(svgText);
+      layer.innerHTML = "";
+      layer.appendChild(svg);
+    }
+
+    async function transitionTo(file) {
+      msg.textContent = `Mostrando ${file}`;
+
+      await setLayerSVG(nextLayer, file);
+
+      nextLayer.classList.remove("active", "fade-out");
+      void nextLayer.offsetWidth; // reflow
+
+      // entrada nueva capa
+      nextLayer.classList.add("active");
+
+      // salida capa actual
+      if (currentLayer.innerHTML.trim() !== "") {
+        currentLayer.classList.remove("active");
+        currentLayer.classList.add("fade-out");
+      }
+
+      // 🔥 sincronizado con CSS (2s)
+      await wait(TRANSITION_TIME);
+
+      currentLayer.classList.remove("fade-out");
+      currentLayer.innerHTML = "";
+
+      [currentLayer, nextLayer] = [nextLayer, currentLayer];
+    }
+
+    async function mainLoop() {
+      try {
+        while (true) {
+          for (const file of files) {
+            await transitionTo(file);
+            await wait(HOLD_TIME);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        msg.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    mainLoop();
+  </script>
+</body>
+</html>
