@@ -899,6 +899,7 @@
       const progress = document.getElementById("progress");
       const currentTimeEl = document.getElementById("currentTime");
       const totalTimeEl = document.getElementById("totalTime");
+      const timeRow = document.querySelector(".timeRow");
 
       let challenge = null;
       let currentMediaVideoEl = null;
@@ -920,7 +921,7 @@
       function renderKamasutraPlayer(audioSrc = ""){
         clearKamasutraTimer();
         mediaBox.innerHTML = "";
-        pTitle.classList.add("right-align");
+       
 
         const stage = document.createElement("div");
         stage.style.cssText = `
@@ -1081,7 +1082,7 @@
           await transition();
 
           if (audioSrc){
-            loadAudio(audioSrc, true);
+            loadAudio(audioSrc, true, true);
           } else {
             startLoop();
           }
@@ -1205,24 +1206,37 @@
         return normalizeChallenge(data, slug);
       }
 
-      function loadAudio(src, autoplay = true){
+      function loadAudio(src, autoplay = true, isLoopMode = false){
         if (!src){
           hiddenAudio.removeAttribute("src");
+          hiddenAudio.loop = false;
           hiddenAudio.load();
           playerWrap.hidden = true;
           progress.value = 0;
           currentTimeEl.textContent = "0:00";
           totalTimeEl.textContent = "0:00";
+          if (timeRow) timeRow.style.display = "";
           updatePlayUI();
           return;
         }
 
         hiddenAudio.src = src;
+        hiddenAudio.loop = isLoopMode;
         hiddenAudio.load();
         playerWrap.hidden = false;
         progress.value = 0;
         currentTimeEl.textContent = "0:00";
-        totalTimeEl.textContent = "0:00";
+
+        if (isLoopMode){
+            totalTimeEl.textContent = "∞";
+            progress.hidden = true;
+            if (timeRow) timeRow.style.display = "none";
+          } else {
+            totalTimeEl.textContent = "0:00";
+            progress.hidden = false;
+            if (timeRow) timeRow.style.display = "";
+          }
+
         updatePlayUI();
 
         if (autoplay){
@@ -1231,6 +1245,8 @@
           }, 120);
         }
       }
+       
+      
 
       function renderMedia(data){
         clearKamasutraTimer();
@@ -1465,7 +1481,7 @@
 
       function renderPlayer(data){
         renderDescription(data.description || "");
-        loadAudio(data.audio || "", true);
+        loadAudio(data.audio || "", true, false);
       }
 
       function selectItem(item){
