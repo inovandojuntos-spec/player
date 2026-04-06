@@ -159,6 +159,10 @@
       line-height:1.08;
       margin:0;
       color:var(--text);
+      .pTitle.right-align{
+        text-align:right;
+        width:100%;
+      }
     }
 
     .pCat{
@@ -913,6 +917,7 @@
       function renderKamasutraPlayer(){
         clearKamasutraTimer();
         mediaBox.innerHTML = "";
+        pTitle.classList.add("right-align");
 
         const stage = document.createElement("div");
         stage.style.cssText = `
@@ -926,25 +931,7 @@
           background:#000;
         `;
 
-        const titleOverlay = document.createElement("div");
-        titleOverlay.style.cssText = `
-          position:absolute;
-          top:14px;
-          left:14px;
-          z-index:20;
-          padding:6px 10px;
-          font-size:15px;
-          line-height:1.2;
-          font-weight:700;
-          letter-spacing:0.02em;
-          color:rgba(180,180,180,0.80);
-          text-transform:none;
-          pointer-events:none;
-          user-select:none;
-          text-shadow:0 1px 2px rgba(0,0,0,0.45);
-          max-width:70%;
-        `;
-
+        
         const layerA = document.createElement("div");
         const layerB = document.createElement("div");
 
@@ -964,7 +951,7 @@
 
         stage.appendChild(layerA);
         stage.appendChild(layerB);
-        stage.appendChild(titleOverlay);
+       
         mediaBox.appendChild(stage);
 
         let currentLayer = layerA;
@@ -1001,7 +988,7 @@
         }
 
         function buildLabel(pos){
-          return `POSIÇÃO ${pos.numero}: ${pos.nombre}`;
+          return pos.nombre || "";
         }
 
         async function loadSVG(url){
@@ -1038,7 +1025,7 @@
           const pos = randomItem();
           if (!pos) return;
 
-          titleOverlay.textContent = buildLabel(pos);
+          pTitle.textContent = buildLabel(pos);
 
           try{
             await setLayer(nextLayer, pos.svg);
@@ -1474,6 +1461,7 @@
         renderPlayer(challenge);
         updateBadge();
         closeItemsPanel();
+        pTitle.classList.remove("right-align");
 
         if (showMsg) showToast("Inicio");
       }
