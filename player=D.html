@@ -145,10 +145,13 @@
     }
 
     .row1{
+      position:relative;
       display:flex;
       gap:10px;
       align-items:flex-start;
       justify-content:space-between;
+      padding-right:56px;
+      min-height:42px;
     }
 
     .pTitle{
@@ -159,11 +162,6 @@
       line-height:1.08;
       margin:0;
       color:var(--text);
-    }
-
-    .pTitle.right-align{
-      text-align:right;
-      width:100%;
     }
 
     .pCat{
@@ -411,6 +409,18 @@
       font-size:9px;
       font-weight:800;
       color:var(--text);
+    }
+
+    .kamaEyeWrap{
+      position:absolute;
+      top:-2px;
+      right:0;
+      display:none;
+      z-index:5;
+    }
+
+    .kamaEyeWrap.show{
+      display:block;
     }
 
     .toast{
@@ -682,10 +692,6 @@
         height:30px;
       }
 
-      .iconBtn .lbl{
-        display:none;
-      }
-
       .itemsOverlay{
         padding:0 10px calc(10px + env(safe-area-inset-bottom, 0px));
       }
@@ -694,6 +700,10 @@
         height:min(88dvh, 920px);
         max-height:min(88dvh, 920px);
         border-radius:22px;
+      }
+
+      .row1{
+        min-height:38px;
       }
     }
 
@@ -731,6 +741,10 @@
         max-height:min(90dvh, 920px);
         border-radius:20px;
       }
+
+      .row1{
+        padding-right:52px;
+      }
     }
   </style>
 </head>
@@ -758,6 +772,15 @@
             <div style="min-width:0; flex:1">
               <p class="pTitle" id="pTitle">Cargando…</p>
               <div class="pCat" id="pCat"></div>
+            </div>
+
+            <div class="kamaEyeWrap" id="kamaEyeWrap" aria-hidden="true">
+              <button class="iconBtn" id="filterBtn" aria-label="Filtrar grupos">
+                <svg class="iconSvg" viewBox="0 0 24 24">
+                  <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -806,12 +829,6 @@
 
           <div class="actions">
             <div class="actionBar">
-              <button class="iconBtn" id="filterBtn" aria-label="Filtrar">
-                <svg class="iconSvg" viewBox="0 0 24 24">
-                  <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button> 
               <button class="iconBtn" id="cartBtn" aria-label="Accesorios">
                 <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="3" y="8" width="18" height="4" rx="1.5"></rect>
@@ -873,6 +890,7 @@
       const RPC_NAME = "get_challenge_full";
       const KAMASUTRA_RPC_NAME = "get_kamasutra_positions";
       const LAST_VIEW_KEY = "shop_last_view_v2";
+      const KAMASUTRA_INTERVAL = 6000;
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -907,6 +925,9 @@
       const totalTimeEl = document.getElementById("totalTime");
       const timeRow = document.querySelector(".timeRow");
 
+      const filterBtn = document.getElementById("filterBtn");
+      const kamaEyeWrap = document.getElementById("kamaEyeWrap");
+
       let challenge = null;
       let currentMediaVideoEl = null;
       let currentMode = "challenge";
@@ -916,261 +937,37 @@
       let kamasutraTimer = null;
       let kamasutraState = null;
 
-      const filterBtn = document.getElementById("filterBtn");
-
-      filterBtn.addEventListener("click", () => {
-
-        if (!kamasutraState?.isKamasutra) return;
-
-        itemsBody.innerHTML = "";
-
-        kamasutraState.groups.forEach(group => {
-
-          const btn = document.createElement("div");
-          btn.className = "itemCard";
-          btn.innerHTML = `<p class="itemName">${group}</p>`;
-
-          btn.onclick = () => {
-            kamasutraState.filterByGroup(group);
-            closeItemsPanel();
-          };
-
-          itemsBody.appendChild(btn);
-        });
-
-        document.getElementById("itemsTitle").textContent = "Filtrar por grupo";
-        itemsOverlay.classList.add("show");
-      });
+      function showKamaEye(show){
+        kamaEyeWrap.classList.toggle("show", !!show);
+        kamaEyeWrap.setAttribute("aria-hidden", show ? "false" : "true");
+      }
 
       function clearKamasutraTimer(){
         if (kamasutraTimer){
           clearInterval(kamasutraTimer);
           kamasutraTimer = null;
         }
-        kamasutraState = null;
       }
 
-      function renderKamasutraPlayer(audioSrc = ""){
+      function resetKamasutraState(){
         clearKamasutraTimer();
-        mediaBox.innerHTML = "";
-       
+        kamasutraState = null;
+        showKamaEye(false);
+      }
 
-        const stage = document.createElement("div");
-        stage.style.cssText = `
-          width:100%;
-          height:100%;
-          position:relative;
-          overflow:hidden;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          background:#000;
-        `;
+      function getKamaMode(src){
+        if (!src) return null;
 
-        const layerA = document.createElement("div");
-        const layerB = document.createElement("div");
+        const value = String(src).trim().toLowerCase();
 
-        [layerA, layerB].forEach((layer, index) => {
-          layer.style.cssText = `
-            position:absolute;
-            inset:0;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background:#000;
-            opacity:${index === 0 ? "1" : "0"};
-            filter:${index === 0 ? "blur(0px)" : "blur(12px)"};
-            transition:opacity 1.5s ease, filter 1.5s ease;
-          `;
-        });
+        if (value.startsWith("kamasutra://")) return "kamasutra";
+        if (value.startsWith("cadeira://")) return "cadeira";
 
-        stage.appendChild(layerA);
-        stage.appendChild(layerB);
-        mediaBox.appendChild(stage);
-
-        let currentLayer = layerA;
-        let nextLayer = layerB;
-        let posiciones = [];
-        let lastIndex = -1;
-        const INTERVAL = 6000;
-
-        async function loadPosiciones(){
-          const { data, error } = await supabase.rpc(KAMASUTRA_RPC_NAME, {
-            p_nivel: null,
-            p_cadera: null
-          });
-
-          if (error){
-            console.error("Error loading posiciones:", error);
-            showToast("Error cargando posiciones");
-            return [];
-          }
-
-          return Array.isArray(data?.data) ? data.data : [];
-        }
-
-        function randomItem(){
-          if (!posiciones.length) return null;
-
-          let idx;
-          do{
-            idx = Math.floor(Math.random() * posiciones.length);
-          } while (idx === lastIndex && posiciones.length > 1);
-
-          lastIndex = idx;
-          return posiciones[idx];
-        }
-
-        function buildLabel(pos){
-          return pos.nombre || "";
-        }
-
-        async function loadSVG(url){
-          const res = await fetch(url, { cache: "no-store" });
-          if (!res.ok){
-            throw new Error(`No se pudo cargar SVG: ${url}`);
-          }
-          return await res.text();
-        }
-
-        function parseSVG(txt){
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(txt, "image/svg+xml");
-          const svg = doc.querySelector("svg");
-          if (!svg) throw new Error("SVG inválido");
-          return svg;
-        }
-
-        async function setLayer(layer, file){
-          const svgText = await loadSVG(file);
-          const svg = parseSVG(svgText);
-
-          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-          svg.style.width = "100%";
-          svg.style.height = "100%";
-          svg.style.display = "block";
-          svg.style.background = "transparent";
-
-          layer.innerHTML = "";
-          layer.appendChild(svg);
-        }
-
-        async function transition(){
-          const pos = randomItem();
-          if (!pos) return;
-
-          pTitle.textContent = buildLabel(pos);
-
-          try{
-            await setLayer(nextLayer, pos.svg);
-          }catch(err){
-            console.error("Error rendering SVG:", err, pos);
-            showToast("Error cargando SVG");
-            return;
-          }
-
-          nextLayer.style.opacity = "1";
-          nextLayer.style.filter = "blur(0px)";
-
-          currentLayer.style.opacity = "0";
-          currentLayer.style.filter = "blur(12px)";
-
-          setTimeout(() => {
-            currentLayer.innerHTML = "";
-            [currentLayer, nextLayer] = [nextLayer, currentLayer];
-          }, 1500);
-        }
-
-        function startLoop(){
-          if (kamasutraTimer || !posiciones.length) return;
-          kamasutraTimer = setInterval(transition, INTERVAL);
-        }
-
-        function stopLoop(){
-          if (kamasutraTimer){
-            clearInterval(kamasutraTimer);
-            kamasutraTimer = null;
-          }
-        }
-
-        kamasutraState = {
-          startLoop,
-          stopLoop,
-          isKamasutra: true
-        };
-
-        (async () => {
-          posiciones = await loadPosiciones();
-
-          // 👉 construir grupos únicos
-          const groups = [...new Set(posiciones.map(p => p.grupo).filter(Boolean))];
-
-          kamasutraState = {
-            isKamasutra: true,
-            posiciones,
-            filtered: posiciones,
-            history: [],
-            current: null,
-            groups,
-            activeGroup: null,
-
-            nextRandom(){
-              const list = this.filtered.length ? this.filtered : this.posiciones;
-              if (!list.length) return;
-
-              let idx = Math.floor(Math.random() * list.length);
-              const pos = list[idx];
-
-              this.history.push(pos);
-              this.current = pos;
-
-              showPosition(pos);
-            },
-
-            showPosition(pos){
-              pTitle.textContent = pos.nombre || "";
-
-              setLayer(nextLayer, pos.svg).then(() => {
-                nextLayer.style.opacity = "1";
-                nextLayer.style.filter = "blur(0px)";
-                currentLayer.style.opacity = "0";
-                currentLayer.style.filter = "blur(12px)";
-
-                setTimeout(() => {
-                  currentLayer.innerHTML = "";
-                  [currentLayer, nextLayer] = [nextLayer, currentLayer];
-                }, 1500);
-              });
-            },
-
-            filterByGroup(group){
-              this.activeGroup = group;
-              this.filtered = this.posiciones.filter(p => p.grupo === group);
-              this.history = [];
-              this.nextRandom();
-            }
-          };
-          if (!posiciones.length){
-            const empty = document.createElement("div");
-            empty.style.cssText = "color:rgba(255,255,255,0.45);font-size:13px;text-align:center;padding:20px;";
-            empty.textContent = "No hay posiciones disponibles";
-            mediaBox.innerHTML = "";
-            mediaBox.appendChild(empty);
-            return;
-          }
-
-          await transition();
-
-          if (audioSrc){
-            loadAudio(audioSrc, true, true);
-          } else {
-            startLoop();
-          }
-        })();
+        return null;
       }
 
       function isKamasutraMedia(src){
-        return (src || "").startsWith("kamasutra://");
+        return !!getKamaMode(src);
       }
 
       function getParam(name, fallback = ""){
@@ -1295,6 +1092,7 @@
           progress.value = 0;
           currentTimeEl.textContent = "0:00";
           totalTimeEl.textContent = "0:00";
+          progress.hidden = false;
           if (timeRow) timeRow.style.display = "";
           updatePlayUI();
           return;
@@ -1308,14 +1106,14 @@
         currentTimeEl.textContent = "0:00";
 
         if (isLoopMode){
-            totalTimeEl.textContent = "∞";
-            progress.hidden = true;
-            if (timeRow) timeRow.style.display = "none";
-          } else {
-            totalTimeEl.textContent = "0:00";
-            progress.hidden = false;
-            if (timeRow) timeRow.style.display = "";
-          }
+          totalTimeEl.textContent = "∞";
+          progress.hidden = true;
+          if (timeRow) timeRow.style.display = "none";
+        } else {
+          totalTimeEl.textContent = "0:00";
+          progress.hidden = false;
+          if (timeRow) timeRow.style.display = "";
+        }
 
         updatePlayUI();
 
@@ -1325,11 +1123,251 @@
           }, 120);
         }
       }
-       
-      
+
+      async function loadKamasutraPositions(nivel){
+        const { data, error } = await supabase.rpc(KAMASUTRA_RPC_NAME, {
+            p_nivel: nivel,
+            p_cadera: null
+        });
+
+        if (error){
+          console.error("Error loading posiciones:", error);
+          showToast("Error cargando posiciones");
+          return [];
+        }
+
+        return Array.isArray(data?.data) ? data.data : [];
+      }
+
+      async function loadSVG(url){
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok){
+          throw new Error(`No se pudo cargar SVG: ${url}`);
+        }
+        return await res.text();
+      }
+
+      function parseSVG(txt){
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(txt, "image/svg+xml");
+        const svg = doc.querySelector("svg");
+        if (!svg) throw new Error("SVG inválido");
+        return svg;
+      }
+
+      async function setLayer(layer, file){
+        const svgText = await loadSVG(file);
+        const svg = parseSVG(svgText);
+
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svg.style.width = "100%";
+        svg.style.height = "100%";
+        svg.style.display = "block";
+        svg.style.background = "transparent";
+
+        layer.innerHTML = "";
+        layer.appendChild(svg);
+      }
+
+      function renderKamasutraPlayer(audioSrc = "", mode = "kamasutra"){
+        resetKamasutraState();
+        mediaBox.innerHTML = "";
+        showKamaEye(true);
+
+        const bgColor = mode === "cadeira" ? "#ffffff" : "#000000";
+
+        const stage = document.createElement("div");
+        stage.style.cssText = `
+        width:100%;
+        height:100%;
+        position:relative;
+        overflow:hidden;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:${bgColor};
+        `;
+
+        const layerA = document.createElement("div");
+        const layerB = document.createElement("div");
+
+        [layerA, layerB].forEach((layer, index) => {
+          layer.style.cssText = `
+            position:absolute;
+            inset:0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:${bgColor};
+            opacity:${index === 0 ? "1" : "0"};
+            filter:${index === 0 ? "blur(0px)" : "blur(12px)"};
+            transition:opacity 1.5s ease, filter 1.5s ease;
+          `;
+        });
+
+        stage.appendChild(layerA);
+        stage.appendChild(layerB);
+        mediaBox.appendChild(stage);
+
+        let currentLayer = layerA;
+        let nextLayer = layerB;
+
+        function buildGroups(posiciones){
+          return [...new Set(posiciones.map(p => (p.grupo || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        }
+
+        function swapLayers(){
+          currentLayer.innerHTML = "";
+          [currentLayer, nextLayer] = [nextLayer, currentLayer];
+        }
+
+        async function showPositionInternal(pos){
+          if (!pos) return;
+
+          pTitle.textContent = pos.nombre || "";
+
+          try{
+            await setLayer(nextLayer, pos.svg);
+          }catch(err){
+            console.error("Error rendering SVG:", err, pos);
+            showToast("Error cargando SVG");
+            return;
+          }
+
+          nextLayer.style.opacity = "1";
+          nextLayer.style.filter = "blur(0px)";
+
+          currentLayer.style.opacity = "0";
+          currentLayer.style.filter = "blur(12px)";
+
+          setTimeout(swapLayers, 1500);
+        }
+
+        function startLoop(){
+          if (!kamasutraState?.isKamasutra) return;
+          if (kamasutraTimer) return;
+
+          kamasutraTimer = setInterval(() => {
+            kamasutraState.nextRandom(false);
+          }, KAMASUTRA_INTERVAL);
+        }
+
+        function stopLoop(){
+          clearKamasutraTimer();
+        }
+
+        (async () => {
+          const nivel = mode === "cadeira" ? 2 : 1;
+          const posiciones = await loadKamasutraPositions(nivel);
+
+          if (!posiciones.length){
+            const empty = document.createElement("div");
+            empty.style.cssText = `color:${mode === "cadeira" ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.45)"};font-size:13px;text-align:center;padding:20px;`;
+            empty.textContent = "No hay posiciones disponibles";
+            mediaBox.innerHTML = "";
+            mediaBox.appendChild(empty);
+            showKamaEye(false);
+            return;
+          }
+
+          const groups = buildGroups(posiciones);
+
+          kamasutraState = {
+            isKamasutra: true,
+            posiciones,
+            filtered: posiciones.slice(),
+            groups,
+            activeGroup: null,
+            history: [],
+            historyIndex: -1,
+            showPosition: showPositionInternal,
+            startLoop,
+            stopLoop,
+
+            getActiveList(){
+              return (this.filtered && this.filtered.length) ? this.filtered : this.posiciones;
+            },
+
+            getRandomFromActiveList(excludeCurrent = true){
+              const list = this.getActiveList();
+              if (!list.length) return null;
+
+              if (list.length === 1) return list[0];
+
+              let attempts = 0;
+              let candidate = null;
+              do{
+                candidate = list[Math.floor(Math.random() * list.length)];
+                attempts++;
+              } while (
+                excludeCurrent &&
+                this.historyIndex >= 0 &&
+                candidate?.id === this.history[this.historyIndex]?.id &&
+                attempts < 12
+              );
+
+              return candidate;
+            },
+
+            async goToPosition(pos, pushToHistory = true){
+              if (!pos) return;
+
+              if (pushToHistory){
+                if (this.historyIndex < this.history.length - 1){
+                  this.history = this.history.slice(0, this.historyIndex + 1);
+                }
+                this.history.push(pos);
+                this.historyIndex = this.history.length - 1;
+              }
+
+              await this.showPosition(pos);
+            },
+
+            async nextRandom(fromUser = true){
+              const pos = this.getRandomFromActiveList(true);
+              if (!pos) return;
+
+              await this.goToPosition(pos, true);
+
+              if (fromUser){
+                showToast("Siguiente posición");
+              }
+            },
+
+            async prev(){
+              if (this.historyIndex > 0){
+                this.historyIndex--;
+                await this.showPosition(this.history[this.historyIndex]);
+                showToast("Posición anterior");
+              }
+            },
+
+            async filterByGroup(group){
+              this.activeGroup = group || null;
+              this.filtered = this.activeGroup
+                ? this.posiciones.filter(p => (p.grupo || "").trim() === this.activeGroup)
+                : this.posiciones.slice();
+
+              this.history = [];
+              this.historyIndex = -1;
+
+              await this.nextRandom(false);
+            }
+          };
+
+          await kamasutraState.nextRandom(false);
+
+          if (audioSrc){
+            loadAudio(audioSrc, true, true);
+          } else {
+            playerWrap.hidden = true;
+            startLoop();
+          }
+        })();
+      }
 
       function renderMedia(data){
-        clearKamasutraTimer();
+        resetKamasutraState();
         mediaBox.innerHTML = "";
         currentMediaVideoEl = null;
 
@@ -1342,12 +1380,12 @@
           return;
         }
 
-        if (isKamasutraMedia(src)){
-          renderKamasutraPlayer(data?.audio || "");
-          return;
-        }
+        const kamaMode = getKamaMode(src);
 
-        pTitle.classList.remove("right-align");
+        if (kamaMode){
+        renderKamasutraPlayer(data?.audio || "", kamaMode);
+        return;
+        }
 
         if (isVideo(src)){
           const v = document.createElement("video");
@@ -1374,7 +1412,6 @@
 
       function renderInfo(data){
         const isKamasutra = isKamasutraMedia(data?.media || "");
-
         pTitle.textContent = (data.title || "Desafío").toString();
 
         if (isKamasutra){
@@ -1524,6 +1561,53 @@
         });
       }
 
+      function renderKamasutraGroupFilter(){
+        itemsBody.innerHTML = "";
+
+        if (!kamasutraState?.isKamasutra){
+          itemsBody.innerHTML = `<div style="font-size:12px;color:rgba(255,255,255,0.55);">Modo no disponible</div>`;
+          return;
+        }
+
+        const allCard = document.createElement("div");
+        allCard.className = "itemCard";
+        allCard.innerHTML = `
+          <div class="itemContent">
+            <p class="itemName">Todos los grupos</p>
+            <div class="itemMetaRow">
+              <span class="itemPill">${kamasutraState.posiciones.length} posiciones</span>
+            </div>
+          </div>
+        `;
+        allCard.addEventListener("click", async () => {
+          await kamasutraState.filterByGroup(null);
+          closeItemsPanel();
+        });
+        itemsBody.appendChild(allCard);
+
+        kamasutraState.groups.forEach(group => {
+          const count = kamasutraState.posiciones.filter(p => (p.grupo || "").trim() === group).length;
+
+          const card = document.createElement("div");
+          card.className = "itemCard";
+          card.innerHTML = `
+            <div class="itemContent">
+              <p class="itemName">${group}</p>
+              <div class="itemMetaRow">
+                <span class="itemPill">${count} posiciones</span>
+              </div>
+            </div>
+          `;
+
+          card.addEventListener("click", async () => {
+            await kamasutraState.filterByGroup(group);
+            closeItemsPanel();
+          });
+
+          itemsBody.appendChild(card);
+        });
+      }
+
       function executeActionLink(url){
         const cleanUrl = (url || "").trim();
         if (!cleanUrl) return false;
@@ -1609,7 +1693,6 @@
         renderPlayer(challenge);
         updateBadge();
         closeItemsPanel();
-        pTitle.classList.remove("right-align");
 
         if (showMsg) showToast("Inicio");
       }
@@ -1617,9 +1700,14 @@
       function openItemsPanel(mode = "accessories"){
         currentOverlayMode = mode;
 
-        const config = getOverlayConfig(mode);
-        document.getElementById("itemsTitle").textContent = config.title;
-        renderItems(config.items, config.emptyText);
+        if (mode === "kamasutra-groups"){
+          document.getElementById("itemsTitle").textContent = "Filtrar por grupo";
+          renderKamasutraGroupFilter();
+        } else {
+          const config = getOverlayConfig(mode);
+          document.getElementById("itemsTitle").textContent = config.title;
+          renderItems(config.items, config.emptyText);
+        }
 
         itemsOverlay.classList.add("show");
         itemsOverlay.setAttribute("aria-hidden", "false");
@@ -1645,6 +1733,13 @@
       }
 
       function updateNavigation(){
+        const isKamasutra = kamasutraState?.isKamasutra;
+        if (isKamasutra){
+          prevBtn.disabled = false;
+          nextBtn.disabled = false;
+          return;
+        }
+
         const hasNext = !!(challenge?.next || "").trim();
         nextBtn.disabled = !hasNext;
       }
@@ -1665,6 +1760,7 @@
           nextBtn.disabled = true;
           playerWrap.hidden = true;
           closeItemsPanel();
+          showKamaEye(false);
           return;
         }
 
@@ -1674,13 +1770,20 @@
         setLastViewed(challenge);
       }
 
+      filterBtn.addEventListener("click", () => {
+        if (!kamasutraState?.isKamasutra) return;
+        openItemsPanel("kamasutra-groups");
+      });
+
       hiddenAudio.addEventListener("loadedmetadata", () => {
-        totalTimeEl.textContent = formatTime(hiddenAudio.duration || 0);
+        if (!hiddenAudio.loop){
+          totalTimeEl.textContent = formatTime(hiddenAudio.duration || 0);
+        }
         progress.value = 0;
       });
 
       hiddenAudio.addEventListener("timeupdate", () => {
-        if (!isSeeking) {
+        if (!isSeeking && !hiddenAudio.loop) {
           const duration = hiddenAudio.duration || 0;
           const current = hiddenAudio.currentTime || 0;
           const pct = duration > 0 ? (current / duration) * 100 : 0;
@@ -1688,7 +1791,11 @@
         }
 
         currentTimeEl.textContent = formatTime(hiddenAudio.currentTime || 0);
-        totalTimeEl.textContent = formatTime(hiddenAudio.duration || 0);
+
+        if (!hiddenAudio.loop){
+          totalTimeEl.textContent = formatTime(hiddenAudio.duration || 0);
+        }
+
         updatePlayUI();
       });
 
@@ -1720,7 +1827,7 @@
 
       progress.addEventListener("change", () => {
         const duration = hiddenAudio.duration || 0;
-        if (duration > 0) {
+        if (duration > 0 && !hiddenAudio.loop) {
           hiddenAudio.currentTime = (Number(progress.value) / 100) * duration;
         }
         isSeeking = false;
@@ -1736,20 +1843,12 @@
         }
       });
 
-      prevBtn.addEventListener("click", () => {
-
-        // 👉 MODO KAMASUTRA
+      prevBtn.addEventListener("click", async () => {
         if (kamasutraState?.isKamasutra){
-          const h = kamasutraState.history;
-          if (h.length > 1){
-            h.pop(); // quita actual
-            const prev = h[h.length - 1];
-            kamasutraState.showPosition(prev);
-          }
+          await kamasutraState.prev();
           return;
         }
 
-        // 👉 comportamiento normal
         stopCurrentAudio();
         stopCurrentMediaVideo();
 
@@ -1762,11 +1861,9 @@
         window.location.href = backUrl;
       });
 
-      nextBtn.addEventListener("click", () => {
-
-        // 👉 MODO KAMASUTRA
+      nextBtn.addEventListener("click", async () => {
         if (kamasutraState?.isKamasutra){
-          kamasutraState.nextRandom();
+          await kamasutraState.nextRandom(true);
           return;
         }
 
@@ -1833,6 +1930,15 @@
 
         if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
 
+        if (kamasutraState?.isKamasutra){
+          if (dx < 0){
+            kamasutraState.nextRandom(true);
+          } else if (dx > 0){
+            kamasutraState.prev();
+          }
+          return;
+        }
+
         if (dx < 0 && challenge?.next){
           stopCurrentAudio();
           stopCurrentMediaVideo();
@@ -1859,7 +1965,13 @@
 
         wheelLock = true;
 
-        if (dy > 0 && challenge?.next){
+        if (kamasutraState?.isKamasutra){
+          if (dy > 0){
+            kamasutraState.nextRandom(true);
+          } else {
+            kamasutraState.prev();
+          }
+        } else if (dy > 0 && challenge?.next){
           stopCurrentAudio();
           stopCurrentMediaVideo();
           window.location.href = `player.html?id=${encodeURIComponent(challenge.next)}`;
@@ -1877,6 +1989,15 @@
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && isItemsPanelOpen()){
           closeItemsPanel();
+          return;
+        }
+
+        if (!kamasutraState?.isKamasutra) return;
+
+        if (e.key === "ArrowRight"){
+          kamasutraState.nextRandom(true);
+        } else if (e.key === "ArrowLeft"){
+          kamasutraState.prev();
         }
       });
 
