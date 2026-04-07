@@ -1451,9 +1451,24 @@
         pShort.appendChild(wrap);
       }
 
+      function normalizeSlug(value){
+        return String(value || "").trim().toLowerCase();
+      }
+
       function isInstructionItem(item){
-        const category = (item?.category || "").trim().toLowerCase();
-        return category === "instrucciones";
+        const slug = normalizeSlug(item?.slug);
+        return slug.startsWith("adicionales_");
+      }
+
+      function isInstructionExternalLinkItem(item){
+        const slug = normalizeSlug(item?.slug);
+        return slug.startsWith("adicionales_link_");
+      }
+
+      function getInstructionExternalUrl(item){
+        // Para este tipo, la URL externa viene de la columna video_url,
+        // que en el frontend normalmente ya llega como item.video.
+        return String(item?.video || "").trim();
       }
 
       function getAccessoryItems(){
@@ -1471,14 +1486,14 @@
       function getOverlayConfig(mode){
         if (mode === "instructions"){
           return {
-            title: "Instrucciones",
+            title: "",
             emptyText: "No hay instrucciones disponibles",
             items: getInstructionItems()
           };
         }
 
         return {
-          title: "Accesorios recomendados",
+          title: "",
           emptyText: "No hay accesorios recomendados",
           items: getAccessoryItems()
         };
@@ -1520,7 +1535,12 @@
             const media = document.createElement("div");
             media.className = "itemMedia";
 
-            const src = item.image || item.video || "";
+            // Para adicionales_link_xx no queremos usar item.video como preview visual,
+            // porque ese campo es la URL externa.
+            const isExternalInstructionLink = isInstructionExternalLinkItem(item);
+            const src = isExternalInstructionLink
+              ? (item.image || "")
+              : (item.image || item.video || "");
 
             if (src){
               if (isVideo(src)){
@@ -1543,6 +1563,7 @@
             content.className = "itemContent";
 
             const hasActionLink = !!(item.action_link || "").trim();
+            const hasExternalInstructionUrl = !!getInstructionExternalUrl(item);
             const isInstruction = isInstructionItem(item);
 
             content.innerHTML = `
@@ -1550,7 +1571,8 @@
               ${isInstruction ? "" : `<p class="itemCategory">${item.category || ""}</p>`}
               ${isInstruction ? "" : `<p class="itemDesc">${item.description || ""}</p>`}
               <div class="itemMetaRow">
-                ${hasActionLink ? '<span class="itemPill">Abrir enlace</span>' : ''}
+                ${isExternalInstructionLink && hasExternalInstructionUrl ? '<span class="itemPill">Abrir link</span>' : ''}
+                ${!isExternalInstructionLink && hasActionLink ? '<span class="itemPill">Abrir enlace</span>' : ''}
               </div>
             `;
 
@@ -1627,6 +1649,19 @@
       function handleOverlayItemSelection(item){
         closeItemsPanel();
 
+        // Nuevo comportamiento para slug adicionales_link_xx
+        if (isInstructionExternalLinkItem(item)){
+          const externalUrl = getInstructionExternalUrl(item);
+
+          if (!externalUrl){
+            showToast("Link no configurado");
+            return;
+          }
+
+          executeActionLink(externalUrl);
+          return;
+        }
+
         const actionLink = (item?.action_link || "").trim();
         const hasPlayableContent = !!(item?.video || item?.image || item?.audio || item?.description);
 
@@ -1656,8 +1691,17 @@
         stopCurrentAudio(false);
         stopCurrentMediaVideo(true);
 
-        const mediaSrc = item.video || item.image || "";
-        const finalMedia = isInstructionItem(item) ? (item.video || "") : mediaSrc;
+        const isExternalInstructionLink = isInstructionExternalLinkItem(item);
+
+        // Si es adicionales_link_xx, no usamos item.video como media,
+        // porque item.video contiene la URL externa.
+        const mediaSrc = isExternalInstructionLink
+          ? (item.image || "")
+          : (item.video || item.image || "");
+
+        const finalMedia = isInstructionItem(item)
+          ? mediaSrc
+          : mediaSrc;
 
         renderMedia({
           media: finalMedia,
