@@ -472,7 +472,7 @@
     }
 
     .sideActionBtn img{
-      width:23px;                  /* 20% más pequeño */
+      width:23px;
       height:23px;
       object-fit:contain;
       display:block;
@@ -492,7 +492,10 @@
     .sideAction.is-hidden{
       display:none;
     }
-       
+
+    #actionContactWrap .sideActionCount{
+      display:none !important;
+    }
 
     .toast{
       position:absolute;
@@ -855,41 +858,42 @@
         </div>
       </div>
 
-    <div class="stage" id="stage">
-      <div class="mediaBox" id="mediaBox"></div>
+      <div class="stage" id="stage">
+        <div class="mediaBox" id="mediaBox"></div>
 
-      <div class="sideActions" id="sideActions" aria-label="Acciones rápidas">
-        <div class="sideAction" id="actionLikeWrap">
-          <button class="sideActionBtn" id="actionLikeBtn" aria-label="Me gusta">
-            <img src="images/like.svg" alt="">
-          </button>
-          <div class="sideActionCount" id="actionLikeCount">0</div>
+        <div class="sideActions" id="sideActions" aria-label="Acciones rápidas">
+          <div class="sideAction" id="actionLikeWrap">
+            <button class="sideActionBtn" id="actionLikeBtn" aria-label="Me gusta">
+              <img id="actionLikeIcon" src="images/like_01.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionLikeCount">0</div>
+          </div>
+
+          <div class="sideAction" id="actionCommentWrap">
+            <button class="sideActionBtn" id="actionCommentBtn" aria-label="Comentarios">
+              <img id="actionCommentIcon" src="images/comment_01.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionCommentCount">0</div>
+          </div>
+
+          <div class="sideAction" id="actionFavoriteWrap">
+            <button class="sideActionBtn" id="actionFavoriteBtn" aria-label="Favorito o experimentado">
+              <img id="actionFavoriteIcon" src="images/favorite_01.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionFavoriteCount">0</div>
+          </div>
+
+          <div class="sideAction" id="actionContactWrap">
+            <button class="sideActionBtn" id="actionContactBtn" aria-label="Contacto">
+              <img id="actionContactIcon" src="images/contacto_01.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionContactCount">0</div>
+          </div>
         </div>
 
-        <div class="sideAction" id="actionCommentWrap">
-          <button class="sideActionBtn" id="actionCommentBtn" aria-label="Comentarios">
-            <img src="images/comment.svg" alt="">
-          </button>
-          <div class="sideActionCount" id="actionCommentCount">0</div>
-        </div>
-
-        <div class="sideAction" id="actionFavoriteWrap">
-          <button class="sideActionBtn" id="actionFavoriteBtn" aria-label="Favorito o experimentado">
-            <img src="images/favorite.svg" alt="">
-          </button>
-          <div class="sideActionCount" id="actionFavoriteCount">0</div>
-        </div>
-
-        <div class="sideAction" id="actionContactWrap">
-          <button class="sideActionBtn" id="actionContactBtn" aria-label="Contacto">
-            <img src="images/contact.svg" alt="">
-          </button>
-          <div class="sideActionCount" id="actionContactCount">0</div>
-        </div>
+        <div class="toast" id="toast">Acción realizada ✓</div>
       </div>
 
-      <div class="toast" id="toast">Acción realizada ✓</div>
-    </div>  
       <div class="bottom">
         <div class="infoCard">
           <div class="row1">
@@ -897,8 +901,6 @@
               <p class="pTitle" id="pTitle">Cargando…</p>
               <div class="pCat" id="pCat"></div>
             </div>
-
-            
           </div>
 
           <div class="pShort" id="pShort"></div>
@@ -1052,6 +1054,11 @@
       const actionFavoriteBtn = document.getElementById("actionFavoriteBtn");
       const actionContactBtn = document.getElementById("actionContactBtn");
 
+      const actionLikeIcon = document.getElementById("actionLikeIcon");
+      const actionCommentIcon = document.getElementById("actionCommentIcon");
+      const actionFavoriteIcon = document.getElementById("actionFavoriteIcon");
+      const actionContactIcon = document.getElementById("actionContactIcon");
+
       const actionLikeCount = document.getElementById("actionLikeCount");
       const actionCommentCount = document.getElementById("actionCommentCount");
       const actionFavoriteCount = document.getElementById("actionFavoriteCount");
@@ -1077,23 +1084,49 @@
 
       const ACTIONS_CONFIG = {
         defaults: {
-          like: { enabled: true, count: 0, incrementOnTap: true, toast: "Te gusta" },
+          like: { enabled: true, count: 0, incrementOnTap: true, toast: "Gostei" },
           comment: { enabled: true, count: 0, incrementOnTap: false, toast: "Comentarios" },
-          favorite: { enabled: true, count: 0, incrementOnTap: true, toast: "Marcado" },
-          contact: { enabled: true, count: 0, incrementOnTap: false, toast: "Contacto" }
+          favorite: { enabled: true, count: 0, incrementOnTap: true, toast: "Salvo" },
+          contact: { enabled: false, count: 0, incrementOnTap: false, toast: "Contato" }
         },
         challenge: {
-          // Ejemplo: desafio_01: { like:{count:28}, comment:{count:6}, favorite:{count:12}, contact:{count:1,url:"https://wa.me/59170000000"} }
         },
         item: {
-          // Ejemplo: lubricante_x: { like:{count:8}, comment:{count:2}, favorite:{count:5}, contact:{enabled:false} }
         },
         classification: {
-          kamasutra: { like: { count: 0 }, comment: { count: 0 }, favorite: { count: 0 }, contact: { count: 0 } },
-          cadeira: { like: { count: 0 }, comment: { count: 0 }, favorite: { count: 0 }, contact: { count: 0 } }
+          kamasutra: { like: { count: 0 }, comment: { count: 0 }, favorite: { count: 0 }, contact: { enabled: false } },
+          cadeira: { like: { count: 0 }, comment: { count: 0 }, favorite: { count: 0 }, contact: { enabled: false } }
         }
       };
 
+      const ACTION_ICON_SRC = {
+        like: {
+          off: "images/like_01.svg",
+          on:  "images/like_02.svg"
+        },
+        comment: {
+          off: "images/comment_01.svg",
+          on:  "images/comment_01.svg"
+        },
+        favorite: {
+          off: "images/favorite_01.svg",
+          on:  "images/favorite_02.svg"
+        },
+        contact: {
+          off: "images/contacto_01.svg",
+          on:  "images/contacto_01.svg"
+        }
+      };
+
+      const ACTION_ICON_ELEMENTS = {
+        like: actionLikeIcon,
+        comment: actionCommentIcon,
+        favorite: actionFavoriteIcon,
+        contact: actionContactIcon
+      };
+
+      const ACTION_TOGGLE_STORAGE_KEY = "ij_action_toggles_v1";
+      let actionToggleState = loadActionToggleState();
 
       function formatActionCount(value){
         const n = Number(value || 0);
@@ -1101,6 +1134,51 @@
         if (n >= 1000000) return `${(n / 1000000).toFixed(n >= 10000000 ? 0 : 1).replace(/\.0$/, "")}M`;
         if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}K`;
         return String(Math.round(n));
+      }
+
+      function loadActionToggleState(){
+        try{
+          const raw = localStorage.getItem(ACTION_TOGGLE_STORAGE_KEY);
+          return raw ? JSON.parse(raw) : {};
+        }catch{
+          return {};
+        }
+      }
+
+      function saveActionToggleState(){
+        try{
+          localStorage.setItem(ACTION_TOGGLE_STORAGE_KEY, JSON.stringify(actionToggleState));
+        }catch{}
+      }
+
+      function getActionStateKey(scope, action){
+        if (!scope?.type || !scope?.key) return `unknown:${action}`;
+        return `${scope.type}:${scope.key}:${action}`;
+      }
+
+      function isActionToggled(scope, action){
+        return !!actionToggleState[getActionStateKey(scope, action)];
+      }
+
+      function setActionToggled(scope, action, value){
+        actionToggleState[getActionStateKey(scope, action)] = !!value;
+        saveActionToggleState();
+      }
+
+      function updateActionIcons(config){
+        ["like", "comment", "favorite", "contact"].forEach((key) => {
+          const iconEl = ACTION_ICON_ELEMENTS[key];
+          if (!iconEl) return;
+
+          const enabled = config?.[key]?.enabled !== false;
+          const isOn = (key === "like" || key === "favorite")
+            ? isActionToggled(currentActionScope, key)
+            : false;
+
+          const srcMap = ACTION_ICON_SRC[key];
+          iconEl.src = isOn ? srcMap.on : srcMap.off;
+          iconEl.style.opacity = enabled ? "1" : "0.45";
+        });
       }
 
       function cloneActionEntry(entry, fallback){
@@ -1140,16 +1218,48 @@
         return mergeActionConfigs(defaults, scoped);
       }
 
+      function shouldShowContactButton(scope){
+        if (!scope) return false;
+
+        if (scope.type === "challenge") return false;
+        if (scope.type === "classification") return false;
+
+        if (scope.type === "item" && currentItem){
+          const isInstruction = isInstructionItem(currentItem);
+          const mediaMode = getKamaMode(currentItem?.video || currentItem?.image || "");
+
+          if (isInstruction) return false;
+          if (mediaMode === "kamasutra" || mediaMode === "cadeira") return false;
+
+          return true;
+        }
+
+        return false;
+      }
+
       function renderActionRail(config){
         ["like", "comment", "favorite", "contact"].forEach((key) => {
           const ui = ACTION_ICON_MAP[key];
           const item = config?.[key] || {};
-          const enabled = item.enabled !== false;
+
+          let enabled = item.enabled !== false;
+
+          if (key === "contact"){
+            enabled = enabled && shouldShowContactButton(currentActionScope);
+          }
+
           ui.wrap.classList.toggle("is-hidden", !enabled);
           ui.btn.disabled = !enabled;
           ui.btn.dataset.actionKey = key;
-          ui.count.textContent = formatActionCount(item.count || 0);
+
+          if (key !== "contact"){
+            ui.count.textContent = formatActionCount(item.count || 0);
+          } else {
+            ui.count.textContent = "";
+          }
         });
+
+        updateActionIcons(config);
       }
 
       function refreshActionRail(data, mode = currentMode){
@@ -1164,9 +1274,52 @@
         renderActionRail(actionState);
       }
 
+      function toggleAction(key){
+        if (key !== "like" && key !== "favorite") return;
+
+        const current = isActionToggled(currentActionScope, key);
+        const next = !current;
+        setActionToggled(currentActionScope, key, next);
+
+        if (actionState?.[key]){
+          const currentCount = Number(actionState[key].count || 0);
+
+          if (next){
+            actionState[key].count = currentCount + 1;
+          } else {
+            actionState[key].count = Math.max(0, currentCount - 1);
+          }
+        }
+
+        renderActionRail(actionState);
+      }
+
       function executeConfiguredAction(key){
         const cfg = actionState?.[key];
         if (!cfg || cfg.enabled === false) return;
+
+        if (key === "like"){
+          toggleAction("like");
+          showToast(isActionToggled(currentActionScope, "like") ? "Gostei" : "Like removido");
+          return;
+        }
+
+        if (key === "favorite"){
+          toggleAction("favorite");
+          showToast(isActionToggled(currentActionScope, "favorite") ? "Salvo" : "Removido dos salvos");
+          return;
+        }
+
+        if (key === "contact"){
+          if (cfg.url){
+            executeActionLink(cfg.url);
+            return;
+          }
+          if (cfg.toast){
+            showToast(cfg.toast);
+          }
+          return;
+        }
 
         if (cfg.incrementOnTap) incrementActionCount(key);
 
@@ -1180,8 +1333,6 @@
         }
       }
 
-  
-
       function clearKamasutraTimer(){
         if (kamasutraTimer){
           clearInterval(kamasutraTimer);
@@ -1192,7 +1343,6 @@
       function resetKamasutraState(){
         clearKamasutraTimer();
         kamasutraState = null;
-       
       }
 
       function getKamaMode(src){
@@ -1259,7 +1409,7 @@
         }catch{}
       }
 
-            function seekCurrentPlayableToStart(){
+      function seekCurrentPlayableToStart(){
         if (currentMediaVideoEl){
           try{
             currentMediaVideoEl.currentTime = 0;
@@ -1457,7 +1607,6 @@
       function renderKamasutraPlayer(audioSrc = "", mode = "kamasutra"){
         resetKamasutraState();
         mediaBox.innerHTML = "";
-       
 
         const bgColor = mode === "cadeira" ? "#ffffff" : "#000000";
 
@@ -1551,7 +1700,7 @@
             empty.textContent = "No hay posiciones disponibles";
             mediaBox.innerHTML = "";
             mediaBox.appendChild(empty);
-            showKamaEye(false);
+            if (typeof showKamaEye === "function") showKamaEye(false);
             return;
           }
 
@@ -1615,7 +1764,6 @@
               await this.goToPosition(pos, true);
 
               if (fromUser){
-                //showToast("Siguiente posición");
               }
             },
 
@@ -1623,7 +1771,6 @@
               if (this.historyIndex > 0){
                 this.historyIndex--;
                 await this.showPosition(this.history[this.historyIndex]);
-                //showToast("Posición anterior");
               }
             },
 
@@ -1668,8 +1815,8 @@
         const kamaMode = getKamaMode(src);
 
         if (kamaMode){
-        renderKamasutraPlayer(data?.audio || "", kamaMode);
-        return;
+          renderKamasutraPlayer(data?.audio || "", kamaMode);
+          return;
         }
 
         if (isVideo(src)){
@@ -1753,8 +1900,6 @@
       }
 
       function getInstructionExternalUrl(item){
-        // Para este tipo, la URL externa viene de la columna video_url,
-        // que en el frontend normalmente ya llega como item.video.
         return String(item?.video || "").trim();
       }
 
@@ -1822,8 +1967,6 @@
             const media = document.createElement("div");
             media.className = "itemMedia";
 
-            // Para adicionales_link_xx no queremos usar item.video como preview visual,
-            // porque ese campo es la URL externa.
             const isExternalInstructionLink = isInstructionExternalLinkItem(item);
             const src = isExternalInstructionLink
               ? (item.image || "")
@@ -1850,15 +1993,12 @@
             content.className = "itemContent";
 
             const hasActionLink = !!(item.action_link || "").trim();
-            const hasExternalInstructionUrl = !!getInstructionExternalUrl(item);
             const isInstruction = isInstructionItem(item);
 
             content.innerHTML = `
               <p class="itemName">${item.name || ""}</p>
-              
               ${isInstruction ? "" : `<p class="itemDesc">${item.description || ""}</p>`}
               <div class="itemMetaRow">
-                
                 ${!isExternalInstructionLink && hasActionLink ? '<span class="itemPill">Abrir enlace</span>' : ''}
               </div>
             `;
@@ -1936,7 +2076,6 @@
       function handleOverlayItemSelection(item){
         closeItemsPanel();
 
-        // Nuevo comportamiento para slug adicionales_link_xx
         if (isInstructionExternalLinkItem(item)){
           const externalUrl = getInstructionExternalUrl(item);
 
@@ -1980,8 +2119,6 @@
 
         const isExternalInstructionLink = isInstructionExternalLinkItem(item);
 
-        // Si es adicionales_link_xx, no usamos item.video como media,
-        // porque item.video contiene la URL externa.
         const mediaSrc = isExternalInstructionLink
           ? (item.image || "")
           : (item.video || item.image || "");
@@ -2008,8 +2145,6 @@
           audio: item.audio || "",
           description: item.description || ""
         });
-
-        //showToast("Item cargado");
       }
 
       function goToChallengeView(showMsg = false){
@@ -2095,7 +2230,7 @@
           nextBtn.disabled = true;
           playerWrap.hidden = true;
           closeItemsPanel();
-          showKamaEye(false);
+          if (typeof showKamaEye === "function") showKamaEye(false);
           return;
         }
 
@@ -2105,7 +2240,6 @@
         setLastViewed(challenge);
       }
 
-
       [actionLikeBtn, actionCommentBtn, actionFavoriteBtn, actionContactBtn].forEach((btn) => {
         btn.addEventListener("click", () => {
           const key = btn.dataset.actionKey;
@@ -2113,8 +2247,6 @@
           executeConfiguredAction(key);
         });
       });
-
-    
 
       hiddenAudio.addEventListener("loadedmetadata", () => {
         if (!hiddenAudio.loop){
@@ -2186,23 +2318,22 @@
 
       prevBtn.addEventListener("click", async () => {
         if (kamasutraState?.isKamasutra){
+          restartKamasutraTimer();
           await kamasutraState.prev();
           return;
         }
 
         seekCurrentPlayableToStart();
-       // showToast("Inicio");
       });
 
       nextBtn.addEventListener("click", async () => {
         if (kamasutraState?.isKamasutra){
-          restartKamasutraTimer();   // 🔥 RESET TIMER
+          restartKamasutraTimer();
           await kamasutraState.nextRandom(true);
           return;
         }
 
         seekCurrentPlayableToEnd();
-       // showToast("Final");
       });
 
       cartBtn.addEventListener("click", () => {
@@ -2261,8 +2392,10 @@
 
         if (kamasutraState?.isKamasutra){
           if (dx < 0){
+            restartKamasutraTimer();
             kamasutraState.nextRandom(true);
           } else if (dx > 0){
+            restartKamasutraTimer();
             kamasutraState.prev();
           }
           return;
@@ -2296,8 +2429,10 @@
 
         if (kamasutraState?.isKamasutra){
           if (dy > 0){
+            restartKamasutraTimer();
             kamasutraState.nextRandom(true);
           } else {
+            restartKamasutraTimer();
             kamasutraState.prev();
           }
         } else if (dy > 0 && challenge?.next){
@@ -2324,8 +2459,10 @@
         if (!kamasutraState?.isKamasutra) return;
 
         if (e.key === "ArrowRight"){
+          restartKamasutraTimer();
           kamasutraState.nextRandom(true);
         } else if (e.key === "ArrowLeft"){
+          restartKamasutraTimer();
           kamasutraState.prev();
         }
       });
