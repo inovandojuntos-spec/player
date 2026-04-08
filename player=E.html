@@ -160,7 +160,7 @@
       gap:10px;
       align-items:flex-start;
       justify-content:space-between;
-      padding-right:56px;
+      padding-right:0px;
       min-height:42px;
     }
 
@@ -419,18 +419,6 @@
       font-size:9px;
       font-weight:800;
       color:var(--text);
-    }
-
-    .kamaEyeWrap{
-      position:absolute;
-      top:-2px;
-      right:0;
-      display:none;
-      z-index:5;
-    }
-
-    .kamaEyeWrap.show{
-      display:block;
     }
 
     .sideActions{
@@ -793,7 +781,7 @@
     @media (max-width: 390px){
       .bottom{
         padding-left:15px;
-        padding-right:74px;
+        padding-right:15px;
       }
 
       .stage{
@@ -849,7 +837,7 @@
       }
 
       .row1{
-        padding-right:52px;
+        padding-right:0px;
       }
     }
   </style>
@@ -910,14 +898,7 @@
               <div class="pCat" id="pCat"></div>
             </div>
 
-            <div class="kamaEyeWrap" id="kamaEyeWrap" aria-hidden="true">
-              <button class="iconBtn" id="filterBtn" aria-label="Filtrar grupos">
-                <svg class="iconSvg" viewBox="0 0 24 24">
-                  <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button>
-            </div>
+            
           </div>
 
           <div class="pShort" id="pShort"></div>
@@ -1061,9 +1042,6 @@
       const totalTimeEl = document.getElementById("totalTime");
       const timeRow = document.querySelector(".timeRow");
 
-      const filterBtn = document.getElementById("filterBtn");
-      const kamaEyeWrap = document.getElementById("kamaEyeWrap");
-
       const actionLikeWrap = document.getElementById("actionLikeWrap");
       const actionCommentWrap = document.getElementById("actionCommentWrap");
       const actionFavoriteWrap = document.getElementById("actionFavoriteWrap");
@@ -1202,10 +1180,7 @@
         }
       }
 
-      function showKamaEye(show){
-        kamaEyeWrap.classList.toggle("show", !!show);
-        kamaEyeWrap.setAttribute("aria-hidden", show ? "false" : "true");
-      }
+  
 
       function clearKamasutraTimer(){
         if (kamasutraTimer){
@@ -1217,7 +1192,7 @@
       function resetKamasutraState(){
         clearKamasutraTimer();
         kamasutraState = null;
-        showKamaEye(false);
+       
       }
 
       function getKamaMode(src){
@@ -1437,7 +1412,7 @@
       function renderKamasutraPlayer(audioSrc = "", mode = "kamasutra"){
         resetKamasutraState();
         mediaBox.innerHTML = "";
-        showKamaEye(true);
+       
 
         const bgColor = mode === "cadeira" ? "#ffffff" : "#000000";
 
@@ -2093,10 +2068,7 @@
         });
       });
 
-      filterBtn.addEventListener("click", () => {
-        if (!kamasutraState?.isKamasutra) return;
-        openItemsPanel("kamasutra-groups");
-      });
+    
 
       hiddenAudio.addEventListener("loadedmetadata", () => {
         if (!hiddenAudio.loop){
