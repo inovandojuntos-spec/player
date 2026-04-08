@@ -96,7 +96,7 @@
       align-items:center;
       justify-content:center;
       overflow:hidden;
-      padding:6px 18px 0;
+      padding:6px 82px 0 18px;
       z-index:1;
     }
 
@@ -423,6 +423,79 @@
       display:block;
     }
 
+
+
+    .sideActions{
+      position:absolute;
+      right:12px;
+      top:50%;
+      transform:translateY(-50%);
+      z-index:12;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+      pointer-events:none;
+    }
+
+    .sideAction{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      pointer-events:auto;
+    }
+
+    .sideActionBtn{
+      width:46px;
+      height:46px;
+      border:none;
+      background:transparent;
+      padding:0;
+      margin:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      filter:drop-shadow(0 6px 18px rgba(0,0,0,0.45));
+      transition:transform .12s ease, opacity .12s ease;
+    }
+
+    .sideActionBtn:hover{
+      transform:translateY(-1px) scale(1.02);
+    }
+
+    .sideActionBtn:active{
+      transform:scale(0.98);
+    }
+
+    .sideActionBtn[disabled]{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+
+    .sideActionBtn img{
+      width:33px;
+      height:33px;
+      object-fit:contain;
+      display:block;
+    }
+
+    .sideActionCount{
+      min-width:40px;
+      text-align:center;
+      font-size:12px;
+      line-height:1;
+      font-weight:800;
+      color:rgba(255,255,255,0.88);
+      text-shadow:0 2px 10px rgba(0,0,0,0.85);
+      letter-spacing:-0.01em;
+    }
+
+    .sideAction.is-hidden{
+      display:none;
+    }
+
     .toast{
       position:absolute;
       left:14px;
@@ -652,7 +725,7 @@
         flex:0 0 39dvh;
         min-height:220px;
         max-height:39dvh;
-        padding:4px 16px 0;
+        padding:4px 78px 0 16px;
       }
 
       .pTitle{
@@ -710,7 +783,7 @@
     @media (max-width: 390px){
       .bottom{
         padding-left:15px;
-        padding-right:15px;
+        padding-right:74px;
       }
 
       .stage{
@@ -763,6 +836,35 @@
 
       <div class="stage" id="stage">
         <div class="mediaBox" id="mediaBox"></div>
+        <div class="sideActions" id="sideActions" aria-label="Acciones rápidas">
+          <div class="sideAction" id="actionLikeWrap">
+            <button class="sideActionBtn" id="actionLikeBtn" aria-label="Me gusta">
+              <img src="images/like.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionLikeCount">0</div>
+          </div>
+
+          <div class="sideAction" id="actionCommentWrap">
+            <button class="sideActionBtn" id="actionCommentBtn" aria-label="Comentarios">
+              <img src="images/comment.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionCommentCount">0</div>
+          </div>
+
+          <div class="sideAction" id="actionFavoriteWrap">
+            <button class="sideActionBtn" id="actionFavoriteBtn" aria-label="Favorito o experimentado">
+              <img src="images/favorite.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionFavoriteCount">0</div>
+          </div>
+
+          <div class="sideAction" id="actionContactWrap">
+            <button class="sideActionBtn" id="actionContactBtn" aria-label="Contacto">
+              <img src="images/contact.svg" alt="">
+            </button>
+            <div class="sideActionCount" id="actionContactCount">0</div>
+          </div>
+        </div>
         <div class="toast" id="toast">Acción realizada ✓</div>
       </div>
 
@@ -928,6 +1030,21 @@
       const filterBtn = document.getElementById("filterBtn");
       const kamaEyeWrap = document.getElementById("kamaEyeWrap");
 
+      const actionLikeWrap = document.getElementById("actionLikeWrap");
+      const actionCommentWrap = document.getElementById("actionCommentWrap");
+      const actionFavoriteWrap = document.getElementById("actionFavoriteWrap");
+      const actionContactWrap = document.getElementById("actionContactWrap");
+
+      const actionLikeBtn = document.getElementById("actionLikeBtn");
+      const actionCommentBtn = document.getElementById("actionCommentBtn");
+      const actionFavoriteBtn = document.getElementById("actionFavoriteBtn");
+      const actionContactBtn = document.getElementById("actionContactBtn");
+
+      const actionLikeCount = document.getElementById("actionLikeCount");
+      const actionCommentCount = document.getElementById("actionCommentCount");
+      const actionFavoriteCount = document.getElementById("actionFavoriteCount");
+      const actionContactCount = document.getElementById("actionContactCount");
+
       let challenge = null;
       let currentMediaVideoEl = null;
       let currentMode = "challenge";
@@ -936,6 +1053,120 @@
       let isSeeking = false;
       let kamasutraTimer = null;
       let kamasutraState = null;
+      let currentActionScope = null;
+      let actionState = null;
+
+      const ACTION_ICON_MAP = {
+        like: { wrap: actionLikeWrap, btn: actionLikeBtn, count: actionLikeCount },
+        comment: { wrap: actionCommentWrap, btn: actionCommentBtn, count: actionCommentCount },
+        favorite: { wrap: actionFavoriteWrap, btn: actionFavoriteBtn, count: actionFavoriteCount },
+        contact: { wrap: actionContactWrap, btn: actionContactBtn, count: actionContactCount }
+      };
+
+      const ACTIONS_CONFIG = {
+        defaults: {
+          like: { enabled: true, count: 0, incrementOnTap: true, toast: "Te gusta" },
+          comment: { enabled: true, count: 0, incrementOnTap: false, toast: "Comentarios" },
+          favorite: { enabled: true, count: 0, incrementOnTap: true, toast: "Marcado" },
+          contact: { enabled: true, count: 0, incrementOnTap: false, toast: "Contacto" }
+        },
+        challenge: {
+          // Ejemplo: desafio_01: { like:{count:28}, comment:{count:6}, favorite:{count:12}, contact:{count:1,url:"https://wa.me/59170000000"} }
+        },
+        item: {
+          // Ejemplo: lubricante_x: { like:{count:8}, comment:{count:2}, favorite:{count:5}, contact:{enabled:false} }
+        },
+        classification: {
+          kamasutra: { like: { count: 0 }, comment: { count: 0 }, favorite: { count: 0 }, contact: { count: 0 } },
+          cadeira: { like: { count: 0 }, comment: { count: 0 }, favorite: { count: 0 }, contact: { count: 0 } }
+        }
+      };
+
+
+      function formatActionCount(value){
+        const n = Number(value || 0);
+        if (!Number.isFinite(n) || n <= 0) return "0";
+        if (n >= 1000000) return `${(n / 1000000).toFixed(n >= 10000000 ? 0 : 1).replace(/\.0$/, "")}M`;
+        if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}K`;
+        return String(Math.round(n));
+      }
+
+      function cloneActionEntry(entry, fallback){
+        return { ...(fallback || {}), ...(entry || {}) };
+      }
+
+      function mergeActionConfigs(base, extra){
+        const out = {};
+        ["like", "comment", "favorite", "contact"].forEach((key) => {
+          out[key] = cloneActionEntry(extra?.[key], base?.[key]);
+        });
+        return out;
+      }
+
+      function getActionScopeFromData(data, mode = currentMode){
+        const mediaMode = getKamaMode(data?.media || data?.video || "");
+        if (mediaMode){
+          return { type: "classification", key: mediaMode };
+        }
+
+        if (mode === "item" && data?.slug){
+          return { type: "item", key: normalizeSlug(data.slug) };
+        }
+
+        if (data?.slug){
+          return { type: "challenge", key: normalizeSlug(data.slug) };
+        }
+
+        return { type: "challenge", key: "default" };
+      }
+
+      function resolveActionsForScope(scope){
+        const defaults = ACTIONS_CONFIG.defaults;
+        if (!scope) return mergeActionConfigs(defaults, null);
+
+        const scoped = ACTIONS_CONFIG[scope.type]?.[scope.key] || null;
+        return mergeActionConfigs(defaults, scoped);
+      }
+
+      function renderActionRail(config){
+        ["like", "comment", "favorite", "contact"].forEach((key) => {
+          const ui = ACTION_ICON_MAP[key];
+          const item = config?.[key] || {};
+          const enabled = item.enabled !== false;
+          ui.wrap.classList.toggle("is-hidden", !enabled);
+          ui.btn.disabled = !enabled;
+          ui.btn.dataset.actionKey = key;
+          ui.count.textContent = formatActionCount(item.count || 0);
+        });
+      }
+
+      function refreshActionRail(data, mode = currentMode){
+        currentActionScope = getActionScopeFromData(data, mode);
+        actionState = resolveActionsForScope(currentActionScope);
+        renderActionRail(actionState);
+      }
+
+      function incrementActionCount(key){
+        if (!actionState?.[key]) return;
+        actionState[key].count = Number(actionState[key].count || 0) + 1;
+        renderActionRail(actionState);
+      }
+
+      function executeConfiguredAction(key){
+        const cfg = actionState?.[key];
+        if (!cfg || cfg.enabled === false) return;
+
+        if (cfg.incrementOnTap) incrementActionCount(key);
+
+        if (cfg.url){
+          executeActionLink(cfg.url);
+          return;
+        }
+
+        if (cfg.toast){
+          showToast(cfg.toast);
+        }
+      }
 
       function showKamaEye(show){
         kamaEyeWrap.classList.toggle("show", !!show);
@@ -1420,6 +1651,8 @@
           pCat.style.display = "";
           pCat.textContent = (data.category || "").toString();
         }
+
+        refreshActionRail(data, currentMode);
       }
 
       function renderDescription(text){
@@ -1706,13 +1939,15 @@
         renderMedia({
           media: finalMedia,
           title: item.name,
-          audio: item.audio || ""
+          audio: item.audio || "",
+          slug: item.slug || ""
         });
 
         renderInfo({
           title: item.name || "Item",
           category: item.category || "",
-          media: finalMedia
+          media: finalMedia,
+          slug: item.slug || ""
         });
 
         renderPlayer({
@@ -1801,6 +2036,7 @@
           pShort.innerHTML = "";
           cartBadge.textContent = "0";
           instructionsBadge.textContent = "0";
+          renderActionRail(resolveActionsForScope({ type: "challenge", key: "default" }));
           nextBtn.disabled = true;
           playerWrap.hidden = true;
           closeItemsPanel();
@@ -1813,6 +2049,15 @@
         updateNavigation();
         setLastViewed(challenge);
       }
+
+
+      [actionLikeBtn, actionCommentBtn, actionFavoriteBtn, actionContactBtn].forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const key = btn.dataset.actionKey;
+          if (!key) return;
+          executeConfiguredAction(key);
+        });
+      });
 
       filterBtn.addEventListener("click", () => {
         if (!kamasutraState?.isKamasutra) return;
