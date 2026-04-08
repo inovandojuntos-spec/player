@@ -1010,6 +1010,7 @@
       const KAMASUTRA_RPC_NAME = "get_kamasutra_positions";
       const LAST_VIEW_KEY = "shop_last_view_v2";
       const KAMASUTRA_INTERVAL = 6000;
+      const DEFAULT_WHATSAPP_URL = "https://wa.me/59177634467";
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -1215,7 +1216,24 @@
         if (!scope) return mergeActionConfigs(defaults, null);
 
         const scoped = ACTIONS_CONFIG[scope.type]?.[scope.key] || null;
-        return mergeActionConfigs(defaults, scoped);
+        const merged = mergeActionConfigs(defaults, scoped);
+
+        // WhatsApp por defecto solo para productos/item reales
+        // Nunca para desafío ni clasificaciones kamasutra/cadeira
+        if (
+          scope.type === "item" &&
+          currentItem &&
+          !isInstructionItem(currentItem) &&
+          !getKamaMode(currentItem?.video || currentItem?.image || "")
+        ){
+          merged.contact.enabled = true;
+
+          if (!merged.contact.url){
+            merged.contact.url = DEFAULT_WHATSAPP_URL;
+          }
+        }
+
+        return merged;
       }
 
       function shouldShowContactButton(scope){
