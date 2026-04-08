@@ -1259,6 +1259,51 @@
         }catch{}
       }
 
+            function seekCurrentPlayableToStart(){
+        if (currentMediaVideoEl){
+          try{
+            currentMediaVideoEl.currentTime = 0;
+          }catch{}
+        }
+
+        if (hiddenAudio.src){
+          try{
+            hiddenAudio.currentTime = 0;
+          }catch{}
+        }
+
+        currentTimeEl.textContent = "0:00";
+        if (!hiddenAudio.loop) {
+          progress.value = 0;
+        }
+      }
+
+      function seekCurrentPlayableToEnd(){
+        if (currentMediaVideoEl){
+          try{
+            const vdur = currentMediaVideoEl.duration;
+            if (Number.isFinite(vdur) && vdur > 0){
+              currentMediaVideoEl.currentTime = Math.max(0, vdur - 0.05);
+            }
+          }catch{}
+        }
+
+        if (hiddenAudio.src){
+          try{
+            if (hiddenAudio.loop){
+              return;
+            }
+
+            const adur = hiddenAudio.duration;
+            if (Number.isFinite(adur) && adur > 0){
+              hiddenAudio.currentTime = Math.max(0, adur - 0.05);
+              progress.value = 100;
+              currentTimeEl.textContent = formatTime(adur);
+            }
+          }catch{}
+        }
+      }
+
       function updatePlayUI(){
         const isPlaying = !hiddenAudio.paused && !hiddenAudio.ended;
         playBtn.classList.toggle("is-playing", isPlaying);
@@ -1570,7 +1615,7 @@
               await this.goToPosition(pos, true);
 
               if (fromUser){
-                showToast("Siguiente posición");
+                //showToast("Siguiente posición");
               }
             },
 
@@ -1578,7 +1623,7 @@
               if (this.historyIndex > 0){
                 this.historyIndex--;
                 await this.showPosition(this.history[this.historyIndex]);
-                showToast("Posición anterior");
+                //showToast("Posición anterior");
               }
             },
 
@@ -1964,7 +2009,7 @@
           description: item.description || ""
         });
 
-        showToast("Item cargado");
+        //showToast("Item cargado");
       }
 
       function goToChallengeView(showMsg = false){
@@ -2021,15 +2066,16 @@
       }
 
       function updateNavigation(){
-        const isKamasutra = kamasutraState?.isKamasutra;
-        if (isKamasutra){
-          prevBtn.disabled = false;
-          nextBtn.disabled = false;
-          return;
-        }
+        prevBtn.disabled = false;
+        nextBtn.disabled = false;
+      }
 
-        const hasNext = !!(challenge?.next || "").trim();
-        nextBtn.disabled = !hasNext;
+      function restartKamasutraTimer(){
+        clearKamasutraTimer();
+
+        if (kamasutraState?.isKamasutra){
+          kamasutraState.startLoop();
+        }
       }
 
       function renderChallenge(){
@@ -2144,31 +2190,19 @@
           return;
         }
 
-        stopCurrentAudio();
-        stopCurrentMediaVideo();
-
-        if (window.history.length > 1){
-          window.history.back();
-          return;
-        }
-
-        const backUrl = challenge?.back || "index.html";
-        window.location.href = backUrl;
+        seekCurrentPlayableToStart();
+       // showToast("Inicio");
       });
 
       nextBtn.addEventListener("click", async () => {
         if (kamasutraState?.isKamasutra){
+          restartKamasutraTimer();   // 🔥 RESET TIMER
           await kamasutraState.nextRandom(true);
           return;
         }
 
-        const nextSlug = (challenge?.next || "").trim();
-        if (!nextSlug) return;
-
-        stopCurrentAudio();
-        stopCurrentMediaVideo();
-
-        window.location.href = `player.html?id=${encodeURIComponent(nextSlug)}`;
+        seekCurrentPlayableToEnd();
+       // showToast("Final");
       });
 
       cartBtn.addEventListener("click", () => {
