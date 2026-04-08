@@ -96,7 +96,7 @@
       align-items:center;
       justify-content:center;
       overflow:hidden;
-      padding:6px 82px 0 18px;
+      padding:6px 18px 0 18px;
       z-index:1;
     }
 
@@ -109,6 +109,7 @@
       position:relative;
       border-radius:18px;
       overflow:hidden;
+      isolation:isolate;
       background:
         radial-gradient(120% 100% at 50% 20%, rgba(255,255,255,0.07), rgba(255,255,255,0.01) 55%, rgba(255,255,255,0.00) 75%),
         #111;
@@ -124,6 +125,15 @@
       object-fit:cover;
       display:block;
       background:#000;
+    }
+
+    .mediaBox > img,
+    .mediaBox > video,
+    .mediaBox > *:not(.sideActions){
+      position:relative;
+      z-index:1;
+      width:100%;
+      height:100%;
     }
 
     .bottom{
@@ -423,18 +433,17 @@
       display:block;
     }
 
-
-
     .sideActions{
       position:absolute;
-      right:12px;
-      top:50%;
-      transform:translateY(-50%);
-      z-index:12;
+      right:10px;
+      bottom:6%;
+      top:auto;
+      transform:none;
+      z-index:999;
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:14px;
+      gap:12px;
       pointer-events:none;
     }
 
@@ -442,13 +451,13 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:6px;
+      gap:5px;
       pointer-events:auto;
     }
 
     .sideActionBtn{
-      width:46px;
-      height:46px;
+      width:24px;
+      height:24px;
       border:none;
       background:transparent;
       padding:0;
@@ -457,7 +466,7 @@
       align-items:center;
       justify-content:center;
       cursor:pointer;
-      filter:drop-shadow(0 6px 18px rgba(0,0,0,0.45));
+      filter:drop-shadow(0 4px 10px rgba(0,0,0,0.70));
       transition:transform .12s ease, opacity .12s ease;
     }
 
@@ -475,26 +484,27 @@
     }
 
     .sideActionBtn img{
-      width:33px;
-      height:33px;
+      width:23px;                  /* 20% más pequeño */
+      height:23px;
       object-fit:contain;
       display:block;
     }
 
     .sideActionCount{
-      min-width:40px;
+      min-width:20px;
       text-align:center;
-      font-size:12px;
+      font-size:9px;
       line-height:1;
       font-weight:800;
-      color:rgba(255,255,255,0.88);
-      text-shadow:0 2px 10px rgba(0,0,0,0.85);
+      color:#ffffff;
+      text-shadow:0 2px 8px rgba(0,0,0,0.9);
       letter-spacing:-0.01em;
     }
 
     .sideAction.is-hidden{
       display:none;
     }
+       
 
     .toast{
       position:absolute;
@@ -725,7 +735,7 @@
         flex:0 0 39dvh;
         min-height:220px;
         max-height:39dvh;
-        padding:4px 78px 0 16px;
+        padding:4px 16px 0 16px;
       }
 
       .pTitle{
@@ -791,6 +801,29 @@
         padding-right:15px;
       }
 
+      .sideActions{
+        right:8px;
+        bottom:16%;
+        top:auto;
+        transform:none;
+        gap:10px;
+      }
+
+      .sideActionBtn{
+        width:34px;
+        height:34px;
+      }
+
+      .sideActionBtn img{
+        width:26px;
+        height:26px;
+      }
+
+      .sideActionCount{
+        min-width:16px;
+        font-size:8px;
+      }
+
       .pTitle{
         font-size:22px;
       }
@@ -834,40 +867,41 @@
         </div>
       </div>
 
-      <div class="stage" id="stage">
-        <div class="mediaBox" id="mediaBox"></div>
-        <div class="sideActions" id="sideActions" aria-label="Acciones rápidas">
-          <div class="sideAction" id="actionLikeWrap">
-            <button class="sideActionBtn" id="actionLikeBtn" aria-label="Me gusta">
-              <img src="images/like.svg" alt="">
-            </button>
-            <div class="sideActionCount" id="actionLikeCount">0</div>
-          </div>
+    <div class="stage" id="stage">
+      <div class="mediaBox" id="mediaBox"></div>
 
-          <div class="sideAction" id="actionCommentWrap">
-            <button class="sideActionBtn" id="actionCommentBtn" aria-label="Comentarios">
-              <img src="images/comment.svg" alt="">
-            </button>
-            <div class="sideActionCount" id="actionCommentCount">0</div>
-          </div>
-
-          <div class="sideAction" id="actionFavoriteWrap">
-            <button class="sideActionBtn" id="actionFavoriteBtn" aria-label="Favorito o experimentado">
-              <img src="images/favorite.svg" alt="">
-            </button>
-            <div class="sideActionCount" id="actionFavoriteCount">0</div>
-          </div>
-
-          <div class="sideAction" id="actionContactWrap">
-            <button class="sideActionBtn" id="actionContactBtn" aria-label="Contacto">
-              <img src="images/contact.svg" alt="">
-            </button>
-            <div class="sideActionCount" id="actionContactCount">0</div>
-          </div>
+      <div class="sideActions" id="sideActions" aria-label="Acciones rápidas">
+        <div class="sideAction" id="actionLikeWrap">
+          <button class="sideActionBtn" id="actionLikeBtn" aria-label="Me gusta">
+            <img src="images/like.svg" alt="">
+          </button>
+          <div class="sideActionCount" id="actionLikeCount">0</div>
         </div>
-        <div class="toast" id="toast">Acción realizada ✓</div>
+
+        <div class="sideAction" id="actionCommentWrap">
+          <button class="sideActionBtn" id="actionCommentBtn" aria-label="Comentarios">
+            <img src="images/comment.svg" alt="">
+          </button>
+          <div class="sideActionCount" id="actionCommentCount">0</div>
+        </div>
+
+        <div class="sideAction" id="actionFavoriteWrap">
+          <button class="sideActionBtn" id="actionFavoriteBtn" aria-label="Favorito o experimentado">
+            <img src="images/favorite.svg" alt="">
+          </button>
+          <div class="sideActionCount" id="actionFavoriteCount">0</div>
+        </div>
+
+        <div class="sideAction" id="actionContactWrap">
+          <button class="sideActionBtn" id="actionContactBtn" aria-label="Contacto">
+            <img src="images/contact.svg" alt="">
+          </button>
+          <div class="sideActionCount" id="actionContactCount">0</div>
+        </div>
       </div>
 
+      <div class="toast" id="toast">Acción realizada ✓</div>
+    </div>  
       <div class="bottom">
         <div class="infoCard">
           <div class="row1">
