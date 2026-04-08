@@ -146,6 +146,27 @@
       z-index:1;
     }
 
+    /* ===== MODO DESAFIO: video más alto detrás de controles tipo Spotify ===== */
+    .shell.is-challenge .stage{
+      flex:0 0 56dvh;
+      max-height:56dvh;
+      margin-bottom:-110px; /* invade visualmente el panel inferior */
+      z-index:0;
+    }
+
+    .shell.is-challenge .bottom{
+      z-index:2; /* controles y texto por encima del video */
+      padding-top:118px; /* compensa el solape */
+      background:
+        linear-gradient(
+          180deg,
+          rgba(0,0,0,0.00) 0%,
+          rgba(0,0,0,0.22) 14%,
+          rgba(0,0,0,0.58) 34%,
+          rgba(0,0,0,0.90) 62%,
+          rgba(0,0,0,0.96) 100%
+        );
+    }
     .infoCard{
       background:transparent;
       border:none;
@@ -842,6 +863,17 @@
       .row1{
         padding-right:0px;
       }
+
+      .shell.is-challenge .stage{
+        flex:0 0 50dvh;
+        max-height:50dvh;
+        margin-bottom:-84px;
+      }
+
+      .shell.is-challenge .bottom{
+        padding-top:90px;
+      }
+      
     }
   </style>
 </head>
@@ -1064,6 +1096,8 @@
       const actionCommentCount = document.getElementById("actionCommentCount");
       const actionFavoriteCount = document.getElementById("actionFavoriteCount");
       const actionContactCount = document.getElementById("actionContactCount");
+      
+      const shell = document.querySelector(".shell");
 
       let challenge = null;
       let currentMediaVideoEl = null;
@@ -1128,6 +1162,11 @@
 
       const ACTION_TOGGLE_STORAGE_KEY = "ij_action_toggles_v1";
       let actionToggleState = loadActionToggleState();
+
+      function syncLayoutMode(){
+        const isChallengeView = currentMode === "challenge";
+        shell.classList.toggle("is-challenge", isChallengeView);
+      }
 
       function formatActionCount(value){
         const n = Number(value || 0);
@@ -2131,7 +2170,7 @@
         closeItemsPanel();
         currentMode = "item";
         currentItem = item;
-
+        syncLayoutMode();
         stopCurrentAudio(false);
         stopCurrentMediaVideo(true);
 
@@ -2170,6 +2209,7 @@
 
         currentMode = "challenge";
         currentItem = null;
+        syncLayoutMode();
 
         stopCurrentAudio(false);
         stopCurrentMediaVideo(true);
@@ -2249,6 +2289,7 @@
           playerWrap.hidden = true;
           closeItemsPanel();
           if (typeof showKamaEye === "function") showKamaEye(false);
+          shell.classList.remove("is-challenge");
           return;
         }
 
