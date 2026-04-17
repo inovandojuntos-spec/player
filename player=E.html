@@ -514,10 +514,7 @@
       display:none;
     }
 
-    #actionContactWrap .sideActionCount{
-      display:none !important;
-    }
-
+   
     .toast{
       position:absolute;
       left:14px;
@@ -1044,6 +1041,8 @@
       const KAMASUTRA_INTERVAL = 6000;
       const DEFAULT_WHATSAPP_URL = "https://wa.me/59177634467";
       const LIKE_TOGGLE_RPC_NAME = "toggle_target_like";
+      const FAVORITE_TOGGLE_RPC_NAME = "toggle_target_favorite";
+      const WHATSAPP_REGISTER_RPC_NAME = "register_target_whatsapp";
       const PLAYER_ID_KEY = "ij_browser_user_id";
       const SESSION_ID_KEY = "ij_browser_session_id";
 
@@ -1233,12 +1232,12 @@
             like_count: Number(data?.like_count || 0),
             comment_count: Number(data?.comment_count || 0),
             favorite_count: Number(data?.favorite_count || 0),
+            whatsapp_count: Number(data?.whatsapp_count || data?.contact_count || 0),
             liked: !!data?.liked,
             favorited: !!data?.favorited
           }
         });
       }
-
       function invalidateCachedTargetStats(target){
         const key = getTargetCacheKey(target);
         if (!key) return;
@@ -1364,6 +1363,179 @@
           actionLikeBtn.disabled = false;
         }
       }
+
+      let favoriteRequestInFlight = false;
+      let whatsappRequestInFlight = false;
+
+      async function handleFavoriteClick(explicitData = null){
+        if (favoriteRequestInFlight) return;
+
+        const explicitTarget = explicitData?.targetId
+          ? {
+              targetType: explicitData.targetType,
+              targetId: explicitData.targetId
+            }
+          : null;
+
+        const target = explicitTarget || getCurrentTarget();
+
+        if (!target?.targetId){
+          showToast("Target inválido para favorito");
+          console.error("[FAVORITE] target inválido", {
+            explicitData,
+            currentMode,
+            currentItem,
+            currentChallengeId: challenge?.id,
+            currentPosition: kamasutraState?.history?.[kamasutraState?.historyIndex] || null,
+            resolvedTarget: target
+          });
+          return;
+        }
+
+        favoriteRequestInFlight = true;
+        actionFavoriteBtn.disabled = true;
+
+        try{
+          console.log("[FAVORITE CLICK]", {
+            currentMode,
+            target,
+            currentActionScope
+          });
+
+          const { data: rpcData, error } = await supabase.rpc(FAVORITE_TOGGLE_RPC_NAME, {
+            p_target_type: target.targetType,
+            p_target_id: target.targetId,
+            p_user_id: browserUserId
+          });
+
+          if (error) throw error;
+
+          console.log("[FAVORITE RPC OK]", rpcData);
+
+          const favorited = !!(rpcData?.favorited ?? rpcData?.data?.favorited);
+          const favoriteCount = Number(rpcData?.favorite_count ?? rpcData?.data?.favorite_count ?? 0);
+
+          setActionToggled(currentActionScope, "favorite", favorited);
+
+          if (actionState?.favorite){
+            actionState.favorite.count = favoriteCount;
+          }
+
+          const updatedTarget = getCurrentTarget();
+          const prevCached = getCachedTargetStats(updatedTarget) || {
+            like_count: 0,
+            comment_count: 0,
+            favorite_count: 0,
+            whatsapp_count: 0,
+            liked: false,
+            favorited: false
+          };
+
+          setCachedTargetStats(updatedTarget, {
+            ...prevCached,
+            favorite_count: favoriteCount,
+            favorited
+          });
+
+          renderActionRail(actionState);
+          showToast(favorited ? "Guardado en favoritos" : "Favorito removido");
+
+        }catch(err){
+          console.error("[FAVORITE RPC ERROR]", err);
+          showToast("Error registrando favorito");
+        }finally{
+          favoriteRequestInFlight = false;
+          actionFavoriteBtn.disabled = false;
+        }
+      }
+
+      async function handleWhatsappClick(){
+        if (whatsappRequestInFlight) return;
+
+        const cfg = actionState?.contact;
+        const target = getCurrentTarget();
+
+        if (!target?.targetId){
+          showToast("Target inválido para contacto");
+          console.error("[WHATSAPP] target inválido", { currentMode, target });
+          return;
+        }
+
+        if (!cfg?.url){
+          showToast("Link de contacto no configurado");
+          return;
+        }
+
+        whatsappRequestInFlight = true;
+        actionContactBtn.disabled = true;
+
+        try{
+          console.log("[WHATSAPP CLICK]", {
+            currentMode,
+            target,
+            url: cfg.url
+          });
+
+          const payload = {
+            url: cfg.url,
+            session_id: browserSessionId,
+            source: "player",
+            current_mode: currentMode,
+            user_agent: navigator.userAgent || ""
+          };
+
+          const { data: rpcData, error } = await supabase.rpc(WHATSAPP_REGISTER_RPC_NAME, {
+            p_target_type: target.targetType,
+            p_target_id: target.targetId,
+            p_user_id: browserUserId,
+            p_payload: payload
+          });
+
+          if (error) throw error;
+
+          console.log("[WHATSAPP RPC OK]", rpcData);
+
+          const whatsappCount = Number(
+            rpcData?.whatsapp_count ??
+            rpcData?.contact_count ??
+            rpcData?.data?.whatsapp_count ??
+            rpcData?.data?.contact_count ??
+            0
+          );
+
+          if (actionState?.contact){
+            actionState.contact.count = whatsappCount;
+          }
+
+          const updatedTarget = getCurrentTarget();
+          const prevCached = getCachedTargetStats(updatedTarget) || {
+            like_count: 0,
+            comment_count: 0,
+            favorite_count: 0,
+            whatsapp_count: 0,
+            liked: false,
+            favorited: false
+          };
+
+          setCachedTargetStats(updatedTarget, {
+            ...prevCached,
+            whatsapp_count: whatsappCount
+          });
+
+          renderActionRail(actionState);
+
+          // abrir link después de registrar
+          executeActionLink(cfg.url);
+
+        }catch(err){
+          console.error("[WHATSAPP RPC ERROR]", err);
+          showToast("Error registrando contacto");
+        }finally{
+          whatsappRequestInFlight = false;
+          actionContactBtn.disabled = false;
+        }
+      }
+
 
       function formatActionCount(value){
         const n = Number(value || 0);
@@ -1551,11 +1723,7 @@
           ui.btn.disabled = !enabled;
           ui.btn.dataset.actionKey = key;
 
-          if (key !== "contact"){
-            ui.count.textContent = formatActionCount(item.count || 0);
-          } else {
-            ui.count.textContent = "";
-          }
+          ui.count.textContent = formatActionCount(item.count || 0);
         });
 
         updateActionIcons(config);
@@ -1567,7 +1735,27 @@
 
         renderActionRail(actionState);
 
-        const target = getCurrentTarget();
+        const target = resolveTargetFromData(data, mode);
+
+        if (!target?.targetId){
+          console.warn("[ACTION RAIL] target inválido", { data, mode, target });
+          return;
+        }
+
+        const cached = getCachedTargetStats(target);
+        if (cached){
+          if (actionState?.like) actionState.like.count = Number(cached.like_count || 0);
+          if (actionState?.comment) actionState.comment.count = Number(cached.comment_count || 0);
+          if (actionState?.favorite) actionState.favorite.count = Number(cached.favorite_count || 0);
+          if (actionState?.contact) actionState.contact.count = Number(cached.whatsapp_count || 0);
+
+          setActionToggled(currentActionScope, "like", !!cached.liked);
+          setActionToggled(currentActionScope, "favorite", !!cached.favorited);
+
+          renderActionRail(actionState);
+          return;
+        }
+
         const stats = await loadTargetStats(target);
 
         if (!stats){
@@ -1587,11 +1775,22 @@
           actionState.favorite.count = Number(stats.favorite_count || 0);
         }
 
+        if (actionState?.contact){
+          actionState.contact.count = Number(stats.whatsapp_count || stats.contact_count || 0);
+        }
+
+        setCachedTargetStats(target, stats);
         setActionToggled(currentActionScope, "like", !!stats.liked);
         setActionToggled(currentActionScope, "favorite", !!stats.favorited);
 
         renderActionRail(actionState);
       }
+      
+      
+      
+      
+      
+      
       function incrementActionCount(key){
         if (!actionState?.[key]) return;
         actionState[key].count = Number(actionState[key].count || 0) + 1;
@@ -1619,6 +1818,16 @@
       }
 
       function executeConfiguredAction(key){
+        
+        console.log("🚀 EXECUTE_CONFIGURED_ACTION ENTER", {
+          key,
+          actionState: actionState,
+          currentMode: currentMode,
+          currentActionScope: currentActionScope,
+          target: getCurrentTarget(),
+          timestamp: new Date().toISOString()
+        });
+
         const cfg = actionState?.[key];
         if (!cfg || cfg.enabled === false) return;
 
@@ -1628,19 +1837,17 @@
         }
 
         if (key === "favorite"){
-          toggleAction("favorite");
-          showToast(isActionToggled(currentActionScope, "favorite") ? "Salvo" : "Removido dos salvos");
+          console.log("⭐ FAVORITE FLOW TRIGGERED", {
+          enabled: actionState?.favorite?.enabled,
+          count: actionState?.favorite?.count,
+          target: getCurrentTarget()
+        }); 
+          handleFavoriteClick();
           return;
         }
 
         if (key === "contact"){
-          if (cfg.url){
-            executeActionLink(cfg.url);
-            return;
-          }
-          if (cfg.toast){
-            showToast(cfg.toast);
-          }
+          handleWhatsappClick();
           return;
         }
 
@@ -1655,7 +1862,6 @@
           showToast(cfg.toast);
         }
       }
-
       function clearKamasutraTimer(){
         if (kamasutraTimer){
           clearInterval(kamasutraTimer);
@@ -2455,6 +2661,38 @@
         loadAudio(data.audio || "", true, false);
       }
 
+      function resolveTargetFromData(data, mode = currentMode){
+        if (data?.targetType && data?.targetId){
+          return {
+            targetType: data.targetType,
+            targetId: data.targetId
+          };
+        }
+
+        if (mode === "position" && data?.id){
+          return {
+            targetType: "position",
+            targetId: data.id
+          };
+        }
+
+        if (mode === "item" && data?.id){
+          return {
+            targetType: "item",
+            targetId: data.id
+          };
+        }
+
+        if (mode === "challenge" && data?.id){
+          return {
+            targetType: "challenge",
+            targetId: data.id
+          };
+        }
+
+        return getCurrentTarget();
+      }
+
       async function selectItem(item){
         closeItemsPanel();
         currentMode = "item";
@@ -2469,22 +2707,26 @@
           ? (item.image || "")
           : (item.video || item.image || "");
 
-        const finalMedia = isInstructionItem(item)
-          ? mediaSrc
-          : mediaSrc;
+        const finalMedia = mediaSrc;
 
         renderMedia({
+          id: item.id ?? null,
           media: finalMedia,
           title: item.name,
           audio: item.audio || "",
-          slug: item.slug || ""
+          slug: item.slug || "",
+          targetType: "item",
+          targetId: item.id ?? null
         });
 
         await renderInfo({
+          id: item.id ?? null,
           title: item.name || "Item",
           category: item.category || "",
           media: finalMedia,
-          slug: item.slug || ""
+          slug: item.slug || "",
+          targetType: "item",
+          targetId: item.id ?? null
         });
 
         renderPlayer({
@@ -2492,7 +2734,6 @@
           description: item.description || ""
         });
       }
-
       async function goToChallengeView(showMsg = false){
         if (!challenge) return;
 
