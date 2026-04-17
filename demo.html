@@ -1170,76 +1170,96 @@
       let actionToggleState = loadActionToggleState();
 
       async function loadTargetStats(target){
-        if (!target?.targetId) {
-          return {
-            like_count: 0,
-            comment_count: 0,
-            favorite_count: 0,
-            liked: false,
-            favorited: false
-          };
-        }
+        if (!target?.targetId) return null;
 
         try{
-          // Opción A: si ya tienes una RPC para bundle/summary, úsala aquí
-          // const { data, error } = await supabase.rpc("get_target_stats_bundle", {
-          //   p_target_type: target.targetType,
-          //   p_target_id: target.targetId,
-          //   p_user_id: browserUserId
-          // });
+          const { data, error } = await supabase.rpc("get_target_interaction_bundle", {
+            p_target_type: target.targetType,
+            p_target_id: target.targetId,
+            p_user_id: browserUserId
+          });
 
-          // Opción B: leer directo desde target_stats
-          const { data: statsRow, error: statsError } = await supabase
-            .from("target_stats")
-            .select("likes_count, comments_count, favorites_count")
-            .eq("target_type", target.targetType)
-            .eq("target_id", target.targetId)
-            .maybeSingle();
+          if (error){
+            console.error("[STATS RPC ERROR]", error);
+            return null;
+          }
 
-          if (statsError) throw statsError;
+          console.log("[RAW RPC DATA]", data);
 
-          // liked actual del usuario actual
-          const { data: likeRow, error: likeError } = await supabase
-            .from("target_likes")
-            .select("target_id")
-            .eq("target_type", target.targetType)
-            .eq("target_id", target.targetId)
-            .eq("user_id", browserUserId)
-            .maybeSingle();
+          // 🔴 SOPORTA ambos formatos
+          const result = data?.get_target_interaction_bundle ?? data;
 
-          if (likeError) throw likeError;
+          return result;
 
-          // favorited actual del usuario actual, si aplica
-          const { data: favRow, error: favError } = await supabase
-            .from("target_favorites")
-            .select("target_id")
-            .eq("target_type", target.targetType)
-            .eq("target_id", target.targetId)
-            .eq("user_id", browserUserId)
-            .maybeSingle();
-
-          if (favError) throw favError;
-
-          return {
-            like_count: Number(statsRow?.likes_count || 0),
-            comment_count: Number(statsRow?.comments_count || 0),
-            favorite_count: Number(statsRow?.favorites_count || 0),
-            liked: !!likeRow,
-            favorited: !!favRow
-          };
         }catch(err){
-          console.error("[LOAD TARGET STATS ERROR]", err);
-          return {
-            like_count: 0,
-            comment_count: 0,
-            favorite_count: 0,
-            liked: false,
-            favorited: false
-          };
+          console.error("[STATS EXCEPTION]", err);
+          return null;
         }
       }
+      
+      
+      
+      const targetStatsCache = new Map();
+      const TARGET_STATS_TTL_MS = 30000; // ajustable: 15s, 30s, 60s
+
+      function getTargetCacheKey(target){
+        if (!target?.targetType || !target?.targetId) return null;
+        return `${target.targetType}:${target.targetId}`;
+      }
+
+      function getCachedTargetStats(target){
+        const key = getTargetCacheKey(target);
+        if (!key) return null;
+
+        const entry = targetStatsCache.get(key);
+        if (!entry) return null;
+
+        const isExpired = (Date.now() - entry.ts) > TARGET_STATS_TTL_MS;
+        if (isExpired){
+          targetStatsCache.delete(key);
+          return null;
+        }
+
+        return entry.data;
+      }
+
+      function setCachedTargetStats(target, data){
+        const key = getTargetCacheKey(target);
+        if (!key) return;
+
+        targetStatsCache.set(key, {
+          ts: Date.now(),
+          data: {
+            like_count: Number(data?.like_count || 0),
+            comment_count: Number(data?.comment_count || 0),
+            favorite_count: Number(data?.favorite_count || 0),
+            liked: !!data?.liked,
+            favorited: !!data?.favorited
+          }
+        });
+      }
+
+      function invalidateCachedTargetStats(target){
+        const key = getTargetCacheKey(target);
+        if (!key) return;
+        targetStatsCache.delete(key);
+      }
+
+
 
       function getCurrentTarget(){
+        // posición individual de kamasutra/cadeira
+        if (currentMode === "position" && kamasutraState?.historyIndex >= 0){
+          const pos = kamasutraState.history[kamasutraState.historyIndex];
+
+          if (pos?.id){
+            return {
+              targetType: "position",
+              targetId: pos.id
+            };
+          }
+        }
+
         if (currentMode === "item" && currentItem?.id){
           return {
             targetType: "item",
@@ -1255,7 +1275,7 @@
         }
 
         return null;
-}
+      }
       function syncLayoutMode(){
         const isChallengeView = currentMode === "challenge";
         shell.classList.toggle("is-challenge", isChallengeView);
@@ -1263,13 +1283,28 @@
       
       let likeRequestInFlight = false;
 
-      async function handleLikeClick(){
+      async function handleLikeClick(explicitData = null){
         if (likeRequestInFlight) return;
 
-        const target = getCurrentTarget();
+        const explicitTarget = explicitData?.targetId
+          ? {
+              targetType: explicitData.targetType,
+              targetId: explicitData.targetId
+            }
+          : null;
+
+        const target = explicitTarget || getCurrentTarget();
+
         if (!target?.targetId){
           showToast("Target inválido para like");
-          console.error("[LIKE] target inválido", target);
+          console.error("[LIKE] target inválido", {
+            explicitData,
+            currentMode,
+            currentItem,
+            currentChallengeId: challenge?.id,
+            currentPosition: kamasutraState?.history?.[kamasutraState?.historyIndex] || null,
+            resolvedTarget: target
+          });
           return;
         }
 
@@ -1277,26 +1312,46 @@
         actionLikeBtn.disabled = true;
 
         try{
-          const { data, error } = await supabase.rpc(LIKE_TOGGLE_RPC_NAME, {
+          console.log("[LIKE CLICK]", {
+            currentMode,
+            target,
+            currentActionScope,
+            currentPosition: kamasutraState?.history?.[kamasutraState?.historyIndex] || null
+          });
+
+          const { data: rpcData, error } = await supabase.rpc(LIKE_TOGGLE_RPC_NAME, {
             p_target_type: target.targetType,
             p_target_id: target.targetId,
-            p_user_id: browserUserId,
-            
+            p_user_id: browserUserId
           });
 
           if (error) throw error;
 
-          console.log("[LIKE RPC OK]", data);
+          console.log("[LIKE RPC OK]", rpcData);
 
-          // Ajusta esto según la respuesta real de tu RPC
-          const liked = !!(data?.liked ?? data?.data?.liked);
-          const likeCount = Number(data?.like_count ?? data?.data?.like_count ?? 0);
+          const liked = !!(rpcData?.liked ?? rpcData?.data?.liked);
+          const likeCount = Number(rpcData?.like_count ?? rpcData?.data?.like_count ?? 0);
 
           setActionToggled(currentActionScope, "like", liked);
 
           if (actionState?.like){
             actionState.like.count = likeCount;
           }
+
+          const updatedTarget = getCurrentTarget();
+          const prevCached = getCachedTargetStats(updatedTarget) || {
+            like_count: 0,
+            comment_count: 0,
+            favorite_count: 0,
+            liked: false,
+            favorited: false
+          };
+
+          setCachedTargetStats(updatedTarget, {
+            ...prevCached,
+            like_count: likeCount,
+            liked
+          });
 
           renderActionRail(actionState);
           showToast(liked ? "Gostei" : "Like removido");
@@ -1309,8 +1364,6 @@
           actionLikeBtn.disabled = false;
         }
       }
-
-
 
       function formatActionCount(value){
         const n = Number(value || 0);
@@ -1394,20 +1447,49 @@
       }
 
       function getActionScopeFromData(data, mode = currentMode){
-        const mediaMode = getKamaMode(data?.media || data?.video || "");
-        if (mediaMode){
-          return { type: "classification", key: mediaMode };
+        // 1) prioridad máxima: posición individual
+        if (mode === "position" && data?.id){
+          return {
+            type: "position",
+            key: String(data.id)
+          };
         }
 
+        // 2) item normal
+        if (mode === "item" && data?.id){
+          return {
+            type: "item",
+            key: String(data.id)
+          };
+        }
+
+        // 3) challenge
+        if (mode === "challenge" && data?.id){
+          return {
+            type: "challenge",
+            key: String(data.id)
+          };
+        }
+
+        // 4) fallback por slug
         if (mode === "item" && data?.slug){
-          return { type: "item", key: normalizeSlug(data.slug) };
+          return {
+            type: "item",
+            key: normalizeSlug(data.slug)
+          };
         }
 
         if (data?.slug){
-          return { type: "challenge", key: normalizeSlug(data.slug) };
+          return {
+            type: "challenge",
+            key: normalizeSlug(data.slug)
+          };
         }
 
-        return { type: "challenge", key: "default" };
+        return {
+          type: "challenge",
+          key: "default"
+        };
       }
 
       function resolveActionsForScope(scope){
@@ -1483,30 +1565,33 @@
         currentActionScope = getActionScopeFromData(data, mode);
         actionState = resolveActionsForScope(currentActionScope);
 
-        // Render inicial rápido
         renderActionRail(actionState);
 
         const target = getCurrentTarget();
         const stats = await loadTargetStats(target);
 
+        if (!stats){
+          console.warn("[ACTION RAIL] no stats for target", target);
+          return;
+        }
+
         if (actionState?.like){
-          actionState.like.count = stats.like_count;
+          actionState.like.count = Number(stats.like_count || 0);
         }
 
         if (actionState?.comment){
-          actionState.comment.count = stats.comment_count;
+          actionState.comment.count = Number(stats.comment_count || 0);
         }
 
         if (actionState?.favorite){
-          actionState.favorite.count = stats.favorite_count;
+          actionState.favorite.count = Number(stats.favorite_count || 0);
         }
 
-        setActionToggled(currentActionScope, "like", stats.liked);
-        setActionToggled(currentActionScope, "favorite", stats.favorited);
+        setActionToggled(currentActionScope, "like", !!stats.liked);
+        setActionToggled(currentActionScope, "favorite", !!stats.favorited);
 
         renderActionRail(actionState);
       }
-
       function incrementActionCount(key){
         if (!actionState?.[key]) return;
         actionState[key].count = Number(actionState[key].count || 0) + 1;
@@ -1908,6 +1993,19 @@
 
           pTitle.textContent = pos.nombre || "";
 
+          // 🔴 importante: esta vista ahora representa una posición individual
+          currentMode = "position";
+
+          await refreshActionRail({
+            id: pos.id,
+            slug: `position_${pos.id}`,
+            title: pos.nombre,
+            media: null,
+            // 🔴 CRÍTICO
+            targetType: "position",
+            targetId: pos.id
+          }, "position");
+
           try{
             await setLayer(nextLayer, pos.svg);
           }catch(err){
@@ -1924,7 +2022,6 @@
 
           setTimeout(swapLayers, 1500);
         }
-
         function startLoop(){
           if (!kamasutraState?.isKamasutra) return;
           if (kamasutraTimer) return;
@@ -1937,6 +2034,17 @@
         function stopLoop(){
           clearKamasutraTimer();
         }
+
+        function shuffleArray(arr){
+          const a = arr.slice();
+
+          for (let i = a.length - 1; i > 0; i--){
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+          }
+
+          return a;
+        } 
 
         (async () => {
           const nivel = mode === "cadeira" ? 2 : 1;
@@ -1955,94 +2063,84 @@
           const groups = buildGroups(posiciones);
 
           kamasutraState = {
-            isKamasutra: true,
-            posiciones,
-            filtered: posiciones.slice(),
-            groups,
-            activeGroup: null,
-            history: [],
-            historyIndex: -1,
-            showPosition: showPositionInternal,
-            startLoop,
-            stopLoop,
+          isKamasutra: true,
+          posiciones,
+          filtered: shuffleArray(posiciones.slice()),
+          groups,
+          activeGroup: null,
+          history: [],
+          historyIndex: -1,
+          playIndex: -1,
+          showPosition: showPositionInternal,
+          startLoop,
+          stopLoop,
 
-            getActiveList(){
-              return (this.filtered && this.filtered.length) ? this.filtered : this.posiciones;
-            },
+          getActiveList(){
+            return (this.filtered && this.filtered.length) ? this.filtered : [];
+          },
 
-            getRandomFromActiveList(excludeCurrent = true){
-              const list = this.getActiveList();
-              if (!list.length) return null;
+          async goToPosition(pos, pushToHistory = true){
+            if (!pos) return;
 
-              if (list.length === 1) return list[0];
-
-              let attempts = 0;
-              let candidate = null;
-              do{
-                candidate = list[Math.floor(Math.random() * list.length)];
-                attempts++;
-              } while (
-                excludeCurrent &&
-                this.historyIndex >= 0 &&
-                candidate?.id === this.history[this.historyIndex]?.id &&
-                attempts < 12
-              );
-
-              return candidate;
-            },
-
-            async goToPosition(pos, pushToHistory = true){
-              if (!pos) return;
-
-              if (pushToHistory){
-                if (this.historyIndex < this.history.length - 1){
-                  this.history = this.history.slice(0, this.historyIndex + 1);
-                }
-                this.history.push(pos);
-                this.historyIndex = this.history.length - 1;
+            if (pushToHistory){
+              if (this.historyIndex < this.history.length - 1){
+                this.history = this.history.slice(0, this.historyIndex + 1);
               }
-
-              await this.showPosition(pos);
-            },
-
-            async nextRandom(fromUser = true){
-              const pos = this.getRandomFromActiveList(true);
-              if (!pos) return;
-
-              await this.goToPosition(pos, true);
-
-              if (fromUser){
-              }
-            },
-
-            async prev(){
-              if (this.historyIndex > 0){
-                this.historyIndex--;
-                await this.showPosition(this.history[this.historyIndex]);
-              }
-            },
-
-            async filterByGroup(group){
-              this.activeGroup = group || null;
-              this.filtered = this.activeGroup
-                ? this.posiciones.filter(p => (p.grupo || "").trim() === this.activeGroup)
-                : this.posiciones.slice();
-
-              this.history = [];
-              this.historyIndex = -1;
-
-              await this.nextRandom(false);
+              this.history.push(pos);
+              this.historyIndex = this.history.length - 1;
             }
-          };
 
-          await kamasutraState.nextRandom(false);
+            await this.showPosition(pos);
+          },
 
-          if (audioSrc){
-            loadAudio(audioSrc, true, true);
-          } else {
-            playerWrap.hidden = true;
-            startLoop();
+          async nextRandom(fromUser = true){
+            const list = this.getActiveList();
+            if (!list.length) return;
+
+            this.playIndex++;
+
+            if (this.playIndex >= list.length){
+              this.filtered = shuffleArray(list.slice());
+              this.playIndex = 0;
+            }
+
+            const pos = this.filtered[this.playIndex];
+            await this.goToPosition(pos, true);
+          },
+
+          async prev(){
+            if (this.historyIndex > 0){
+              this.historyIndex--;
+              await this.showPosition(this.history[this.historyIndex]);
+            }
+          },
+
+          async filterByGroup(group){
+            this.activeGroup = group || null;
+
+            const base = this.activeGroup
+              ? this.posiciones.filter(p => (p.grupo || "").trim() === this.activeGroup)
+              : this.posiciones.slice();
+
+            this.filtered = shuffleArray(base);
+            this.history = [];
+            this.historyIndex = -1;
+            this.playIndex = -1;
+
+            await this.nextRandom(false);
           }
+        };
+
+        // ✅ mostrar primera posición inmediatamente
+        await kamasutraState.nextRandom(false);
+
+        // ✅ luego iniciar audio/loop
+        if (audioSrc){
+          loadAudio(audioSrc, true, true);
+        } else {
+          playerWrap.hidden = true;
+          startLoop();
+        }
         })();
       }
 
