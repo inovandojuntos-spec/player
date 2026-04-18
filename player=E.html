@@ -1039,10 +1039,13 @@
       const KAMASUTRA_RPC_NAME = "get_kamasutra_positions";
       const LAST_VIEW_KEY = "shop_last_view_v2";
       const KAMASUTRA_INTERVAL = 6000;
-      const DEFAULT_WHATSAPP_URL = "https://wa.me/59177634467";
+      
+      const DEFAULT_WHATSAPP_PHONE = "59177634467";
+      const DEFAULT_WHATSAPP_URL = `https://wa.me/${DEFAULT_WHATSAPP_PHONE}`;
+
+      const WHATSAPP_REGISTER_RPC_NAME = "register_target_whatsapp";
       const LIKE_TOGGLE_RPC_NAME = "toggle_target_like";
       const FAVORITE_TOGGLE_RPC_NAME = "toggle_target_favorite";
-      const WHATSAPP_REGISTER_RPC_NAME = "register_target_whatsapp";
       const PLAYER_ID_KEY = "ij_browser_user_id";
       const SESSION_ID_KEY = "ij_browser_session_id";
 
@@ -1461,11 +1464,6 @@
           return;
         }
 
-        if (!cfg?.url){
-          showToast("Link de contacto no configurado");
-          return;
-        }
-
         whatsappRequestInFlight = true;
         actionContactBtn.disabled = true;
 
@@ -1473,33 +1471,28 @@
           console.log("[WHATSAPP CLICK]", {
             currentMode,
             target,
-            url: cfg.url
+            phone: cfg?.phone || null
           });
-
-          const payload = {
-            url: cfg.url,
-            session_id: browserSessionId,
-            source: "player",
-            current_mode: currentMode,
-            user_agent: navigator.userAgent || ""
-          };
 
           const { data: rpcData, error } = await supabase.rpc(WHATSAPP_REGISTER_RPC_NAME, {
             p_target_type: target.targetType,
             p_target_id: target.targetId,
             p_user_id: browserUserId,
-            p_payload: payload
+            p_phone_number: cfg?.phone || DEFAULT_WHATSAPP_PHONE,
+            p_source: "player",
+            p_session_id: browserSessionId,
+            p_user_agent: navigator.userAgent || ""
           });
 
           if (error) throw error;
 
           console.log("[WHATSAPP RPC OK]", rpcData);
 
+          const whatsappUrl = rpcData?.whatsapp_url || "";
           const whatsappCount = Number(
+            rpcData?.wp_click_count ??
             rpcData?.whatsapp_count ??
             rpcData?.contact_count ??
-            rpcData?.data?.whatsapp_count ??
-            rpcData?.data?.contact_count ??
             0
           );
 
@@ -1524,8 +1517,12 @@
 
           renderActionRail(actionState);
 
-          // abrir link después de registrar
-          executeActionLink(cfg.url);
+          if (!whatsappUrl){
+            showToast("No se pudo generar el link de WhatsApp");
+            return;
+          }
+
+          executeActionLink(whatsappUrl);
 
         }catch(err){
           console.error("[WHATSAPP RPC ERROR]", err);
@@ -1535,8 +1532,7 @@
           actionContactBtn.disabled = false;
         }
       }
-
-
+    
       function formatActionCount(value){
         const n = Number(value || 0);
         if (!Number.isFinite(n) || n <= 0) return "0";
@@ -1681,8 +1677,8 @@
         ){
           merged.contact.enabled = true;
 
-          if (!merged.contact.url){
-            merged.contact.url = DEFAULT_WHATSAPP_URL;
+          if (!merged.contact.phone){
+            merged.contact.phone = DEFAULT_WHATSAPP_PHONE;
           }
         }
 
