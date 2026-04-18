@@ -1452,87 +1452,121 @@
         }
       }
 
-      async function handleWhatsappClick(){
+      async function handleWhatsappClick() {
         if (whatsappRequestInFlight) return;
 
         const cfg = actionState?.contact;
         const target = getCurrentTarget();
 
-        if (!target?.targetId){
+        if (!target?.targetId) {
           showToast("Target inválido para contacto");
           console.error("[WHATSAPP] target inválido", { currentMode, target });
           return;
         }
 
+        // Resolver teléfono
+        const phoneRaw = cfg?.phone || DEFAULT_WHATSAPP_PHONE || "";
+        const phoneClean = String(phoneRaw).replace(/\D/g, "");
+
+        if (!phoneClean) {
+          showToast("Número de WhatsApp inválido");
+          console.error("[WHATSAPP] teléfono inválido", { phoneRaw });
+          return;
+        }
+
+        // Resolver nombre del producto/target localmente
+        // Resolver nombre del producto desde el estado real del player
+        const productName =
+          (currentMode === "item" && currentItem?.name)
+            ? currentItem.name
+            : "Produto";
+
+        // Mensaje por defecto
+        const messageText = `Ola, tengo interes en este producto: ${productName}`;
+        const whatsappUrl = `https://wa.me/${phoneClean}?text=${encodeURIComponent(messageText)}`;
+
+        console.log("[WHATSAPP CLICK]", {
+          currentMode,
+          target,
+          phone: phoneClean,
+          productName,
+          whatsappUrl
+        });
+
+        // Bloqueo corto para evitar doble click muy rápido
         whatsappRequestInFlight = true;
         actionContactBtn.disabled = true;
 
-        try{
-          console.log("[WHATSAPP CLICK]", {
-            currentMode,
-            target,
-            phone: cfg?.phone || null
-          });
+        try {
+          // 1) Abrir WhatsApp inmediatamente
+          executeActionLink(whatsappUrl);
 
-          const { data: rpcData, error } = await supabase.rpc(WHATSAPP_REGISTER_RPC_NAME, {
+          // 2) Registrar en DB en background, SIN esperar respuesta para continuar flujo
+          supabase.rpc(WHATSAPP_REGISTER_RPC_NAME, {
             p_target_type: target.targetType,
             p_target_id: target.targetId,
             p_user_id: browserUserId,
-            p_phone_number: cfg?.phone || DEFAULT_WHATSAPP_PHONE,
+            p_phone_number: phoneClean,
             p_source: "player",
             p_session_id: browserSessionId,
             p_user_agent: navigator.userAgent || ""
+          })
+          .then(({ data: rpcData, error }) => {
+            if (error) {
+              console.error("[WHATSAPP RPC ERROR]", error);
+              return;
+            }
+
+            console.log("[WHATSAPP RPC OK]", rpcData);
+
+            const whatsappCount = Number(
+              rpcData?.wp_click_count ??
+              rpcData?.whatsapp_count ??
+              rpcData?.contact_count ??
+              0
+            );
+
+            if (actionState?.contact) {
+              actionState.contact.count = whatsappCount;
+            }
+
+            const updatedTarget = getCurrentTarget();
+            const prevCached = getCachedTargetStats(updatedTarget) || {
+              like_count: 0,
+              comment_count: 0,
+              favorite_count: 0,
+              whatsapp_count: 0,
+              liked: false,
+              favorited: false
+            };
+
+            setCachedTargetStats(updatedTarget, {
+              ...prevCached,
+              whatsapp_count: whatsappCount
+            });
+
+            renderActionRail(actionState);
+
+            // opcional: solo mostrar si realmente quieres feedback visual al guardar
+            // showToast("Contacto guardado");
+          })
+          .catch((err) => {
+            console.error("[WHATSAPP RPC CATCH ERROR]", err);
           });
 
-          if (error) throw error;
-
-          console.log("[WHATSAPP RPC OK]", rpcData);
-
-          const whatsappUrl = rpcData?.whatsapp_url || "";
-          const whatsappCount = Number(
-            rpcData?.wp_click_count ??
-            rpcData?.whatsapp_count ??
-            rpcData?.contact_count ??
-            0
-          );
-
-          if (actionState?.contact){
-            actionState.contact.count = whatsappCount;
-          }
-
-          const updatedTarget = getCurrentTarget();
-          const prevCached = getCachedTargetStats(updatedTarget) || {
-            like_count: 0,
-            comment_count: 0,
-            favorite_count: 0,
-            whatsapp_count: 0,
-            liked: false,
-            favorited: false
-          };
-
-          setCachedTargetStats(updatedTarget, {
-            ...prevCached,
-            whatsapp_count: whatsappCount
-          });
-
-          renderActionRail(actionState);
-
-          if (!whatsappUrl){
-            showToast("No se pudo generar el link de WhatsApp");
-            return;
-          }
-
-          executeActionLink(whatsappUrl);
-
-        }catch(err){
-          console.error("[WHATSAPP RPC ERROR]", err);
-          showToast("Error registrando contacto");
-        }finally{
-          whatsappRequestInFlight = false;
-          actionContactBtn.disabled = false;
+        } catch (err) {
+          console.error("[WHATSAPP OPEN ERROR]", err);
+          showToast("Error abriendo WhatsApp");
+        } finally {
+          // liberar rápido el botón, sin esperar a la DB
+          setTimeout(() => {
+            whatsappRequestInFlight = false;
+            actionContactBtn.disabled = false;
+          }, 500);
         }
       }
-    
+
+
       function formatActionCount(value){
         const n = Number(value || 0);
         if (!Number.isFinite(n) || n <= 0) return "0";
