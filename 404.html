@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+
+  <script>
+    const parts = window.location.pathname
+      .split("/")
+      .filter(Boolean);
+
+    const slug = parts[parts.length - 1];
+
+    // SOLO URLs /play/desafio_xx
+    if (parts[0] === "play" && slug) {
+
+      // redirección interna dinámica
+      window.location.replace(`/play.html/${slug}`);
+
+    } else {
+
+      document.body.innerHTML = "Página no encontrada";
+
+    }
+  </script>
+
+</head>
+<body></body>
+</html>
