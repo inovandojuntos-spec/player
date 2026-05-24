@@ -1913,6 +1913,11 @@
       }
 
       function getChallengeSlug(fallback = ""){
+        const params = new URLSearchParams(window.location.search);
+        const fromQuery = params.get("id");
+
+        if (fromQuery) return fromQuery.trim();
+
         const pathParts = window.location.pathname
           .split("/")
           .map(p => p.trim())
