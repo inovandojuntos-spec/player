@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bienvenida</title>
+
+  <style>
+    :root{
+      --bg:#000;
+      --edge:rgba(255,255,255,.12);
+      --text:rgba(255,255,255,.95);
+      --muted:rgba(255,255,255,.55);
+    }
+    html,body{
+      margin:0;
+      height:100%;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:#000;
+      color:var(--text);
+    }
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .card{
+      width:min(420px,100%);
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      padding:20px;
+      box-shadow:0 30px 90px rgba(0,0,0,.85);
+    }
+    .logo{ text-align:center; margin-bottom:14px; }
+    .logo img{ max-width:160px; width:60%; }
+    h1{ text-align:center; font-size:22px; margin:6px 0; font-weight:900; }
+    p{
+      text-align:center;
+      font-size:14px;
+      color:var(--muted);
+      margin:0 0 18px;
+      line-height:1.4;
+    }
+    label{
+      display:block;
+      font-size:11px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:4px;
+    }
+    input{
+      width:95%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--edge);
+      background:#000;
+      color:var(--text);
+      font-size:15px;
+      margin-bottom:12px;
+      outline:none;
+    }
+    input::placeholder{ color:rgba(255,255,255,.35); }
+    .btn{
+      width:100%;
+      padding:15px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+      color:#fff;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      cursor:pointer;
+      margin-top:6px;
+    }
+    .btn:active{ transform:translateY(1px); }
+    .welcomeBack{
+      text-align:center;
+      font-size:14px;
+      margin-bottom:14px;
+    }
+    .small{
+      font-size:12px;
+      color:var(--muted);
+      text-align:center;
+      margin-top:12px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="card">
+
+    <div class="logo">
+      <img src="images/logo.png" alt="Logo">
+    </div>
+
+    <h1 id="title">Bienvenido</h1>
+    <p id="subtitle">Antes de comenzar, dinos cómo te llamas.</p>
+
+    <div id="welcomeBack" class="welcomeBack" style="display:none;"></div>
+
+    <label for="name">NOMBRE *</label>
+    <input id="name" type="text" placeholder="Tu nombre" autocomplete="given-name">
+
+    <label for="contact">INSTAGRAM O GMAIL</label>
+    <input id="contact" type="text" placeholder="@usuario o correo">
+
+    <button class="btn" id="startBtn">COMENZAR</button>
+
+    <div class="small">
+      Tu progreso se guardará en este dispositivo.
+    </div>
+
+  </div>
+</div>
+
+<script>
+// =========================
+// CONFIG
+// =========================
+const SNAPSHOT_ENDPOINT = "https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/snapshot";
+const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9"
+// =========================
+// STORAGE KEYS
+// =========================
+const PROFILE_KEY  = "player_profile";
+const SESSION_KEY  = "player_session";
+const SNAPSHOT_KEY = "innovandojuntos_ruleta_snapshot_v1";
+
+// =========================
+// HELPERS
+// =========================
+function uuid(){
+  return (crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + "-" + Math.random().toString(16).slice(2)
+  );
+}
+
+const normalizeContact = v => (v ? v.trim().toLowerCase() : "");
+const nowISO = () => new Date().toISOString();
+
+function safeJSONParse(s){
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+function getProfile(){
+  return safeJSONParse(localStorage.getItem(PROFILE_KEY));
+}
+
+function saveProfile(p){
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+}
+
+function getSession(){
+  return safeJSONParse(sessionStorage.getItem(SESSION_KEY));
+}
+
+function ensureSession(){
+  let s = getSession();
+  if (!s){
+    s = { session_id: uuid(), started_at: nowISO() };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  }
+  return s;
+}
+
+// =========================
+// SNAPSHOT
+// =========================
+function ensureSnapshot(profile, session){
+  const existing = safeJSONParse(localStorage.getItem(SNAPSHOT_KEY));
+  if (existing && existing.player_id && existing.session_id) return existing;
+
+  const base = {
+    player_id: profile?.player_id || uuid(),
+    session_id: session?.session_id || uuid(),
+
+    profile_name: profile?.name || null,
+    profile_contact: profile?.contact || null,
+
+    games_total: 0,
+    spins_session: 0,
+    total_time_ms: 0,
+
+    last_group: null,
+    last_question: null,
+    last_result_text: null,
+
+    counts_by_group: {},
+
+    created_at: nowISO(),
+    updated_at: nowISO(),
+
+    session_started_at_ms: performance.now(),
+    last_saved_at_ms: performance.now(),
+    last_save_trigger: "created_on_index"
+  };
+
+  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(base));
+  return base;
+}
+
+async function postSnapshotToSupabase(payload){
+  try{
+    const res = await fetch(SNAPSHOT_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok){
+      const txt = await res.text();
+      console.error("snapshot post failed:", res.status, txt);
+      return false;
+    }
+    return true;
+
+  } catch(e){
+    console.error("snapshot post error:", e);
+    return false;
+  }
+}
+
+
+// =========================
+// INIT UI
+// =========================
+const session = ensureSession();
+
+const nameInput    = document.getElementById("name");
+const contactInput = document.getElementById("contact");
+const startBtn     = document.getElementById("startBtn");
+const welcomeEl    = document.getElementById("welcomeBack");
+
+let profile = getProfile();
+
+if (profile){
+  document.getElementById("title").textContent = "¡Bienvenido de nuevo!";
+  document.getElementById("subtitle").textContent = "Reconocimos tu progreso. Puedes continuar.";
+
+  nameInput.value    = profile.name || "";
+  contactInput.value = profile.contact || "";
+
+  welcomeEl.style.display = "block";
+  welcomeEl.textContent = `Hola ${profile.name}`;
+}
+
+// crea snapshot base
+const snapBase = ensureSnapshot(profile, session);
+
+startBtn.addEventListener("click", () => {
+  const name = nameInput.value.trim();
+  const contact = normalizeContact(contactInput.value);
+
+  if (!name){
+    alert("Por favor ingresa tu nombre");
+    return;
+  }
+
+  const now = nowISO();
+
+  if (!profile){
+    profile = {
+      player_id: uuid(),
+      name,
+      contact,
+      created_at: now
+    };
+  } else {
+    profile.name = name;
+    profile.contact = contact;
+    profile.updated_at = now;
+  }
+
+  saveProfile(profile);
+
+  // sincroniza snapshot con profile
+  const snap = safeJSONParse(localStorage.getItem(SNAPSHOT_KEY)) || {};
+  snap.player_id = profile.player_id;
+  snap.updated_at = nowISO();
+  snap.profile_name = profile.name || null;
+  snap.profile_contact = profile.contact || null;
+  snap.last_save_trigger = "profile_saved_on_index";
+  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
+
+  // envía snapshot base (no bloquea)
+  postSnapshotToSupabase({
+    player_id: snap.player_id,
+    session_id: snap.session_id,
+    profile_name: snap.profile_name || profile?.name || null,
+    profile_contact: snap.profile_contact || profile?.contact || null,
+    games_total: snap.games_total || 0,
+    spins_session: snap.spins_session || 0,
+    total_time_ms: snap.total_time_ms || 0,
+    last_group: null,
+    last_question: null,
+    last_result_text: null,
+    counts_by_group: snap.counts_by_group || {}
+  });
+
+  window.location.href = "ruleta=01.html";
+});
+</script>
+</body>
+</html>

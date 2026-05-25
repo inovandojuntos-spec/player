@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ruleta</title>
+
+  <style>
+    :root{
+      --bg:#000000;
+      --panelGrad: radial-gradient(600px 600px at 50% 35%, #1a1a1a 0%, #050505 60%);
+      --edge:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.35);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:#000;
+      color:var(--text);
+    }
+
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      box-sizing:border-box;
+    }
+
+    /* ===== CARD NEGRO PURO ===== */
+    .card{
+      width:min(640px,100%);
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      padding:14px;
+      box-shadow:0 28px 90px rgba(0,0,0,.9);
+    }
+
+    /* ===== LOGO ===== */
+  .logoHeader{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:14px 0 12px;
+      margin:-14px -14px 0;   /* 👈 sin separación abajo */
+      background:#000;
+      border-top-left-radius:22px;
+      border-top-right-radius:22px;
+      box-shadow:none;        /* 👈 elimina línea blanca */
+    }
+
+    .logoHeader img{
+      width:42vw;
+      max-width:140px;
+      height:auto;
+    }
+
+    /* ===== RULETA (CON SU PROPIO DEGRADADO) ===== */
+    .stage{
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px 0 16px;
+      background:#000;              /* 👈 negro puro */
+      border-radius:18px;
+      box-shadow:none;              /* 👈 sin bordes blancos */
+    }
+
+
+    canvas{
+      width:min(420px,90vw);
+      height:auto;
+      aspect-ratio:1/1;
+      filter:drop-shadow(0 18px 36px rgba(0,0,0,.85));
+    }
+
+    .pin{
+      position:absolute;
+      top:6px;
+      width:0;height:0;
+      border-left:14px solid transparent;
+      border-right:14px solid transparent;
+      border-bottom:22px solid rgba(255,255,255,.9);
+      filter:drop-shadow(0 8px 16px rgba(0,0,0,.9));
+    }
+
+    /* ===== BOTÓN ===== */
+    .btnBig{
+      width:100%;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%);
+      color:var(--text);
+      padding:18px 14px;
+      border-radius:16px;
+      font-weight:950;
+      letter-spacing:1px;
+      font-size:18px;
+      text-transform:uppercase;
+      box-shadow:0 14px 34px rgba(0,0,0,.75);
+      margin-top:12px;
+    }
+    .btnBig:active{transform:translateY(1px)}
+
+    /* ===== RESULTADO ===== */
+    .result{
+      margin-top:10px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.02) 100%);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .result .label{
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+    .result .value{
+      margin-top:6px;
+      font-size:20px;
+      font-weight:950;
+      letter-spacing:.4px;
+    }
+
+    /* ===== SOUNDCLOUD OCULTO ===== */
+    .playerBox{
+      position:absolute;
+      left:-9999px;
+      width:1px;
+      height:1px;
+      overflow:hidden;
+      opacity:0;
+      pointer-events:none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+
+      <!-- LOGO -->
+      <div class="logoHeader">
+        <img src="images/logo.png" alt="Innovando Juntos">
+      </div>
+
+      <!-- RULETA -->
+      <div class="stage">
+        <div class="pin"></div>
+        <canvas id="wheel" width="800" height="800"></canvas>
+      </div>
+
+      <button class="btnBig" id="btnSpin">GIRAR</button>
+
+      <div class="result">
+        <div class="label">RESULTADO</div>
+        <div class="value" id="resultText">—</div>
+      </div>
+
+      <!-- SOUNDCLOUD OCULTO -->
+      <div class="playerBox">
+        <iframe id="scFrame" allow="autoplay"></iframe>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const GROUPS = ["SENSUAL","CONFIANZA","DESEOS","CURIOSIDAD","ACERCAMIENTO"];
+
+    const GROUP_COUNTS = {
+      SENSUAL:14,
+      CONFIANZA:14,
+      DESEOS:14,
+      CURIOSIDAD:14,
+      ACERCAMIENTO:13
+    };
+
+    const DEFAULT_SC_EMBED =
+      "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%3Atracks%3A2257955501%3Fsecret_token%3Ds-JaiHelBXnZB" +
+      "&color=%23040404&auto_play=true&visual=true";
+
+    document.getElementById("scFrame").src = DEFAULT_SC_EMBED;
+
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const cx = 400, cy = 400, R = 350;
+
+    function drawWheel(rot=0){
+      ctx.clearRect(0,0,800,800);
+      const slice = (Math.PI*2)/GROUPS.length;
+
+      for(let i=0;i<GROUPS.length;i++){
+        const a0 = rot + i*slice;
+        const a1 = a0 + slice;
+
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,R,a0,a1);
+        ctx.closePath();
+        ctx.fillStyle = i%2 ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.10)";
+        ctx.fill();
+        ctx.strokeStyle="rgba(255,255,255,.14)";
+        ctx.lineWidth=3;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx,cy);
+        ctx.rotate(a0+slice/2);
+        ctx.textAlign="right";
+        ctx.fillStyle="#fff";
+        ctx.font="900 26px system-ui";
+        ctx.fillText(GROUPS[i],R-26,10);
+        ctx.restore();
+      }
+    }
+
+    let rot=0, spinning=false;
+
+    function spin(){
+      if(spinning) return;
+      spinning=true;
+      const start=rot;
+      const end=start + (Math.random()*4+7)*Math.PI*2;
+      const t0=performance.now();
+
+      function anim(t){
+        const p=Math.min(1,(t-t0)/3200);
+        rot=start+(end-start)*(1-Math.pow(1-p,3));
+        drawWheel(rot);
+
+        if(p<1) requestAnimationFrame(anim);
+        else{
+          const idx=Math.floor(((Math.PI*1.5-rot)%(Math.PI*2)+Math.PI*2)/(Math.PI*2/GROUPS.length));
+          const g=GROUPS[idx];
+          const q=Math.floor(Math.random()*GROUP_COUNTS[g])+1;
+          document.getElementById("resultText").textContent =
+            `${g} – #${String(q).padStart(2,"0")}`;
+          document.getElementById("scFrame").src = DEFAULT_SC_EMBED;
+          spinning=false;
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+
+    drawWheel();
+    document.getElementById("btnSpin").onclick=spin;
+  </script>
+</body>
+</html>

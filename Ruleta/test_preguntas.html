@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QC / Comisionamiento — Preguntas (1–69)</title>
+
+  <style>
+    :root{
+      --bg:#000000;
+      --edge:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.45);
+      --ok:rgba(140,255,180,.85);
+      --bad:rgba(255,140,140,.85);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      box-sizing:border-box;
+    }
+
+    .card{
+      width:min(720px,100%);
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      padding:14px;
+      box-shadow:0 28px 90px rgba(0,0,0,.9);
+    }
+
+    .logoHeader{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:14px 0 12px;
+      margin:-14px -14px 0;
+      background:#000;
+      border-top-left-radius:22px;
+      border-top-right-radius:22px;
+    }
+    .logoHeader img{
+      width:42vw;
+      max-width:140px;
+      height:auto;
+    }
+
+    .title{
+      margin:10px 6px 4px;
+      font-weight:950;
+      letter-spacing:.3px;
+      font-size:18px;
+    }
+    .subtitle{
+      margin:0 6px 12px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin:10px 6px;
+      flex-wrap:wrap;
+    }
+
+    .field{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex:1;
+      min-width:260px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:10px;
+      background:linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.02) 100%);
+    }
+
+    label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    input[type="number"]{
+      flex:1;
+      background:#000;
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:12px;
+      padding:12px 12px;
+      font-size:16px;
+      outline:none;
+    }
+    input[type="number"]:focus{
+      border-color:rgba(255,255,255,.35);
+    }
+
+    .btn{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%);
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:14px;
+      font-weight:950;
+      letter-spacing:.7px;
+      text-transform:uppercase;
+      font-size:12px;
+      box-shadow:0 14px 34px rgba(0,0,0,.75);
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn[disabled]{ opacity:.55; cursor:not-allowed; }
+
+    .panel{
+      margin:10px 6px;
+      padding:12px 14px;
+      border-radius:16px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.02) 100%);
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 140px 1fr;
+      gap:8px 10px;
+      font-size:13px;
+      line-height:1.35;
+      word-break:break-word;
+    }
+    .k{ color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:.4px; font-size:11px; }
+    .v{ color:var(--text); font-weight:700; }
+
+    .question{
+      margin-top:10px;
+      font-size:18px;
+      font-weight:950;
+      line-height:1.25;
+    }
+
+    .audioBox{
+      margin:10px 6px 0;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:10px;
+      background:#000;
+    }
+
+    audio{
+      width:100%;
+      display:block;
+      background:#000;
+      filter:invert(1) hue-rotate(180deg) saturate(0.2);
+      opacity:.95;
+    }
+
+    .log{
+      margin:10px 6px 0;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      padding:10px 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+      color:rgba(255,255,255,.80);
+      max-height:220px;
+      overflow:auto;
+      white-space:pre-wrap;
+    }
+
+    .badgeOk{ color:var(--ok); font-weight:900; }
+    .badgeBad{ color:var(--bad); font-weight:900; }
+
+    .footer{
+      margin:10px 6px 2px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+
+      <div class="logoHeader">
+        <img src="images/logo.png" alt="Innovando Juntos">
+      </div>
+
+      <div class="title">QC / Comisionamiento — Selección directa de pregunta</div>
+      <div class="subtitle">
+        Ingresa un número del <b>1 al 69</b>. Se carga desde <code>preguntas/questions.json</code> y se reproduce el audio correspondiente.
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="qno">Pregunta #</label>
+          <input id="qno" type="number" min="1" max="69" step="1" placeholder="1–69" />
+        </div>
+
+        <button class="btn" id="btnLoad">Cargar</button>
+        <button class="btn" id="btnPrev" title="Anterior">◀</button>
+        <button class="btn" id="btnNext" title="Siguiente">▶</button>
+        <button class="btn" id="btnReloadJson" title="Recargar JSON">Recargar JSON</button>
+      </div>
+
+      <div class="panel">
+        <div class="kv">
+          <div class="k">Estado JSON</div><div class="v" id="jsonStatus">—</div>
+          <div class="k">Total preguntas</div><div class="v" id="totalQuestions">—</div>
+          <div class="k">Categoría</div><div class="v" id="cat">—</div>
+          <div class="k">Audio</div><div class="v" id="audioUrl">—</div>
+          <div class="k">Validación</div><div class="v" id="validation">—</div>
+        </div>
+
+        <div class="question" id="questionText">—</div>
+      </div>
+
+      <div class="audioBox">
+        <audio id="audio" controls preload="none">
+          <source id="audioSrc" src="" type="audio/mpeg">
+          Tu navegador no soporta audio HTML5.
+        </audio>
+      </div>
+
+      <div class="log" id="log"></div>
+
+      <div class="footer">
+        Tip: si el audio no reproduce, verifica rutas relativas (por ejemplo <code>audios/pregunta01.mp3</code>) y que estés sirviendo la web (GitHub Pages / Live Server).
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/* =========================
+   CONFIG
+========================= */
+const CONFIG_URL = "preguntas/questions.json";
+
+/* =========================
+   DOM
+========================= */
+const elNo = document.getElementById("qno");
+const btnLoad = document.getElementById("btnLoad");
+const btnPrev = document.getElementById("btnPrev");
+const btnNext = document.getElementById("btnNext");
+const btnReloadJson = document.getElementById("btnReloadJson");
+
+const jsonStatus = document.getElementById("jsonStatus");
+const totalQuestions = document.getElementById("totalQuestions");
+const cat = document.getElementById("cat");
+const audioUrl = document.getElementById("audioUrl");
+const validation = document.getElementById("validation");
+const questionText = document.getElementById("questionText");
+
+const audioEl = document.getElementById("audio");
+const audioSrc = document.getElementById("audioSrc");
+const logEl = document.getElementById("log");
+
+/* =========================
+   STATE
+========================= */
+let QUESTIONS = [];
+let FALLBACK_AUDIO = "audios/pregunta.mp3";
+
+/* =========================
+   HELPERS
+========================= */
+function log(msg){
+  const line = `[${new Date().toISOString()}] ${msg}`;
+  logEl.textContent = (logEl.textContent ? (logEl.textContent + "\n") : "") + line;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setOk(text){
+  validation.innerHTML = `<span class="badgeOk">OK</span> — ${escapeHtml(text)}`;
+}
+
+function setBad(text){
+  validation.innerHTML = `<span class="badgeBad">ERROR</span> — ${escapeHtml(text)}`;
+}
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+
+function clampInt(n, min, max){
+  const x = Math.trunc(Number(n));
+  if (!Number.isFinite(x)) return null;
+  return Math.min(max, Math.max(min, x));
+}
+
+function findQuestionByNo(no){
+  return QUESTIONS.find(q => Number(q.no) === Number(no)) || null;
+}
+
+function setAudio(url){
+  const u = (url && String(url).trim()) ? String(url).trim() : FALLBACK_AUDIO;
+
+  audioSrc.setAttribute("src", u);
+  audioEl.src = u;
+  audioEl.load();
+
+  audioUrl.textContent = u;
+  log(`Audio set -> ${u}`);
+}
+
+function renderQuestion(q){
+  cat.textContent = q.categoria || "—";
+  questionText.textContent = q.pregunta || "—";
+  setAudio(q.audio || FALLBACK_AUDIO);
+
+  // QC checks
+  const issues = [];
+
+  if (!q.pregunta || !String(q.pregunta).trim()) issues.push("pregunta vacía");
+  if (!q.categoria || !String(q.categoria).trim()) issues.push("categoria vacía");
+  if (!q.audio || !String(q.audio).trim()) issues.push("audio vacío (usando fallback)");
+
+  if (issues.length){
+    setBad(`Encontrado con advertencias: ${issues.join(", ")}`);
+  } else {
+    setOk("Registro completo (categoria/pregunta/audio presentes).");
+  }
+
+  log(`Loaded Q#${q.no} [${q.categoria}] "${q.pregunta}"`);
+}
+
+/* =========================
+   LOAD JSON
+========================= */
+async function loadConfig(){
+  jsonStatus.textContent = "Cargando…";
+  log(`Fetching ${CONFIG_URL} (no-store)…`);
+
+  const res = await fetch(CONFIG_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`No se pudo cargar ${CONFIG_URL} (HTTP ${res.status})`);
+
+  const cfg = await res.json();
+
+  FALLBACK_AUDIO = (cfg.defaultAudio && String(cfg.defaultAudio).trim())
+    ? String(cfg.defaultAudio).trim()
+    : FALLBACK_AUDIO;
+
+  QUESTIONS = Array.isArray(cfg.questions) ? cfg.questions : [];
+
+  QUESTIONS = QUESTIONS.map(q => ({
+    no: Number(q.no),
+    categoria: String(q.categoria || "").trim(),
+    pregunta: String(q.pregunta || "").trim(),
+    audio: (q.audio && String(q.audio).trim()) ? String(q.audio).trim() : FALLBACK_AUDIO
+  }));
+
+  totalQuestions.textContent = String(QUESTIONS.length);
+  jsonStatus.textContent = `OK (v${cfg.version ?? "?"})`;
+
+  log(`JSON loaded: version=${cfg.version ?? "?"}, total=${QUESTIONS.length}, defaultAudio=${FALLBACK_AUDIO}`);
+
+  if (QUESTIONS.length !== 69){
+    log(`WARNING: questions.json no tiene 69 preguntas, tiene ${QUESTIONS.length}`);
+  }
+}
+
+/* =========================
+   ACTIONS
+========================= */
+function doLoadFromInput(){
+  const no = clampInt(elNo.value, 1, 69);
+
+  if (no == null){
+    setBad("Ingresa un número válido.");
+    return;
+  }
+  elNo.value = String(no);
+
+  const q = findQuestionByNo(no);
+  if (!q){
+    cat.textContent = "—";
+    questionText.textContent = "—";
+    audioUrl.textContent = "—";
+    audioEl.pause();
+    setBad(`No existe la pregunta #${no} en el JSON.`);
+    log(`ERROR: not found Q#${no}`);
+    return;
+  }
+
+  renderQuestion(q);
+}
+
+function step(delta){
+  const cur = clampInt(elNo.value || 1, 1, 69) ?? 1;
+  const next = clampInt(cur + delta, 1, 69);
+  elNo.value = String(next);
+  doLoadFromInput();
+}
+
+/* =========================
+   EVENTS
+========================= */
+btnLoad.addEventListener("click", doLoadFromInput);
+btnPrev.addEventListener("click", () => step(-1));
+btnNext.addEventListener("click", () => step(+1));
+
+btnReloadJson.addEventListener("click", async () => {
+  try{
+    btnReloadJson.disabled = true;
+    await loadConfig();
+    setOk("JSON recargado. Ahora puedes cargar una pregunta.");
+  } catch(e){
+    jsonStatus.textContent = "ERROR";
+    setBad(String(e));
+    log(`ERROR loadConfig: ${String(e)}`);
+  } finally {
+    btnReloadJson.disabled = false;
+  }
+});
+
+elNo.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") doLoadFromInput();
+});
+
+audioEl.addEventListener("error", () => {
+  setBad("El audio no pudo cargarse. Revisa la ruta del archivo y el hosting.");
+  log(`AUDIO ERROR: src=${audioEl.currentSrc || audioEl.src || "(none)"}`);
+});
+
+/* =========================
+   INIT
+========================= */
+(async function init(){
+  log("QC page init…");
+  try{
+    await loadConfig();
+    setOk("Listo. Ingresa un número 1–69 y presiona Cargar.");
+    // opcional: precargar #1
+    elNo.value = "1";
+    doLoadFromInput();
+  } catch(e){
+    jsonStatus.textContent = "ERROR";
+    setBad(String(e));
+    log(`INIT ERROR: ${String(e)}`);
+  }
+})();
+</script>
+
+</body>
+</html>

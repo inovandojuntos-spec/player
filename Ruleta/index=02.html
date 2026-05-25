@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ruleta (Audio embebido)</title>
+
+  <style>
+    :root{
+      --bg:#000000;
+      --edge:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.35);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:#000;
+      color:var(--text);
+    }
+
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      box-sizing:border-box;
+    }
+
+    .card{
+      width:min(640px,100%);
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      padding:14px;
+      box-shadow:0 28px 90px rgba(0,0,0,.9);
+      position:relative;
+    }
+
+    .logoHeader{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:14px 0 12px;
+      margin:-14px -14px 0;
+      background:#000;
+      border-top-left-radius:22px;
+      border-top-right-radius:22px;
+    }
+
+    .logoHeader img{
+      width:42vw;
+      max-width:140px;
+      height:auto;
+    }
+
+    .stage{
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px 0 16px;
+      background:#000;
+      border-radius:18px;
+      margin-top:10px;
+    }
+
+    canvas{
+      width:min(420px,90vw);
+      height:auto;
+      aspect-ratio:1/1;
+      filter:drop-shadow(0 10px 28px rgba(0,0,0,.9));
+    }
+
+    .pin{
+      position:absolute;
+      top:6px;
+      width:0;height:0;
+      border-left:14px solid transparent;
+      border-right:14px solid transparent;
+      border-top:22px solid rgba(255,255,255,.9);
+      filter:drop-shadow(0 8px 16px rgba(0,0,0,.9));
+    }
+
+    .btnBig{
+      width:100%;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%);
+      color:var(--text);
+      padding:18px 14px;
+      border-radius:16px;
+      font-weight:950;
+      letter-spacing:1px;
+      font-size:18px;
+      text-transform:uppercase;
+      box-shadow:0 14px 34px rgba(0,0,0,.75);
+      margin-top:12px;
+    }
+    .btnBig:active{transform:translateY(1px)}
+    .btnBig[disabled]{ opacity:.55; cursor:not-allowed; }
+
+    .result{
+      margin-top:10px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.02) 100%);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .result .value{
+      font-size:20px;
+      font-weight:950;
+      letter-spacing:.2px;
+      line-height:1.25;
+    }
+
+    .playerBox{
+      margin-top:12px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      overflow:hidden;
+      background:#000;
+      display:none;
+      visibility: hidden;
+      height: 0;
+      overflow: hidden;
+    }
+
+    .playerRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+
+    .btnSmall{
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%);
+      color:rgba(255,255,255,.92);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:900;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .btnSmall:active{ transform: translateY(1px); }
+
+    .audioNative{
+      width:100%;
+      display:block;
+      background:#000;
+      filter:invert(1) hue-rotate(180deg) saturate(0.2);
+      opacity:.95;
+    }
+
+    .toast{
+      margin:10px 10px 0;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      color:rgba(255,255,255,.70);
+      font-size:12px;
+      display:none;
+    }
+    .toast.show{ display:block; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+
+      <div class="logoHeader">
+        <img src="images/logo.png" alt="Innovando Juntos">
+      </div>
+
+      <div class="stage">
+        <div class="pin"></div>
+        <canvas id="wheel" width="800" height="800"></canvas>
+      </div>
+
+      <button class="btnBig" id="btnSpin">GIRAR</button>
+
+      <div class="result" role="status" aria-live="polite">
+        <div class="value" id="resultText">—</div>
+      </div>
+
+      <div class="playerBox" style="display:none">
+        <div class="playerRow">
+          <button class="btnSmall" id="btnPlay">▶ PLAY</button>
+        </div>
+
+        <div id="toast" class="toast">Si no se reproduce automáticamente, toca ▶ PLAY.</div>
+
+        <audio id="audio" class="audioNative" preload="none">
+          <source id="audioSrc" src="audios/pregunta.mp3" type="audio/mpeg">
+          Tu navegador no soporta audio HTML5.
+        </audio>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+// =========================
+// CONFIG DESDE JSON
+// =========================
+const CONFIG_URL = "preguntas/questions.json";
+
+// =========================
+// ✅ NEW: PÁGINA DE INICIO / REGISTRO
+// =========================
+const START_PAGE = "index.html"; // <-- cambia si tu registro es otro archivo
+
+// =========================
+// SUPABASE EDGE FUNCTION (IJ_events)
+// =========================
+const EVENTS_ENDPOINT = "https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/IJ_events";
+const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
+
+// =========================
+// STORAGE KEYS
+// =========================
+const PROFILE_KEY  = "player_profile";                     // localStorage
+const SESSION_KEY  = "player_session";                     // sessionStorage
+const SNAPSHOT_KEY = "innovandojuntos_ruleta_snapshot_v1";  // localStorage
+
+function uuid(){
+  return (crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + "-" + Math.random().toString(16).slice(2)
+  );
+}
+function safeJSONParse(s){ try { return JSON.parse(s); } catch { return null; } }
+function nowISO(){ return new Date().toISOString(); }
+
+function getProfile(){
+  return safeJSONParse(localStorage.getItem(PROFILE_KEY));
+}
+
+// ✅ NEW: exigir usuario en memoria (y nombre) o volver al inicio
+function requireProfileOrRedirect(){
+  const p = getProfile();
+  const hasName = p && typeof p.name === "string" && p.name.trim().length > 0;
+
+  // si no hay perfil o no hay nombre, volver al registro
+  if (!p || !hasName){
+    // evita loops infinitos si justo estás en index.html
+    if (!window.location.pathname.endsWith("/" + START_PAGE) && !window.location.pathname.endsWith(START_PAGE)){
+      window.location.replace(START_PAGE);
+    }
+    return false;
+  }
+  return true;
+}
+
+function getSession(){
+  return safeJSONParse(sessionStorage.getItem(SESSION_KEY));
+}
+function ensureSession(){
+  let s = getSession();
+  if (!s){
+    s = { session_id: uuid(), started_at: nowISO() };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  }
+  return s;
+}
+
+function getOrCreateSnapshotBase(){
+  let snap = safeJSONParse(localStorage.getItem(SNAPSHOT_KEY));
+
+  const session = ensureSession();
+  const profile = getProfile();
+
+  if (!snap || !snap.player_id || !snap.session_id){
+    snap = {
+      player_id: (profile && profile.player_id) ? profile.player_id : uuid(),
+      session_id: session.session_id,
+
+      profile_name: (profile && profile.name) ? profile.name : null,
+      profile_contact: (profile && profile.contact) ? profile.contact : null,
+
+      total_time_ms: 0,
+      last_group: null,
+      last_question: null,
+      last_audio: null,
+      last_question_text: null,
+
+      created_at: nowISO(),
+      updated_at: nowISO(),
+
+      session_started_at_ms: performance.now()
+    };
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
+    return snap;
+  }
+
+  // ✅ NEW: SIEMPRE refrescar nombre/contacto desde memoria al cargar
+  if (profile){
+    if (profile.player_id) snap.player_id = profile.player_id;
+    snap.profile_name = (profile.name && String(profile.name).trim()) ? String(profile.name).trim() : (snap.profile_name || null);
+    snap.profile_contact = (profile.contact && String(profile.contact).trim()) ? String(profile.contact).trim() : (snap.profile_contact || null);
+  }
+
+  snap.session_id = session.session_id;
+
+  snap.updated_at = nowISO();
+  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
+  return snap;
+}
+
+function updateSnapshot(patch){
+  const snap = getOrCreateSnapshotBase();
+  const next = {
+    ...snap,
+    ...patch,
+    updated_at: nowISO()
+  };
+  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(next));
+  return next;
+}
+
+function getTimePlayingMs(){
+  const snap = getOrCreateSnapshotBase();
+  const started = Number(snap.session_started_at_ms) || performance.now();
+  return Math.round(Math.max(0, performance.now() - started));
+}
+
+// =========================
+// POST EVENT (SOLO 1 EVENTO, CUANDO TERMINA AUDIO)
+// =========================
+async function postEventToSupabase(eventPayload){
+  try{
+    const res = await fetch(EVENTS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(eventPayload),
+    });
+
+    const text = await res.text();
+
+    if (!res.ok){
+      console.error("IJ_events post failed:", {
+        status: res.status,
+        statusText: res.statusText,
+        body: text
+      });
+      return { ok:false, body:text };
+    }
+    return { ok:true, body:text };
+  } catch(e){
+    console.error("IJ_events post error:", e);
+    return { ok:false, body:String(e) };
+  }
+}
+
+function buildAudioCompletedEvent(payloadExtra){
+  // ✅ NEW: preferir siempre el perfil “vivo” desde memoria
+  const p = getProfile();
+  const snap = getOrCreateSnapshotBase();
+
+  const profileName = (p && p.name && String(p.name).trim()) ? String(p.name).trim() : (snap.profile_name || null);
+  const profileContact = (p && p.contact && String(p.contact).trim()) ? String(p.contact).trim() : (snap.profile_contact || null);
+
+  return {
+    player_id: snap.player_id,
+    session_id: snap.session_id,
+
+    profile_name: profileName,
+    profile_contact: profileContact,
+
+    event_type: "audio",
+    event_name: "ruleta_audio_completed",
+
+    event_source: "ruleta=02.html",
+    event_version: 1,
+
+    page_url: window.location.href,
+    referrer: document.referrer || null,
+
+    data1: "ruleta",
+    data2: String(getTimePlayingMs()),
+    data3: snap.last_question != null ? String(snap.last_question) : null,
+
+    payload: {
+      last: {
+        group: snap.last_group || null,
+        question_no: snap.last_question || null,
+        question_text: snap.last_question_text || null,
+        audio_url: snap.last_audio || null
+      },
+      ...payloadExtra
+    }
+  };
+}
+
+// =========================
+// DATA
+// =========================
+let QUESTIONS = [];
+let GROUPS = [];
+let QUESTIONS_BY_GROUP = {};
+
+// =========================
+// AUDIO
+// =========================
+const audioEl   = document.getElementById("audio");
+const audioSrc  = document.getElementById("audioSrc");
+const btnPlay   = document.getElementById("btnPlay");
+const toast     = document.getElementById("toast");
+const playerBox = document.querySelector(".playerBox");
+
+let audioUnlocked = false;
+let FALLBACK_AUDIO = "audios/pregunta.mp3";
+let currentAudioUrl = FALLBACK_AUDIO;
+
+// para medir reproducción real
+let audioAttempted = false;
+
+let lastPicked = { group:null, no:null, text:null, audio:null };
+
+function setAudio(url){
+  const u = (url && String(url).trim()) ? String(url).trim() : FALLBACK_AUDIO;
+  currentAudioUrl = u;
+}
+
+async function unlockAudioOnce(){
+  if (audioUnlocked) return;
+
+  audioEl.pause();
+  audioEl.currentTime = 0;
+
+  if (audioSrc) audioSrc.setAttribute("src", currentAudioUrl);
+  audioEl.src = currentAudioUrl;
+  audioEl.load();
+
+  try{
+    await audioEl.play();
+    audioEl.pause();
+    audioEl.currentTime = 0;
+    audioUnlocked = true;
+  } catch(e){
+    console.log("unlock blocked:", e);
+  }
+}
+
+async function playMainAudio(url){
+  if (url) setAudio(url);
+  playerBox.style.display = "block";
+
+  // Guardamos en snapshot "último audio tocado" + última pregunta
+  updateSnapshot({
+    last_group: lastPicked.group || null,
+    last_question: (lastPicked.no != null ? Number(lastPicked.no) : null),
+    last_question_text: lastPicked.text || null,
+    last_audio: currentAudioUrl || null
+  });
+
+  const current = (audioEl.getAttribute("src") || audioEl.src || "");
+  if (!current || !current.includes(currentAudioUrl)){
+    if (audioSrc) audioSrc.setAttribute("src", currentAudioUrl);
+    audioEl.src = currentAudioUrl;
+    audioEl.load();
+  }
+
+  try{
+    toast.classList.remove("show");
+    audioAttempted = true;
+    await audioEl.play();
+    btnPlay.textContent = "⏸ PAUSE";
+  } catch(e){
+    console.log("play blocked:", e);
+    toast.classList.add("show");
+    btnPlay.textContent = "▶ PLAY";
+  }
+}
+
+function pauseAudio(){
+  audioEl.pause();
+  btnPlay.textContent = "▶ PLAY";
+}
+
+btnPlay.addEventListener("click", async () => {
+  if (audioEl.paused){
+    await playMainAudio();
+  } else {
+    pauseAudio();
+  }
+});
+
+// ✅ ÚNICO EVENTO: cuando TERMINA el audio
+audioEl.addEventListener("ended", async () => {
+  btnPlay.textContent = "▶ PLAY";
+
+  if (!audioAttempted) return;
+
+  const audioPlayedMs = Number.isFinite(audioEl.duration)
+    ? Math.round(audioEl.duration * 1000)
+    : Math.round((audioEl.currentTime || 0) * 1000);
+
+  const timePlayingMs = getTimePlayingMs();
+
+  updateSnapshot({
+    total_time_ms: Math.round(timePlayingMs),
+    updated_at: nowISO()
+  });
+
+  const eventPayload = buildAudioCompletedEvent({
+    time_playing_ms: timePlayingMs,
+    audio_played_ms: audioPlayedMs,
+    audio_current_time_s: audioEl.currentTime || 0
+  });
+
+  await postEventToSupabase(eventPayload);
+
+  audioAttempted = false;
+});
+
+// =========================
+// TICK SOUND (WebAudio)
+// =========================
+let audioCtx = null;
+
+function ensureAudioCtx(){
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+}
+
+function playTick(intensity = 1){
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "square";
+  osc.frequency.setValueAtTime(900 + 250 * intensity, t);
+
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.12 * intensity, t + 0.002);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start(t);
+  osc.stop(t + 0.04);
+}
+
+// =========================
+// CANVAS WHEEL
+// =========================
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const cx = 400, cy = 400, R = 350;
+
+let rot = 0, spinning = false;
+
+const TWO_PI = Math.PI * 2;
+let slice = TWO_PI / 5;
+
+function drawWheel(rot=0){
+  ctx.clearRect(0,0,800,800);
+
+  slice = (Math.PI*2)/GROUPS.length;
+
+  for(let i=0;i<GROUPS.length;i++){
+    const a0 = rot + i*slice;
+    const a1 = a0 + slice;
+
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,R,a0,a1);
+    ctx.closePath();
+    ctx.fillStyle = i%2 ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.10)";
+    ctx.fill();
+    ctx.strokeStyle="rgba(255,255,255,.14)";
+    ctx.lineWidth=3;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(a0 + slice/2);
+    ctx.textAlign="right";
+    ctx.fillStyle="#fff";
+    ctx.font="900 26px system-ui";
+    ctx.fillText(GROUPS[i], R-26, 10);
+    ctx.restore();
+  }
+}
+
+function norm(x){
+  x = x % TWO_PI;
+  return x < 0 ? x + TWO_PI : x;
+}
+
+function pickRandomQuestionByGroup(group){
+  const arr = QUESTIONS_BY_GROUP[group] || [];
+  if (!arr.length) return null;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+async function spin(){
+  if(spinning) return;
+
+  const btnSpin = document.getElementById("btnSpin");
+
+  // ✅ NEW: bloqueo robusto (no queda “pegado” si falla algo)
+  spinning = true;
+  btnSpin.disabled = true;
+
+  try{
+    document.getElementById("resultText").textContent = "—";
+
+    ensureAudioCtx();
+
+    setAudio(FALLBACK_AUDIO);
+    await unlockAudioOnce();
+
+    const start = rot;
+    const end = start + (Math.random()*4 + 7) * TWO_PI;
+    const t0 = performance.now();
+
+    function anim(t){
+      const p = Math.min(1, (t - t0) / 3200);
+      const prevRot = rot;
+
+      rot = start + (end - start) * (1 - Math.pow(1 - p, 3));
+      drawWheel(rot);
+
+      const aPrev = norm(prevRot);
+      const aNow  = norm(rot);
+
+      const segPrev = Math.floor(aPrev / slice);
+      const segNow  = Math.floor(aNow  / slice);
+
+      if (segNow !== segPrev) {
+        const vel = Math.abs(aNow - aPrev);
+        const intensity = Math.min(1, Math.max(0.35, vel / 0.25));
+        playTick(intensity);
+      }
+
+      if(p < 1){
+        requestAnimationFrame(anim);
+      } else {
+        const idx = Math.floor(((Math.PI*1.5 - rot) % TWO_PI + TWO_PI) / slice);
+        const group = GROUPS[idx];
+
+        const q = pickRandomQuestionByGroup(group);
+
+        if (q){
+          document.getElementById("resultText").textContent = q.pregunta;
+
+          lastPicked = {
+            group,
+            no: Number(q.no),
+            text: q.pregunta,
+            audio: q.audio || FALLBACK_AUDIO
+          };
+
+          setAudio(lastPicked.audio);
+          playMainAudio(lastPicked.audio);
+
+        } else {
+          document.getElementById("resultText").textContent = "(sin preguntas cargadas)";
+          lastPicked = { group, no:null, text:null, audio:FALLBACK_AUDIO };
+          updateSnapshot({
+            last_group: group || null,
+            last_question: null,
+            last_question_text: null,
+            last_audio: FALLBACK_AUDIO
+          });
+        }
+
+        updateSnapshot({
+          total_time_ms: Math.round(getTimePlayingMs())
+        });
+
+        spinning = false;
+        btnSpin.disabled = false;
+      }
+    }
+
+    requestAnimationFrame(anim);
+
+  } catch(err){
+    console.error("spin error:", err);
+    // si algo falla, liberamos
+    spinning = false;
+    btnSpin.disabled = false;
+  }
+}
+
+// =========================
+// CARGA JSON + INIT
+// =========================
+async function loadConfig(){
+  const res = await fetch(CONFIG_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error("No se pudo cargar " + CONFIG_URL);
+  const cfg = await res.json();
+
+  FALLBACK_AUDIO = (cfg.defaultAudio && String(cfg.defaultAudio).trim()) ? String(cfg.defaultAudio).trim() : FALLBACK_AUDIO;
+
+  QUESTIONS = Array.isArray(cfg.questions) ? cfg.questions : [];
+
+  const fallbackAudio = FALLBACK_AUDIO;
+  QUESTIONS = QUESTIONS.map(q => ({
+    no: Number(q.no),
+    categoria: String(q.categoria || "").trim(),
+    pregunta: String(q.pregunta || "").trim(),
+    audio: (q.audio && String(q.audio).trim()) ? String(q.audio).trim() : fallbackAudio
+  }));
+
+  if (QUESTIONS.length !== 69){
+    console.warn("WARNING: questions.json no tiene 69 preguntas:", QUESTIONS.length);
+  }
+
+  QUESTIONS_BY_GROUP = {};
+  for (const q of QUESTIONS){
+    if (!q.categoria) continue;
+    if (!QUESTIONS_BY_GROUP[q.categoria]) QUESTIONS_BY_GROUP[q.categoria] = [];
+    QUESTIONS_BY_GROUP[q.categoria].push(q);
+  }
+
+  GROUPS = Object.keys(QUESTIONS_BY_GROUP);
+
+  if (!GROUPS.length){
+    GROUPS = ["MEMÓRIAS","EMOÇÕES","DESEJO","DIÁLOGO","FUTURO"];
+    QUESTIONS_BY_GROUP = {
+      "MEMÓRIAS": [], "EMOÇÕES": [], "DESEJO": [], "DIÁLOGO": [], "FUTURO": []
+    };
+  }
+
+  // ✅ NEW: refresca snapshot (nombre incluido) al cargar
+  getOrCreateSnapshotBase();
+
+  setAudio(FALLBACK_AUDIO);
+  drawWheel();
+  document.getElementById("btnSpin").addEventListener("click", spin);
+}
+
+// ✅ NEW: gate principal (si no hay usuario, vuelve al registro)
+(function boot(){
+  const ok = requireProfileOrRedirect();
+  if (!ok) return;
+
+  loadConfig().catch(err => {
+    console.log(err);
+    GROUPS = ["MEMÓRIAS","EMOÇÕES","DESEJO","DIÁLOGO","FUTURO"];
+    QUESTIONS_BY_GROUP = { "MEMÓRIAS": [], "EMOÇÕES": [], "DESEJO": [], "DIÁLOGO": [], "FUTURO": [] };
+
+    getOrCreateSnapshotBase();
+
+    setAudio(FALLBACK_AUDIO);
+    drawWheel();
+    document.getElementById("btnSpin").addEventListener("click", spin);
+  });
+})();
+</script>
+
+</body>
+</html>

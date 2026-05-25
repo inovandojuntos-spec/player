@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ruleta</title>
+
+  <style>
+    :root{
+      --bg:#000000;
+      --edge:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.35);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:#000;
+      color:var(--text);
+    }
+
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      box-sizing:border-box;
+    }
+
+    .card{
+      width:min(640px,100%);
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      padding:14px;
+      box-shadow:0 28px 90px rgba(0,0,0,.9);
+      position:relative;
+    }
+
+    .logoHeader{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:14px 0 12px;
+      margin:-14px -14px 0;
+      background:#000;
+      border-top-left-radius:22px;
+      border-top-right-radius:22px;
+      box-shadow:none;
+    }
+    .logoHeader img{
+      width:42vw;
+      max-width:140px;
+      height:auto;
+    }
+
+    .stage{
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px 0 16px;
+      background:#000;
+      border-radius:18px;
+      box-shadow:none;
+      margin-top:10px;
+    }
+
+    canvas{
+      width:min(420px,90vw);
+      height:auto;
+      aspect-ratio:1/1;
+      filter:drop-shadow(0 10px 28px rgba(0,0,0,.9));
+    }
+
+    .pin{
+      position:absolute;
+      top:6px;
+      width:0;height:0;
+      border-left:14px solid transparent;
+      border-right:14px solid transparent;
+      border-bottom:22px solid rgba(255,255,255,.9);
+      filter:drop-shadow(0 8px 16px rgba(0,0,0,.9));
+    }
+
+    .btnBig{
+      width:100%;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%);
+      color:var(--text);
+      padding:18px 14px;
+      border-radius:16px;
+      font-weight:950;
+      letter-spacing:1px;
+      font-size:18px;
+      text-transform:uppercase;
+      box-shadow:0 14px 34px rgba(0,0,0,.75);
+      margin-top:12px;
+    }
+    .btnBig:active{transform:translateY(1px)}
+    .btnBig[disabled]{opacity:.55; cursor:not-allowed;}
+
+    .result{
+      margin-top:10px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.02) 100%);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .result .label{
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+    .result .value{
+      margin-top:6px;
+      font-size:20px;
+      font-weight:950;
+      letter-spacing:.4px;
+    }
+
+    .playerBox{
+      position:absolute;
+      left:-9999px;
+      width:1px;
+      height:1px;
+      overflow:hidden;
+      opacity:0;
+      pointer-events:none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+
+      <div class="logoHeader">
+        <img src="images/logo.png" alt="Innovando Juntos">
+      </div>
+
+      <div class="stage">
+        <div class="pin"></div>
+        <canvas id="wheel" width="800" height="800"></canvas>
+      </div>
+
+      <button class="btnBig" id="btnSpin">GIRAR</button>
+
+      <div class="result" role="status" aria-live="polite">
+        <div class="label">RESULTADO</div>
+        <div class="value" id="resultText">—</div>
+      </div>
+
+      <div class="playerBox">
+        <iframe id="scFrame" allow="autoplay"></iframe>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // CONFIG RULETA
+    // =========================
+    const GROUPS = ["SENSUAL","CONFIANZA","DESEOS","CURIOSIDAD","ACERCAMIENTO"];
+
+    const GROUP_COUNTS = {
+      SENSUAL:14,
+      CONFIANZA:14,
+      DESEOS:14,
+      CURIOSIDAD:14,
+      ACERCAMIENTO:13
+    };
+
+    const DEFAULT_SC_EMBED =
+      "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%3Atracks%3A2257955501%3Fsecret_token%3Ds-JaiHelBXnZB" +
+      "&color=%23040404&auto_play=true&visual=true";
+
+    document.getElementById("scFrame").src = DEFAULT_SC_EMBED;
+
+    // =========================
+    // SNAPSHOT (SOLO CONTADORES)
+    // =========================
+    const SNAPSHOT_KEY = "innovandojuntos_ruleta_snapshot_v1";
+    const PROFILE_KEY  = "player_profile";
+    const SESSION_KEY  = "player_session";
+
+    const SAVE_TRIGGERS = {
+      on_load: true,
+      on_spin_start: true,
+      on_spin_end: true,
+      on_visibility_hidden: true,
+      every_n_spins: 1   // cambia a 3 si quieres guardar cada 3 giros (además de start/end)
+    };
+
+    function safeJSONParse(s){
+      try { return JSON.parse(s); } catch { return null; }
+    }
+    const nowISO = () => new Date().toISOString();
+
+    function getProfile(){
+      return safeJSONParse(localStorage.getItem(PROFILE_KEY));
+    }
+    function getSession(){
+      return safeJSONParse(sessionStorage.getItem(SESSION_KEY));
+    }
+
+    function ensureSession(){
+      let s = getSession();
+      if (!s){
+        s = { session_id: crypto.randomUUID(), started_at: nowISO() };
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+      }
+      return s;
+    }
+
+    function loadOrCreateSnapshot(){
+      const existing = safeJSONParse(localStorage.getItem(SNAPSHOT_KEY));
+      const profile = getProfile();
+      const session = ensureSession();
+
+      if (existing && existing.player_id && existing.session_id){
+        // Asegura grupos presentes
+        existing.counts_by_group = existing.counts_by_group || {};
+        for (const g of GROUPS){
+          if (typeof existing.counts_by_group[g] !== "number") existing.counts_by_group[g] = 0;
+        }
+        // refresca session_id por si es nueva pestaña
+        existing.session_id = session.session_id;
+        localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(existing));
+        return existing;
+      }
+
+      const base = {
+        player_id: profile?.player_id || crypto.randomUUID(),
+        session_id: session.session_id,
+        created_at: nowISO(),
+        updated_at: nowISO(),
+
+        games_total: 0,
+        spins_session: 0,
+        total_time_ms: 0,
+
+        last_group: null,
+        last_question: null,
+        last_result_text: null,
+
+        counts_by_group: Object.fromEntries(GROUPS.map(g => [g, 0])),
+
+        session_started_at_ms: performance.now(),
+        last_saved_at_ms: performance.now(),
+
+        last_save_trigger: "created_on_ruleta"
+      };
+
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(base));
+      return base;
+    }
+
+    let STATE = loadOrCreateSnapshot();
+
+    function computeAndAccumulateTime(){
+      const t = performance.now();
+      const prev = (typeof STATE.last_saved_at_ms === "number") ? STATE.last_saved_at_ms : t;
+      const delta = Math.max(0, t - prev);
+      STATE.total_time_ms += delta;
+      STATE.last_saved_at_ms = t;
+    }
+
+    function saveState(trigger){
+      computeAndAccumulateTime();
+      STATE.updated_at = nowISO();
+      STATE.last_save_trigger = trigger;
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(STATE));
+
+      // Si luego quieres DB central, puedes sync aquí según trigger:
+      // if (trigger === "on_spin_end" || trigger === "on_visibility_hidden") syncSnapshot();
+    }
+
+    function maybeSave(trigger){
+      if (trigger === "every_n_spins"){
+        const n = SAVE_TRIGGERS.every_n_spins || 0;
+        if (n > 0 && (STATE.spins_session % n === 0)) saveState("every_n_spins");
+        return;
+      }
+      if (SAVE_TRIGGERS[trigger]) saveState(trigger);
+    }
+
+    // Guardar al cargar
+    maybeSave("on_load");
+
+    // Guardar al cerrar/cambiar pestaña
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden"){
+        if (SAVE_TRIGGERS.on_visibility_hidden) saveState("on_visibility_hidden");
+      }
+    });
+
+    // =========================
+    // (OPCIONAL) SYNC A DB CENTRAL
+    // =========================
+    async function syncSnapshot(){
+      // 1) Crea tu endpoint en backend (Supabase/Cloudflare/Node)
+      // 2) Reemplaza URL y añade auth si corresponde
+      const payload = {
+        player_id: STATE.player_id,
+        session_id: STATE.session_id,
+        games_total: STATE.games_total,
+        spins_session: STATE.spins_session,
+        total_time_ms: Math.round(STATE.total_time_ms),
+        last_group: STATE.last_group,
+        last_question: STATE.last_question,
+        last_result_text: STATE.last_result_text,
+        counts_by_group: STATE.counts_by_group,
+        updated_at: STATE.updated_at
+      };
+
+      try{
+        await fetch("https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/snapshot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true
+        });
+      } catch(e){
+        // Si falla, no afecta UX: queda guardado local
+      }
+    }
+
+    // =========================
+    // TICK SOUND (WebAudio)
+    // =========================
+    let audioCtx = null;
+
+    function ensureAudio(){
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    function playTick(intensity = 1){
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "square";
+      osc.frequency.setValueAtTime(900 + 250 * intensity, t);
+
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.12 * intensity, t + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.04);
+    }
+
+    // =========================
+    // CANVAS WHEEL
+    // =========================
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const cx = 400, cy = 400, R = 350;
+
+    function drawWheel(rot=0){
+      ctx.clearRect(0,0,800,800);
+      const sliceLocal = (Math.PI*2)/GROUPS.length;
+
+      for(let i=0;i<GROUPS.length;i++){
+        const a0 = rot + i*sliceLocal;
+        const a1 = a0 + sliceLocal;
+
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,R,a0,a1);
+        ctx.closePath();
+        ctx.fillStyle = i%2 ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.10)";
+        ctx.fill();
+        ctx.strokeStyle="rgba(255,255,255,.14)";
+        ctx.lineWidth=3;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx,cy);
+        ctx.rotate(a0 + sliceLocal/2);
+        ctx.textAlign="right";
+        ctx.fillStyle="#fff";
+        ctx.font="900 26px system-ui";
+        ctx.fillText(GROUPS[i], R-26, 10);
+        ctx.restore();
+      }
+    }
+
+    // =========================
+    // SPIN
+    // =========================
+    let rot = 0, spinning = false;
+
+    const TWO_PI = Math.PI * 2;
+    const slice = TWO_PI / GROUPS.length;
+
+    function norm(x){
+      x = x % TWO_PI;
+      return x < 0 ? x + TWO_PI : x;
+    }
+
+    function pad2(n){ return String(n).padStart(2,"0"); }
+
+    function spin(){
+      if(spinning) return;
+      spinning = true;
+
+      const btnSpin = document.getElementById("btnSpin");
+      btnSpin.disabled = true;
+
+      ensureAudio();
+
+      // ===== TRIGGER: SPIN START =====
+      STATE.spins_session += 1;
+      STATE.games_total += 1;
+      maybeSave("on_spin_start");
+      maybeSave("every_n_spins");
+
+      const start = rot;
+      const end = start + (Math.random()*4 + 7) * TWO_PI;
+      const t0 = performance.now();
+
+      function anim(t){
+        const p = Math.min(1, (t - t0) / 3200);
+        const prevRot = rot;
+
+        rot = start + (end - start) * (1 - Math.pow(1 - p, 3));
+        drawWheel(rot);
+
+        const aPrev = norm(prevRot);
+        const aNow  = norm(rot);
+
+        const segPrev = Math.floor(aPrev / slice);
+        const segNow  = Math.floor(aNow  / slice);
+
+        if (segNow !== segPrev) {
+          const vel = Math.abs(aNow - aPrev);
+          const intensity = Math.min(1, Math.max(0.35, vel / 0.25));
+          playTick(intensity);
+        }
+
+        if(p < 1){
+          requestAnimationFrame(anim);
+        } else {
+          const idx = Math.floor(((Math.PI*1.5 - rot) % TWO_PI + TWO_PI) / slice);
+          const g = GROUPS[idx];
+          const q = Math.floor(Math.random() * GROUP_COUNTS[g]) + 1;
+
+          const text = `${g} – #${pad2(q)}`;
+          document.getElementById("resultText").textContent = text;
+
+          // acento final
+          playTick(1);
+
+          document.getElementById("scFrame").src = DEFAULT_SC_EMBED;
+
+          // ===== TRIGGER: SPIN END =====
+          STATE.last_group = g;
+          STATE.last_question = q;
+          STATE.last_result_text = text;
+          STATE.counts_by_group[g] = (STATE.counts_by_group[g] || 0) + 1;
+          maybeSave("on_spin_end");
+
+          spinning = false;
+          btnSpin.disabled = false;
+        }
+      }
+
+      requestAnimationFrame(anim);
+    }
+
+    drawWheel();
+    document.getElementById("btnSpin").onclick = spin;
+  </script>
+</body>
+</html>

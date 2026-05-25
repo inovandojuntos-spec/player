@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bem-vindo</title>
+
+  <style>
+    :root{
+      --bg:#000;
+      --edge:rgba(255,255,255,.12);
+      --text:rgba(255,255,255,.95);
+      --muted:rgba(255,255,255,.55);
+    }
+    html,body{
+      margin:0;
+      height:100%;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:#000;
+      color:var(--text);
+    }
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .card{
+      width:min(420px,100%);
+      background:#000;
+      border:1px solid var(--edge);
+      border-radius:22px;
+      padding:20px;
+      box-shadow:0 30px 90px rgba(0,0,0,.85);
+    }
+    .logo{ text-align:center; margin-bottom:14px; }
+    .logo img{ max-width:160px; width:60%; }
+    h1{ text-align:center; font-size:22px; margin:6px 0; font-weight:900; }
+    p{
+      text-align:center;
+      font-size:14px;
+      color:var(--muted);
+      margin:0 0 18px;
+      line-height:1.4;
+    }
+    label{
+      display:block;
+      font-size:11px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:4px;
+    }
+    input{
+      width:95%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--edge);
+      background:#000;
+      color:var(--text);
+      font-size:15px;
+      margin-bottom:12px;
+      outline:none;
+    }
+    input::placeholder{ color:rgba(255,255,255,.35); }
+    .btn{
+      width:100%;
+      padding:15px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+      color:#fff;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:1px;
+      text-transform:uppercase;
+      cursor:pointer;
+      margin-top:6px;
+    }
+    .btn:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+    .welcomeBack{
+      text-align:center;
+      font-size:14px;
+      margin-bottom:14px;
+    }
+    .small{
+      font-size:12px;
+      color:var(--muted);
+      text-align:center;
+      margin-top:12px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="card">
+
+    <div class="logo">
+      <img src="images/logo.png" alt="Logo">
+    </div>
+
+    <h1 id="title">Bem-vindo</h1>
+    <p id="subtitle">Antes de começar, faça seu cadastro</p>
+
+    <div id="welcomeBack" class="welcomeBack" style="display:none;"></div>
+
+    <label for="name">NOME: </label>
+    <input id="name" type="text" placeholder="Seu nome" autocomplete="given-name">
+
+    <label for="contact">INSTAGRAM OU GMAIL: </label>
+    <input id="contact" type="text" placeholder="@usuario ou email">
+
+    <button class="btn" id="startBtn">COMEÇAR</button>
+
+    <div id="loadingMsg" class="small" style="display:none;">
+      Conectando...
+    </div>
+
+    <div class="small">
+      Seu cadastro será salvo neste dispositivo.
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =========================
+   CONFIG
+========================= */
+const SNAPSHOT_ENDPOINT = "https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/IJ_events";
+const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
+
+/* =========================
+   STORAGE KEYS
+========================= */
+const PROFILE_KEY  = "player_profile";
+const SESSION_KEY  = "player_session";
+const SNAPSHOT_KEY = "innovandojuntos_ruleta_snapshot_v1";
+
+/* =========================
+   HELPERS
+========================= */
+function uuid(){
+  return crypto.randomUUID();
+}
+const normalizeContact = v => (v ? v.trim().toLowerCase() : "");
+const nowISO = () => new Date().toISOString();
+
+function safeJSONParse(s){
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+function canUseLocalStorage(){
+  try{
+    const k="__ij_test__";
+    localStorage.setItem(k,"1");
+    localStorage.removeItem(k);
+    return true;
+  }catch(e){
+    console.warn("localStorage bloqueado/no disponible:", e);
+    return false;
+  }
+}
+
+function readProfile(){
+  if(!canUseLocalStorage()) return null;
+  return safeJSONParse(localStorage.getItem(PROFILE_KEY));
+}
+
+function writeProfile(profile){
+  if(!canUseLocalStorage()) return false;
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  return true;
+}
+
+function writeSession(session){
+  if(!canUseLocalStorage()) return false;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  return true;
+}
+
+/* =========================
+   INIT (DOM)
+========================= */
+const nameInput = document.getElementById("name");
+const contactInput = document.getElementById("contact");
+const startBtn = document.getElementById("startBtn");
+const loadingMsg = document.getElementById("loadingMsg");
+
+const titleEl = document.getElementById("title");
+const subtitleEl = document.getElementById("subtitle");
+const welcomeBackEl = document.getElementById("welcomeBack");
+
+/* =========================
+   PREFILL (load existing user)
+========================= */
+const existingProfile = readProfile();
+if(existingProfile?.profile_name){
+  welcomeBackEl.style.display = "block";
+  welcomeBackEl.textContent = `Bem-vindo de volta, ${existingProfile.profile_name}!`;
+  titleEl.textContent = "Bem-vindo";
+  subtitleEl.textContent = "Seus dados já estão salvos. Você pode continuar.";
+
+  nameInput.value = existingProfile.profile_name || "";
+  contactInput.value = existingProfile.profile_contact || "";
+
+  // opcional: bloquear edición de nombre si quieres
+  // nameInput.disabled = true;
+
+  startBtn.textContent = "CONTINUAR";
+}
+
+/* =========================
+   CLICK
+========================= */
+startBtn.addEventListener("click", async () => {
+  const name = nameInput.value.trim();
+  const contact = normalizeContact(contactInput.value);
+
+  if (!name){
+    alert("Por favor, informe seu nome");
+    return;
+  }
+
+  // UI
+  startBtn.disabled = true;
+  startBtn.textContent = "Conectando...";
+  loadingMsg.style.display = "block";
+
+  // Reusar player_id si existe (mismo usuario en este dispositivo)
+  const profile = readProfile();
+  const player_id = profile?.player_id || uuid();
+  const session_id = uuid();
+
+  // 1) Guardar LOCAL primero (lo que te faltaba)
+  const profileObj = {
+    player_id,
+    profile_name: name,
+    profile_contact: contact,
+    updated_at: nowISO()
+  };
+
+  const sessionObj = {
+    session_id,
+    started_at: nowISO(),
+    page: "index=02.html"
+  };
+
+  const okProfile = writeProfile(profileObj);
+  const okSession = writeSession(sessionObj);
+
+  if(!okProfile || !okSession){
+    // Esto pasa en modo incógnito/restricciones (iOS/Safari/privacidad)
+    alert("No fue posible guardar en este dispositivo (bloqueo de almacenamiento del navegador).");
+    // dejamos continuar igual; si quieres bloquear navegación, haz return aquí.
+  }
+
+  // 2) Enviar evento a Supabase (no bloquea si falla)
+  const payload = {
+    player_id,
+    session_id,
+    event_name: "login",
+    event_type: "login",
+    event_source: "index=02.html",
+    profile_name: name,
+    profile_contact: contact,
+    games_total: 1,
+    spins_session: 0,
+    total_time_ms: 0,
+    counts_by_group: {}
+  };
+
+  try{
+    await fetch(SNAPSHOT_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch(e){
+    console.error("Snapshot fetch failed:", e);
+  }
+
+  // 3) Navegar
+  window.location.href = "ruleta=02.html";
+});
+</script>
+
+</body>
+</html>
