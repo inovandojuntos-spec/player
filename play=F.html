@@ -717,123 +717,6 @@
       color:var(--text);
     }
 
-    .commentsOverlay{
-      position:absolute;
-      inset:0;
-      z-index:80;
-      display:none;
-      align-items:flex-end;
-      justify-content:center;
-      background:rgba(0,0,0,0.45);
-    }
-
-    .commentsOverlay.show{
-      display:flex;
-    }
-
-    .commentsBackdrop{
-      position:absolute;
-      inset:0;
-      backdrop-filter:blur(4px);
-      -webkit-backdrop-filter:blur(4px);
-    }
-
-    .commentsPanel{
-      position:relative;
-      z-index:1;
-      width:100%;
-      height:min(72dvh, 720px);
-      background:rgba(0,0,0,0.97);
-      border:1px solid rgba(255,255,255,0.08);
-      border-radius:24px 24px 0 0;
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
-    }
-
-    .commentsHeader{
-      padding:14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      border-bottom:1px solid rgba(255,255,255,0.08);
-    }
-
-    .commentsTitle{
-      font-size:15px;
-      font-weight:900;
-      color:var(--text);
-    }
-
-    .commentsClose{
-      width:36px;
-      height:36px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,0.10);
-      background:rgba(255,255,255,0.04);
-      color:var(--text);
-      cursor:pointer;
-    }
-
-    .commentsBody{
-      flex:1;
-      overflow:auto;
-      padding:14px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-
-    .commentItem{
-      padding:10px 12px;
-      border-radius:14px;
-      background:rgba(255,255,255,0.05);
-      color:var(--text);
-      font-size:14px;
-      line-height:1.35;
-    }
-
-    .commentMeta{
-      margin-top:5px;
-      font-size:11px;
-      color:var(--soft);
-    }
-
-    .commentsForm{
-      display:flex;
-      gap:8px;
-      padding:12px;
-      border-top:1px solid rgba(255,255,255,0.08);
-      padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));
-    }
-
-    .commentInput{
-      flex:1;
-      min-width:0;
-      border:none;
-      outline:none;
-      border-radius:999px;
-      background:rgba(255,255,255,0.08);
-      color:var(--text);
-      padding:12px 14px;
-      font-size:14px;
-    }
-
-    .commentSendBtn{
-      border:none;
-      border-radius:999px;
-      padding:0 16px;
-      font-weight:800;
-      background:rgba(255,255,255,0.85);
-      color:#000;
-      cursor:pointer;
-    }
-
-    .commentSendBtn:disabled{
-      opacity:.45;
-      cursor:not-allowed;
-    }
-
     .srOnly{
       position:absolute;
       width:1px;
@@ -1135,24 +1018,6 @@
         </div>
       </div>
 
-      <div class="commentsOverlay" id="commentsOverlay" aria-hidden="true">
-        <div class="commentsBackdrop" id="commentsBackdrop"></div>
-
-        <div class="commentsPanel" role="dialog" aria-modal="true">
-          <div class="commentsHeader">
-            <div class="commentsTitle">Comentarios</div>
-            <button class="commentsClose" id="commentsCloseBtn">✕</button>
-          </div>
-
-          <div class="commentsBody" id="commentsBody"></div>
-
-          <form class="commentsForm" id="commentsForm">
-            <input id="commentInput" class="commentInput" type="text" maxlength="300" placeholder="Agregar comentario..." />
-            <button id="commentSendBtn" class="commentSendBtn" type="submit">Enviar</button>
-          </form>
-        </div>
-      </div>
-
       <audio id="hiddenAudio" class="srOnly" preload="auto" playsinline></audio>
     </div>
   </div>
@@ -1174,8 +1039,6 @@
       const WHATSAPP_REGISTER_RPC_NAME = "register_target_whatsapp";
       const LIKE_TOGGLE_RPC_NAME = "toggle_target_like";
       const FAVORITE_TOGGLE_RPC_NAME = "toggle_target_favorite";
-      const COMMENT_ADD_RPC_NAME = "add_target_comment";
-      const COMMENT_LIST_RPC_NAME = "get_target_comments";
       const PLAYER_ID_KEY = "ij_browser_user_id";
       const SESSION_ID_KEY = "ij_browser_session_id";
 
@@ -1205,13 +1068,6 @@
       const itemsBody = document.getElementById("itemsBody");
       const itemsBackdrop = document.getElementById("itemsBackdrop");
       const itemsCloseBtn = document.getElementById("itemsCloseBtn");
-      const commentsOverlay = document.getElementById("commentsOverlay");
-      const commentsBackdrop = document.getElementById("commentsBackdrop");
-      const commentsCloseBtn = document.getElementById("commentsCloseBtn");
-      const commentsBody = document.getElementById("commentsBody");
-      const commentsForm = document.getElementById("commentsForm");
-      const commentInput = document.getElementById("commentInput");
-      const commentSendBtn = document.getElementById("commentSendBtn");
 
       const hiddenAudio = document.getElementById("hiddenAudio");
       const playerWrap = document.getElementById("playerWrap");
@@ -1984,127 +1840,6 @@
         renderActionRail(actionState);
       }
 
-      async function loadComments(){
-        const target = getCurrentTarget();
-
-        if (!target?.targetId){
-          commentsBody.innerHTML = `<div class="commentItem">Target inválido</div>`;
-          return;
-        }
-
-        commentsBody.innerHTML = `<div class="commentItem">Cargando comentarios...</div>`;
-
-        try{
-          const { data, error } = await supabase.rpc(COMMENT_LIST_RPC_NAME, {
-            p_target_type: target.targetType,
-            p_target_id: target.targetId,
-            p_limit: 50,
-            p_offset: 0
-          });
-
-          if (error) throw error;
-
-          const result = data?.get_target_comments ?? data;
-          const comments = Array.isArray(result?.comments) ? result.comments : [];
-
-          if (!comments.length){
-            commentsBody.innerHTML = `<div class="commentItem">Sin comentarios todavía</div>`;
-            return;
-          }
-
-          commentsBody.innerHTML = comments.map(c => `
-            <div class="commentItem">
-              <div>${escapeHtml(c.body || "")}</div>
-              <div class="commentMeta">${formatCommentDate(c.created_at)}</div>
-            </div>
-          `).join("");
-
-        }catch(err){
-          console.error("[COMMENTS LOAD ERROR]", err);
-          commentsBody.innerHTML = `<div class="commentItem">Error cargando comentarios</div>`;
-        }
-      }
-
-      function openCommentsPanel(){
-        commentsOverlay.classList.add("show");
-        commentsOverlay.setAttribute("aria-hidden", "false");
-        document.body.classList.add("modal-open");
-        loadComments();
-        setTimeout(() => commentInput.focus(), 250);
-      }
-
-      function closeCommentsPanel(){
-        commentsOverlay.classList.remove("show");
-        commentsOverlay.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("modal-open");
-        commentInput.value = "";
-      }
-
-      function escapeHtml(value){
-        return String(value)
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#039;");
-      }
-
-      function formatCommentDate(value){
-        if (!value) return "";
-        try{
-          return new Date(value).toLocaleString();
-        }catch{
-          return "";
-        }
-      }
-
-      async function submitComment(){
-        const body = commentInput.value.trim();
-        const target = getCurrentTarget();
-
-        if (!body){
-          showToast("Comentario vacío");
-          return;
-        }
-
-        if (!target?.targetId){
-          showToast("Target inválido");
-          return;
-        }
-
-        commentSendBtn.disabled = true;
-
-        try{
-          const { data, error } = await supabase.rpc(COMMENT_ADD_RPC_NAME, {
-            p_user_id: browserUserId,
-            p_target_type: target.targetType,
-            p_target_id: target.targetId,
-            p_body: body
-          });
-
-          if (error) throw error;
-
-          const result = data?.add_target_comment ?? data;
-          const commentCount = Number(result?.comment_count || 0);
-
-          commentInput.value = "";
-
-          if (actionState?.comment && commentCount > 0){
-            actionState.comment.count = commentCount;
-            renderActionRail(actionState);
-          }
-
-          invalidateCachedTargetStats(target);
-          await loadComments();
-
-        }catch(err){
-          console.error("[COMMENT ADD ERROR]", err);
-          showToast("Error guardando comentario");
-        }finally{
-          commentSendBtn.disabled = false;
-        }
-      }
-
       function executeConfiguredAction(key){
         
         console.log("🚀 EXECUTE_CONFIGURED_ACTION ENTER", {
@@ -2131,11 +1866,6 @@
           target: getCurrentTarget()
         }); 
           handleFavoriteClick();
-          return;
-        }
-
-        if (key === "comment"){
-          openCommentsPanel();
           return;
         }
 
@@ -3248,14 +2978,6 @@
       itemsCloseBtn.addEventListener("click", closeItemsPanel);
       itemsBackdrop.addEventListener("click", closeItemsPanel);
 
-      commentsCloseBtn.addEventListener("click", closeCommentsPanel);
-      commentsBackdrop.addEventListener("click", closeCommentsPanel);
-
-      commentsForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        submitComment();
-      });
-
       itemsPanel.addEventListener("click", (e) => {
         e.stopPropagation();
       });
@@ -3339,11 +3061,6 @@
       }, { passive: false });
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && commentsOverlay.classList.contains("show")){
-          closeCommentsPanel();
-          return;
-        }
-
         if (e.key === "Escape" && isItemsPanelOpen()){
           closeItemsPanel();
           return;
