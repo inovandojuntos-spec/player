@@ -85,13 +85,6 @@
       filter:drop-shadow(0 8px 16px rgba(0,0,0,.9));
     }
 
-    .spinControls{
-      display:grid;
-      grid-template-columns:1fr 74px;
-      gap:10px;
-      margin-top:12px;
-    }
-
     .btnBig{
       width:100%;
       cursor:pointer;
@@ -105,18 +98,10 @@
       font-size:18px;
       text-transform:uppercase;
       box-shadow:0 14px 34px rgba(0,0,0,.75);
+      margin-top:12px;
     }
     .btnBig:active{transform:translateY(1px)}
     .btnBig[disabled]{ opacity:.55; cursor:not-allowed; }
-
-    .btnRepeat{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:24px;
-      line-height:1;
-      padding:0;
-    }
 
     .result{
       margin-top:10px;
@@ -202,10 +187,7 @@
         <canvas id="wheel" width="800" height="800"></canvas>
       </div>
 
-      <div class="spinControls">
-        <button class="btnBig" id="btnSpin">GIRAR</button>
-        <button class="btnBig btnRepeat" id="btnRepeat" type="button" aria-label="Repetir audio" title="Repetir audio">↻</button>
-      </div>
+      <button class="btnBig" id="btnSpin">GIRAR</button>
 
       <div class="result" role="status" aria-live="polite">
         <div class="value" id="resultText">—</div>
@@ -415,8 +397,6 @@ let QUESTIONS_BY_GROUP = {};
 // =========================
 const audioEl   = document.getElementById("audio");
 const audioSrc  = document.getElementById("audioSrc");
-const btnSpin   = document.getElementById("btnSpin");
-const btnRepeat = document.getElementById("btnRepeat");
 const btnPlay   = document.getElementById("btnPlay");
 const toast     = document.getElementById("toast");
 const playerBox = document.querySelector(".playerBox");
@@ -491,19 +471,6 @@ function pauseAudio(){
   btnPlay.textContent = "▶ PLAY";
 }
 
-async function replayCurrentAudio(){
-  if (!currentAudioUrl || currentAudioUrl === FALLBACK_AUDIO && !lastPicked.audio){
-    toast.classList.add("show");
-    return;
-  }
-
-  audioEl.pause();
-  audioEl.currentTime = 0;
-  await playMainAudio(currentAudioUrl);
-}
-
-btnRepeat.addEventListener("click", replayCurrentAudio);
-
 btnPlay.addEventListener("click", async () => {
   if (audioEl.paused){
     await playMainAudio();
@@ -516,7 +483,6 @@ btnPlay.addEventListener("click", async () => {
 audioEl.addEventListener("ended", async () => {
   btnPlay.textContent = "▶ PLAY";
   btnSpin.disabled = false;
-  btnRepeat.disabled = false;
   // si nunca se logró reproducir, no mandamos nada
   if (!audioAttempted) return;
 
@@ -628,9 +594,8 @@ function norm(x){
 function pickRandomQuestionByGroup(group){
   const arr = QUESTIONS_BY_GROUP[group] || [];
   if (!arr.length) return null;
-
-  const randomIndex = Math.floor(Math.random() * arr.length);
-  return arr[randomIndex] || null;
+    return arr[Math.floor(Math.random() * arr.length)];
+  //return QUESTIONS.find(q => Number(q.no) === 41) || null;
 }
 
 async function spin(){
@@ -638,8 +603,8 @@ async function spin(){
   spinning = true;
 
   document.getElementById("resultText").textContent = "—";
+  const btnSpin = document.getElementById("btnSpin");
   btnSpin.disabled = true;
-  btnRepeat.disabled = true;
 
   ensureAudioCtx();
 
@@ -688,7 +653,6 @@ async function spin(){
         };
 
         setAudio(lastPicked.audio);
-        btnRepeat.disabled = false;
         playMainAudio(lastPicked.audio);
 
       } else {
@@ -700,8 +664,6 @@ async function spin(){
           last_question_text: null,
           last_audio: FALLBACK_AUDIO
         });
-        btnSpin.disabled = false;
-        btnRepeat.disabled = false;
       }
 
       // snapshot: solo actualizamos info local (sin eventos)
@@ -761,7 +723,7 @@ async function loadConfig(){
 
   setAudio(FALLBACK_AUDIO);
   drawWheel();
-  btnSpin.addEventListener("click", spin);
+  document.getElementById("btnSpin").addEventListener("click", spin);
 }
 
 loadConfig().catch(err => {
@@ -773,7 +735,7 @@ loadConfig().catch(err => {
 
   setAudio(FALLBACK_AUDIO);
   drawWheel();
-  btnSpin.addEventListener("click", spin);
+  document.getElementById("btnSpin").addEventListener("click", spin);
 });
 </script>
 

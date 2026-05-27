@@ -201,7 +201,7 @@
         <div id="toast" class="toast">Si no se reproduce automáticamente, toca ▶ PLAY.</div>
 
         <audio id="audio" class="audioNative" preload="none">
-          <source id="audioSrc" src="audios/pregunta.mp3" type="audio/mpeg">
+          <source id="audioSrc" src="" type="audio/mpeg">
           Tu navegador no soporta audio HTML5.
         </audio>
       </div>
@@ -594,8 +594,8 @@ function norm(x){
 function pickRandomQuestionByGroup(group){
   const arr = QUESTIONS_BY_GROUP[group] || [];
   if (!arr.length) return null;
-  //return arr[Math.floor(Math.random() * arr.length)];
-  return QUESTIONS.find(q => Number(q.no) === 41) || null;
+    return arr[Math.floor(Math.random() * arr.length)];
+  //return QUESTIONS.find(q => Number(q.no) === 41) || null;
 }
 
 async function spin(){
