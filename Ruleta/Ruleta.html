@@ -124,6 +124,23 @@
       box-shadow:0 14px 34px rgba(0,0,0,.75);
       margin-top:12px;
     }
+    .spinRow{
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+    }
+
+    .spinRow .btnBig{
+      margin-top:0;
+    }
+
+    .btnRepeat{
+      width:76px;
+      flex:0 0 76px;
+      font-size:26px;
+      line-height:1;
+      padding:14px 10px;
+    }
     .btnBig:active{transform:translateY(1px)}
     .btnBig[disabled]{ opacity:.55; cursor:not-allowed; }
 
@@ -211,7 +228,10 @@
         <canvas id="wheel" width="800" height="800"></canvas>
       </div>
 
-      <button class="btnBig" id="btnSpin">GIRAR</button>
+      <div class="spinRow">
+        <button class="btnBig" id="btnSpin">GIRAR</button>
+        <button class="btnBig btnRepeat" id="btnRepeat" disabled aria-label="Repetir audio">↻</button>
+      </div>
 
       <div class="result" role="status" aria-live="polite">
         <div class="value" id="resultText">—</div>
@@ -421,6 +441,8 @@ let QUESTIONS_BY_GROUP = {};
 // =========================
 const audioEl   = document.getElementById("audio");
 const audioSrc  = document.getElementById("audioSrc");
+const btnSpin   = document.getElementById("btnSpin");
+const btnRepeat = document.getElementById("btnRepeat");
 const btnPlay   = document.getElementById("btnPlay");
 const toast     = document.getElementById("toast");
 const playerBox = document.querySelector(".playerBox");
@@ -433,6 +455,11 @@ let currentAudioUrl = "";
 let audioAttempted = false;
 
 let lastPicked = { group:null, no:null, text:null, audio:null };
+
+function setButtonsAudioPlaying(isPlaying){
+  btnSpin.disabled = isPlaying || spinning;
+  btnRepeat.disabled = isPlaying || spinning || !currentAudioUrl;
+}
 
 function setAudio(url){
   const u = (url && String(url).trim()) ? String(url).trim() : FALLBACK_AUDIO;
@@ -481,18 +508,22 @@ async function playMainAudio(url){
   try{
     toast.classList.remove("show");
     audioAttempted = true;
+    setButtonsAudioPlaying(true);
     await audioEl.play();
     btnPlay.textContent = "⏸ PAUSE";
+    
   } catch(e){
     console.log("play blocked:", e);
     toast.classList.add("show");
     btnPlay.textContent = "▶ PLAY";
+    setButtonsAudioPlaying(false);
   }
 }
 
 function pauseAudio(){
   audioEl.pause();
   btnPlay.textContent = "▶ PLAY";
+  setButtonsAudioPlaying(false);
 }
 
 btnPlay.addEventListener("click", async () => {
@@ -503,10 +534,17 @@ btnPlay.addEventListener("click", async () => {
   }
 });
 
+btnRepeat.addEventListener("click", async () => {
+  if (!currentAudioUrl || spinning || !audioEl.paused) return;
+
+  audioEl.currentTime = 0;
+  await playMainAudio(currentAudioUrl);
+});
+
 // ✅ ÚNICO EVENTO: cuando TERMINA el audio
 audioEl.addEventListener("ended", async () => {
   btnPlay.textContent = "▶ PLAY";
-  btnSpin.disabled = false;
+  setButtonsAudioPlaying(false);
   // si nunca se logró reproducir, no mandamos nada
   if (!audioAttempted) return;
 
@@ -627,7 +665,7 @@ async function spin(){
   spinning = true;
 
   document.getElementById("resultText").textContent = "—";
-  const btnSpin = document.getElementById("btnSpin");
+  //const btnSpin = document.getElementById("btnSpin");
   btnSpin.disabled = true;
 
   ensureAudioCtx();
@@ -680,6 +718,7 @@ async function spin(){
         playMainAudio(lastPicked.audio);
 
       } else {
+        setButtonsAudioPlaying(false);
         document.getElementById("resultText").textContent = "(sin preguntas cargadas)";
         lastPicked = { group, no:null, text:null, audio:FALLBACK_AUDIO };
         updateSnapshot({
