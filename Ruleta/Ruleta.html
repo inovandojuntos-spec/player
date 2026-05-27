@@ -40,6 +40,30 @@
       position:relative;
     }
 
+    .btnClose{
+      position:absolute;
+      top:12px;
+      right:12px;
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(0,0,0,.65);
+      color:#fff;
+      font-size:22px;
+      font-weight:900;
+      cursor:pointer;
+      z-index:50;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      backdrop-filter:blur(4px);
+      box-shadow:0 6px 18px rgba(0,0,0,.5);
+    }
+
+    .btnClose:active{
+      transform:scale(.96);
+    }
     .logoHeader{
       display:flex;
       justify-content:center;
@@ -177,7 +201,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-
+      <button id="btnClose" class="btnClose" aria-label="Cerrar">✕</button>
       <div class="logoHeader">
         <img src="images/logo.png" alt="Innovando Juntos">
       </div>
@@ -403,7 +427,7 @@ const playerBox = document.querySelector(".playerBox");
 
 let audioUnlocked = false;
 let FALLBACK_AUDIO = "audios/pregunta.mp3";
-let currentAudioUrl = FALLBACK_AUDIO;
+let currentAudioUrl = "";
 
 // para medir reproducción real
 let audioAttempted = false;
@@ -608,8 +632,8 @@ async function spin(){
 
   ensureAudioCtx();
 
-  setAudio(FALLBACK_AUDIO);
-  await unlockAudioOnce();
+  //setAudio(FALLBACK_AUDIO);
+  //await unlockAudioOnce();
 
   const start = rot;
   const end = start + (Math.random()*4 + 7) * TWO_PI;
@@ -721,10 +745,25 @@ async function loadConfig(){
 
   getOrCreateSnapshotBase();
 
-  setAudio(FALLBACK_AUDIO);
+  //setAudio(FALLBACK_AUDIO);
   drawWheel();
   document.getElementById("btnSpin").addEventListener("click", spin);
 }
+
+// =========================
+// CLOSE BUTTON
+// =========================
+  document.getElementById("btnClose").addEventListener("click", () => {
+
+    // detener audio si está reproduciendo
+    try{
+      audioEl.pause();
+      audioEl.currentTime = 0;
+    }catch(e){}
+
+    // volver al desafio 20
+    window.location.href = "https://inovandojuntos.com/play/desafio_20";
+  });
 
 loadConfig().catch(err => {
   console.log(err);
@@ -733,7 +772,7 @@ loadConfig().catch(err => {
 
   getOrCreateSnapshotBase();
 
-  setAudio(FALLBACK_AUDIO);
+  //setAudio(FALLBACK_AUDIO);
   drawWheel();
   document.getElementById("btnSpin").addEventListener("click", spin);
 });
