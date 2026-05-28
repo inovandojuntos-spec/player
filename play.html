@@ -816,7 +816,7 @@
       background:rgba(255,255,255,0.08);
       color:var(--text);
       padding:12px 14px;
-      font-size:14px;
+      font-size:16px;
     }
 
     .commentSendBtn{
@@ -2030,14 +2030,21 @@
         commentsOverlay.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-open");
         loadComments();
-        setTimeout(() => commentInput.focus(), 250);
+        //setTimeout(() => commentInput.focus(), 250);
       }
 
       function closeCommentsPanel(){
+        commentInput.blur();
+
         commentsOverlay.classList.remove("show");
         commentsOverlay.setAttribute("aria-hidden", "true");
         document.body.classList.remove("modal-open");
         commentInput.value = "";
+
+        // Ayuda a iOS a recalcular viewport después del teclado/zoom
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 50);
       }
 
       function escapeHtml(value){
