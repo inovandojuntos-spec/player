@@ -115,15 +115,6 @@
       gap:7px;
     }
 
-    .field.is-hidden{
-      display:none;
-    }
-
-    #activationCode{
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
     .label{
       padding-left:2px;
       color:var(--soft);
@@ -277,13 +268,6 @@
           </div>
         </div>
 
-        <div class="field is-hidden" id="activationCodeField">
-          <label class="label" for="activationCode">Código de ativação</label>
-          <div class="inputWrap">
-            <input id="activationCode" name="activationCode" type="text" placeholder="Digite seu código" autocomplete="one-time-code" inputmode="text" />
-          </div>
-        </div>
-
         <button class="primaryBtn" id="submitBtn" type="submit">Entrar</button>
       </form>
 
@@ -311,8 +295,6 @@
     const authForm = document.getElementById("authForm");
     const emailEl = document.getElementById("email");
     const passwordEl = document.getElementById("password");
-    const activationCodeField = document.getElementById("activationCodeField");
-    const activationCodeEl = document.getElementById("activationCode");
     const submitBtn = document.getElementById("submitBtn");
     const statusBox = document.getElementById("statusBox");
     const togglePassBtn = document.getElementById("togglePassBtn");
@@ -371,16 +353,10 @@
 
       submitBtn.textContent = isRegister ? "Criar conta" : "Entrar";
       modeCopy.textContent = isRegister
-        ? "Crie sua conta e informe seu código de ativação."
+        ? "Crie sua conta para registrar sua atividade."
         : "Acesse sua conta para continuar.";
 
       passwordEl.autocomplete = isRegister ? "new-password" : "current-password";
-      activationCodeField.classList.toggle("is-hidden", !isRegister);
-      activationCodeEl.required = isRegister;
-      activationCodeEl.disabled = !isRegister;
-
-      if (!isRegister) activationCodeEl.value = "";
-
       clearStatus();
     }
 
@@ -408,9 +384,6 @@
       const credentials = getCredentials();
       if (!credentials) return;
 
-      const activationCode = getActivationCode();
-      if (!activationCode) return;
-
       setBusy(true, "Criando conta...");
 
       try{
@@ -423,29 +396,16 @@
 
         if (error) throw error;
 
-        const userId = data?.user?.id;
-        if (!userId){
-          throw new Error("Conta criada, mas não foi possível identificar o usuário para ativação.");
-        }
-
-        showStatus("Conta criada. Validando código de ativação...");
-
-        const activationResult = await activateProfile(userId, activationCode);
-        if (!activationResult?.ok){
-          throw new Error(activationResult?.message || "Não foi possível ativar o perfil.");
-        }
-
         emailEl.value = "";
         passwordEl.value = "";
-        activationCodeEl.value = "";
 
         if (data?.session){
-          showStatus("Conta criada e ativada. Redirecionando...", "ok");
+          showStatus("Conta criada. Redirecionando...", "ok");
           window.location.href = redirect;
           return;
         }
 
-        showStatus("Conta criada e ativada. Agora entre com seu email e senha.", "ok");
+        showStatus("Conta criada. Agora entre com seu email e senha.", "ok");
         setMode("login");
       }catch(err){
         showStatus(getFriendlyAuthError(err), "error");
@@ -453,28 +413,6 @@
       }finally{
         setBusy(false);
       }
-    }
-
-    async function activateProfile(userId, activationCode){
-      const { data, error } = await supabase.rpc("activate_profile_with_code", {
-        p_user_id: userId,
-        p_code: activationCode
-      });
-
-      if (error) throw error;
-      return data;
-    }
-
-    function getActivationCode(){
-      const activationCode = activationCodeEl.value.trim().toUpperCase();
-
-      if (!activationCode){
-        showStatus("Informe um código de ativação.", "error");
-        activationCodeEl.focus();
-        return null;
-      }
-
-      return activationCode;
     }
 
     function getCredentials(){
@@ -528,7 +466,6 @@
       submitBtn.disabled = isBusy;
       emailEl.disabled = isBusy;
       passwordEl.disabled = isBusy;
-      activationCodeEl.disabled = isBusy || mode !== "register";
       loginTab.disabled = isBusy;
       registerTab.disabled = isBusy;
 
@@ -565,10 +502,6 @@
       if (/user already registered|already registered/i.test(msg)){
         setMode("login");
         return "Este email já está registrado. Entre com sua senha.";
-      }
-
-      if (/perfil_nao_encontrado/i.test(msg)){
-        return "Perfil de usuário não encontrado. Verifique se o gatilho de criação de perfil está ativo.";
       }
 
       return msg;
