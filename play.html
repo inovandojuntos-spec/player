@@ -1308,6 +1308,35 @@
       const ACTION_TOGGLE_STORAGE_KEY = "ij_action_toggles_v1";
       let actionToggleState = loadActionToggleState();
 
+      async function getCurrentDistributorId(){
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+
+        const user = userData?.user;
+
+        if (!user?.id) {
+          window.location.replace(
+            `/login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+          );
+          throw new Error("Usuario no logueado");
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("distributor_id")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (!profile?.distributor_id) {
+          throw new Error("Usuario sin distributor_id asignado");
+        }
+
+        return profile.distributor_id;
+      }
+      
       async function loadTargetStats(target){
         if (!target?.targetId) return null;
 
@@ -2360,8 +2389,18 @@
       }
 
       async function loadChallengeBySlug(slug){
-        const { data, error } = await supabase.rpc(RPC_NAME, { p_slug: slug });
-        if (error) throw error;
+        const distributorId = await getCurrentDistributorId();
+
+        const { data, error } = await supabase.rpc(RPC_NAME, {
+          p_slug: slug,
+          p_distributor_id: distributorId
+        });
+
+        if (error){
+          console.error("[GET_CHALLENGE_FULL ERROR]", error);
+          throw error;
+        }
+
         return normalizeChallenge(data, slug);
       }
 
