@@ -753,118 +753,69 @@
       position:relative;
       z-index:1;
       width:100%;
-      height:min(78dvh, 760px);
-      background:#0b0b0b;
+      height:min(72dvh, 720px);
+      background:rgba(0,0,0,0.97);
       border:1px solid rgba(255,255,255,0.08);
-      border-radius:22px 22px 0 0;
+      border-radius:24px 24px 0 0;
       display:flex;
       flex-direction:column;
       overflow:hidden;
     }
 
     .commentsHeader{
-      height:52px;
-      padding:0 14px;
+      padding:14px;
       display:flex;
       align-items:center;
-      justify-content:center;
+      justify-content:space-between;
       border-bottom:1px solid rgba(255,255,255,0.08);
-      position:relative;
     }
 
     .commentsTitle{
       font-size:15px;
       font-weight:900;
-      color:rgba(255,255,255,0.88);
+      color:var(--text);
     }
 
     .commentsClose{
-      position:absolute;
-      right:12px;
-      top:8px;
       width:36px;
       height:36px;
-      border-radius:50%;
-      border:none;
-      background:rgba(255,255,255,0.08);
-      color:rgba(255,255,255,0.85);
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.04);
+      color:var(--text);
       cursor:pointer;
-      font-size:18px;
     }
 
     .commentsBody{
       flex:1;
       overflow:auto;
-      padding:14px 14px 8px;
+      padding:14px;
       display:flex;
       flex-direction:column;
-      gap:16px;
-      -webkit-overflow-scrolling:touch;
+      gap:12px;
     }
 
     .commentItem{
-      display:flex;
-      align-items:flex-start;
-      gap:10px;
-      background:transparent;
-      padding:0;
-    }
-
-    .commentAvatar{
-      width:38px;
-      height:38px;
-      flex:0 0 38px;
-      border-radius:50%;
-      overflow:hidden;
-      background:rgba(255,255,255,0.12);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:#fff;
-      font-size:14px;
-      font-weight:900;
-    }
-
-    .commentAvatar img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-
-    .commentContent{
-      flex:1;
-      min-width:0;
-    }
-
-    .commentUser{
-      font-size:13px;
-      font-weight:800;
-      color:rgba(255,255,255,0.82);
-      margin-bottom:3px;
-    }
-
-    .commentText{
+      padding:10px 12px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.05);
+      color:var(--text);
       font-size:14px;
       line-height:1.35;
-      color:rgba(255,255,255,0.92);
-      word-break:break-word;
     }
 
     .commentMeta{
       margin-top:5px;
       font-size:11px;
-      color:rgba(255,255,255,0.42);
+      color:var(--soft);
     }
 
     .commentsForm{
       display:flex;
-      align-items:center;
       gap:8px;
-      padding:10px 12px;
+      padding:12px;
       border-top:1px solid rgba(255,255,255,0.08);
-      padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
-      background:#0b0b0b;
+      padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));
     }
 
     .commentInput{
@@ -873,8 +824,8 @@
       border:none;
       outline:none;
       border-radius:999px;
-      background:rgba(255,255,255,0.10);
-      color:rgba(255,255,255,0.92);
+      background:rgba(255,255,255,0.08);
+      color:var(--text);
       padding:12px 14px;
       font-size:16px;
     }
@@ -883,9 +834,8 @@
       border:none;
       border-radius:999px;
       padding:0 16px;
-      min-height:42px;
-      font-weight:900;
-      background:rgba(255,255,255,0.92);
+      font-weight:800;
+      background:rgba(255,255,255,0.85);
       color:#000;
       cursor:pointer;
     }
@@ -1213,14 +1163,14 @@
 
         <div class="commentsPanel" role="dialog" aria-modal="true">
           <div class="commentsHeader">
-            <div class="commentsTitle">Comentários</div>
+            <div class="commentsTitle">Comentarios</div>
             <button class="commentsClose" id="commentsCloseBtn">✕</button>
           </div>
 
           <div class="commentsBody" id="commentsBody"></div>
 
           <form class="commentsForm" id="commentsForm">
-            <input id="commentInput" class="commentInput" type="text" maxlength="300" placeholder="Adicionar comentário..." />
+            <input id="commentInput" class="commentInput" type="text" maxlength="300" placeholder="Agregar comentario..." />
             <button id="commentSendBtn" class="commentSendBtn" type="submit">Enviar</button>
           </form>
         </div>
@@ -1387,7 +1337,6 @@
         if (userError) throw userError;
 
         const user = userData?.user;
-        authUserId = user?.id || null;
 
         if (!user?.id) {
           window.location.replace(
@@ -1413,13 +1362,12 @@
       
       async function loadTargetStats(target){
         if (!target?.targetId) return null;
-        if (!authUserId) return null;
 
         try{
           const { data, error } = await supabase.rpc("get_target_interaction_bundle", {
             p_target_type: target.targetType,
             p_target_id: target.targetId,
-            p_user_id: authUserId
+            p_user_id: browserUserId
           });
 
           if (error){
@@ -1551,11 +1499,6 @@
           return;
         }
 
-        if (!authUserId){
-          showToast("Usuário não autenticado");
-          return;
-        }
-
         likeRequestInFlight = true;
         actionLikeBtn.disabled = true;
 
@@ -1570,7 +1513,7 @@
           const { data: rpcData, error } = await supabase.rpc(LIKE_TOGGLE_RPC_NAME, {
             p_target_type: target.targetType,
             p_target_id: target.targetId,
-            p_user_id: authUserId
+            p_user_id: browserUserId
           });
 
           if (error) throw error;
@@ -1641,11 +1584,6 @@
           return;
         }
 
-        if (!authUserId){
-          showToast("Usuário não autenticado");
-          return;
-        }
-
         favoriteRequestInFlight = true;
         actionFavoriteBtn.disabled = true;
 
@@ -1659,7 +1597,7 @@
           const { data: rpcData, error } = await supabase.rpc(FAVORITE_TOGGLE_RPC_NAME, {
             p_target_type: target.targetType,
             p_target_id: target.targetId,
-            p_user_id: authUserId
+            p_user_id: browserUserId
           });
 
           if (error) throw error;
@@ -1715,11 +1653,6 @@
           return;
         }
 
-        if (!authUserId){
-          showToast("Usuário não autenticado");
-          return;
-        }
-
         // Resolver teléfono
         const phoneRaw = cfg?.phone || DEFAULT_WHATSAPP_PHONE || "";
         const phoneClean = String(phoneRaw).replace(/\D/g, "");
@@ -1761,7 +1694,7 @@
           supabase.rpc(WHATSAPP_REGISTER_RPC_NAME, {
             p_target_type: target.targetType,
             p_target_id: target.targetId,
-            p_user_id: authUserId,
+            p_user_id: browserUserId,
             p_phone_number: phoneClean,
             p_source: "player",
             p_session_id: browserSessionId,
@@ -1854,8 +1787,6 @@
       }
 
       const browserUserId = getOrCreateClientUuid(PLAYER_ID_KEY);
-      let authUserId = null;
-
       const browserSessionId = getOrCreateClientUuid(SESSION_ID_KEY);
 
       function saveActionToggleState(){
@@ -2133,22 +2064,12 @@
             return;
           }
 
-          commentsBody.innerHTML = comments.map(c => {
-            const displayName = c.display_name || "Usuário";
-            const avatarUrl = c.avatar_url || "";
-
-            return `
-              <div class="commentItem">
-                ${renderAvatar(displayName, avatarUrl)}
-
-                <div class="commentContent">
-                  <div class="commentUser">${escapeHtml(displayName)}</div>
-                  <div class="commentText">${escapeHtml(c.body || "")}</div>
-                  <div class="commentMeta">${formatCommentDate(c.created_at)}</div>
-                </div>
-              </div>
-            `;
-          }).join("");
+          commentsBody.innerHTML = comments.map(c => `
+            <div class="commentItem">
+              <div>${escapeHtml(c.body || "")}</div>
+              <div class="commentMeta">${formatCommentDate(c.created_at)}</div>
+            </div>
+          `).join("");
 
         }catch(err){
           console.error("[COMMENTS LOAD ERROR]", err);
@@ -2187,30 +2108,6 @@
           .replaceAll("'", "&#039;");
       }
 
-      function getAvatarInitial(name){
-        const clean = String(name || "").trim();
-        return clean ? clean.charAt(0).toUpperCase() : "?";
-      }
-
-      function renderAvatar(name, avatarUrl){
-        const safeName = escapeHtml(name || "Usuário");
-        const safeAvatar = String(avatarUrl || "").trim();
-
-        if (safeAvatar){
-          return `
-            <div class="commentAvatar">
-              <img src="${escapeHtml(safeAvatar)}" alt="${safeName}">
-            </div>
-          `;
-        }
-
-        return `
-          <div class="commentAvatar" aria-label="${safeName}">
-            ${escapeHtml(getAvatarInitial(name))}
-          </div>
-        `;
-      }
-
       function formatCommentDate(value){
         if (!value) return "";
         try{
@@ -2234,16 +2131,11 @@
           return;
         }
 
-        if (!authUserId){
-          showToast("Usuário não autenticado");
-          return;
-        }
-
         commentSendBtn.disabled = true;
 
         try{
           const { data, error } = await supabase.rpc(COMMENT_ADD_RPC_NAME, {
-            p_user_id: authUserId,
+            p_user_id: browserUserId,
             p_target_type: target.targetType,
             p_target_id: target.targetId,
             p_body: body
