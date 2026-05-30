@@ -1793,7 +1793,7 @@
         const target = explicitTarget || getCurrentTarget();
 
         if (!target?.targetId){
-          showToast("Target inválido para favorito");
+          showToast("Target inválido para realizado");
           console.error("[FAVORITE] target inválido", {
             explicitData,
             currentMode,
@@ -1856,11 +1856,11 @@
           });
 
           renderActionRail(actionState);
-          showToast(favorited ? "Guardado en favoritos" : "Favorito removido");
+          showToast(favorited ? "Guardado en realizados" : "Realizado removido");
 
         }catch(err){
           console.error("[FAVORITE RPC ERROR]", err);
-          showToast("Error registrando favorito");
+          showToast("Error registrando realizado");
         }finally{
           favoriteRequestInFlight = false;
           actionFavoriteBtn.disabled = false;
