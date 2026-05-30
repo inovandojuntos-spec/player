@@ -1237,6 +1237,119 @@
       padding-bottom:130px !important;
     }
 
+
+    /* ===== Progresso / raspadinha digital ===== */
+    .progressScratchIntro{
+      padding:4px 4px 10px;
+      color:rgba(255,255,255,0.58);
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .progressScratchGrid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:12px;
+      padding:2px 2px 14px;
+    }
+
+    .progressScratchCard{
+      position:relative;
+      aspect-ratio:1 / 1;
+      border-radius:15px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:
+        radial-gradient(circle at 32% 24%, rgba(255,255,255,0.12), transparent 28%),
+        linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      color:rgba(255,255,255,0.82);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:8px;
+      cursor:pointer;
+      overflow:hidden;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);
+      transition:transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+
+    .progressScratchCard:not(:disabled):hover{
+      transform:translateY(-1px);
+      border-color:rgba(255,255,255,0.22);
+      background:
+        radial-gradient(circle at 32% 24%, rgba(255,255,255,0.18), transparent 30%),
+        linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04));
+    }
+
+    .progressScratchCard:disabled{
+      cursor:not-allowed;
+      color:rgba(255,255,255,0.34);
+      background:
+        repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0 2px, rgba(255,255,255,0.025) 2px 6px),
+        #262626;
+      opacity:.78;
+      filter:grayscale(1);
+    }
+
+    .progressScratchCard:disabled::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.12), transparent 18%),
+        radial-gradient(circle at 78% 74%, rgba(255,255,255,0.08), transparent 18%);
+      opacity:.55;
+      pointer-events:none;
+    }
+
+    .progressScratchNumber{
+      font-size:18px;
+      font-weight:950;
+      letter-spacing:-0.04em;
+      line-height:1;
+    }
+
+    .progressScratchTitle{
+      width:100%;
+      margin-top:6px;
+      font-size:9.5px;
+      font-weight:800;
+      line-height:1.1;
+      text-align:center;
+      color:currentColor;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      word-break:break-word;
+    }
+
+    .progressScratchStatus{
+      position:absolute;
+      left:7px;
+      bottom:6px;
+      right:7px;
+      font-size:8px;
+      font-weight:900;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.48);
+      text-align:center;
+    }
+
+    .progressScratchCard.is-open .progressScratchStatus{
+      color:rgba(255,255,255,0.78);
+    }
+
+    @media (max-width:390px){
+      .progressScratchGrid{
+        gap:10px;
+      }
+      .progressScratchTitle{
+        font-size:9px;
+      }
+    }
+
 </style>
 </head>
 
@@ -1525,6 +1638,7 @@
       let kamasutraState = null;
       let currentActionScope = null;
       let actionState = null;
+      let desafiosProgressData = null;
 
       const ACTION_ICON_MAP = {
         like: { wrap: actionLikeWrap, btn: actionLikeBtn, count: actionLikeCount },
@@ -3467,12 +3581,108 @@
         if (showMsg) showToast("Inicio");
       }
 
+
+      function getProgressItemsFromRpc(result){
+        const candidates = [
+          result?.desafios,
+          result?.details,
+          result?.detail,
+          result?.items,
+          result?.data,
+          result?.progress,
+          result?.summary?.items
+        ];
+
+        let list = candidates.find(Array.isArray) || [];
+
+        return list
+          .map((row, index) => {
+            const title = row?.title || row?.titulo || row?.desafio_title || row?.name || row?.nome || `Desafio ${index + 1}`;
+            const slug = row?.slug || row?.desafio_slug || row?.target_slug || "";
+            const id = row?.id || row?.desafio_id || row?.target_id || null;
+            const playedAt = row?.last_played_at || row?.played_at || row?.last_opened_at || row?.ultima_vez_jogado || row?.last_activity_at || row?.created_at || null;
+            const isDone = !!(
+              row?.done || row?.is_done || row?.played || row?.is_played ||
+              row?.completed || row?.is_completed || row?.favorited || row?.favorite ||
+              row?.has_activity || row?.activity || playedAt
+            );
+
+            return {
+              id,
+              slug,
+              title: String(title || "").trim(),
+              playedAt,
+              isDone
+            };
+          })
+          .filter(item => item.title && normalizeSlug(item.slug || item.title) !== "intro")
+          .sort((a, b) => a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" }));
+      }
+
+      function formatProgressPlayedAt(value){
+        if (!value) return "Disponível";
+        try{
+          return new Date(value).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" });
+        }catch{
+          return "Disponível";
+        }
+      }
+
+      function renderProgressScratch(result){
+        const rpcItems = getProgressItemsFromRpc(result || desafiosProgressData || {});
+        const total = Math.max(20, Number(result?.summary?.total || desafiosProgressData?.summary?.total || 20));
+        const bySlot = rpcItems.slice(0, total);
+
+        itemsBody.innerHTML = "";
+
+        const intro = document.createElement("div");
+        intro.className = "progressScratchIntro";
+        intro.textContent = "Raspe, escaneie o QR e descubra a sua próxima experiência. Os desafios já ativados ficam liberados para abrir novamente.";
+        itemsBody.appendChild(intro);
+
+        const grid = document.createElement("div");
+        grid.className = "progressScratchGrid";
+
+        for (let i = 0; i < total; i++){
+          const item = bySlot[i] || null;
+          const enabled = !!(item?.isDone && item?.slug);
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = `progressScratchCard${enabled ? " is-open" : ""}`;
+          btn.disabled = !enabled;
+          btn.setAttribute("aria-label", enabled ? `Abrir ${item.title}` : `Desafio ${i + 1} bloqueado`);
+
+          btn.innerHTML = `
+            <div class="progressScratchNumber">${String(i + 1).padStart(2, "0")}</div>
+            <div class="progressScratchTitle">${escapeHtml(item?.title || "Bloqueado")}</div>
+            <div class="progressScratchStatus">${enabled ? formatProgressPlayedAt(item?.playedAt) : "Raspe QR"}</div>
+          `;
+
+          if (enabled){
+            btn.addEventListener("click", () => {
+              closeItemsPanel();
+              stopCurrentAudio(false);
+              stopCurrentMediaVideo(true);
+              window.location.href = `/play/${encodeURIComponent(item.slug)}`;
+            });
+          }
+
+          grid.appendChild(btn);
+        }
+
+        itemsBody.appendChild(grid);
+      }
+
       function openItemsPanel(mode = "accessories"){
         currentOverlayMode = mode;
 
         if (mode === "kamasutra-groups"){
           document.getElementById("itemsTitle").textContent = "Filtrar por grupo";
           renderKamasutraGroupFilter();
+        } else if (mode === "progress"){
+          document.getElementById("itemsTitle").textContent = "Progresso";
+          renderProgressScratch(desafiosProgressData);
         } else {
           const config = getOverlayConfig(mode);
           document.getElementById("itemsTitle").textContent = config.title;
@@ -3816,12 +4026,18 @@
             return result;
           }
 
+          desafiosProgressData = result;
+
           updateProgressNav(result?.summary || {
             done: 0,
             total: 0,
             label: "0/0",
             percent: 0
           });
+
+          if (currentOverlayMode === "progress" && isItemsPanelOpen()){
+            renderProgressScratch(result);
+          }
 
           return result;
 
@@ -3857,17 +4073,11 @@
       });
 
       navPerfilBtn?.addEventListener("click", async () => {
-        try{
-          const { data } = await supabase.auth.getUser();
-
-          if (data?.user){
-            showToast(data.user.email || "Perfil");
-          }else{
-            window.location.href = "/login.html";
-          }
-        }catch{
-          window.location.href = "/login.html";
+        if (!desafiosProgressData){
+          showToast("Carregando progresso...");
+          await refreshDesafiosProgress();
         }
+        openItemsPanel("progress");
       });
 
 
