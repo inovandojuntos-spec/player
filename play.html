@@ -1128,9 +1128,27 @@
 
         <div class="itemsPanel" id="itemsPanel" role="dialog" aria-modal="true" aria-labelledby="itemsTitle">
           <div class="itemsHeader">
-            <div class="itemsTitle" id="itemsTitle">Items recomendados</div>
-            <button class="itemsClose" id="itemsCloseBtn" aria-label="Cerrar">✕</button>
-          </div>
+            <div style="
+              flex:1;
+              display:flex;
+              justify-content:center;
+              align-items:center;
+              position:relative;
+            ">
+              <div class="itemsTitle" id="itemsTitle">
+                ITENS RECOMENDADOS
+              </div>
+            </div>
+
+            <button
+              class="itemsClose"
+              id="itemsCloseBtn"
+              aria-label="Cerrar"
+              style="position:absolute; right:12px;"
+            >
+              ✕
+            </button>
+          </div>                                
           <div class="itemsBody" id="itemsBody"></div>
         </div>
       </div>
