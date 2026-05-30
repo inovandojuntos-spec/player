@@ -167,31 +167,6 @@
           rgba(0,0,0,0.96) 100%
         );
     }
-
-    /* ===== MODO POSICIONES: igual comportamiento visual que desafíos ===== */
-    .shell.is-position .stage{
-      flex:0 0 60dvh;
-      max-height:60dvh;
-      margin-bottom:-92px;
-      z-index:0;
-      padding-top:12px;
-    }
-
-    .shell.is-position .bottom{
-      z-index:2;
-      padding-top:98px;
-      overflow:auto;
-      -webkit-overflow-scrolling:touch;
-      background:
-        linear-gradient(
-          180deg,
-          rgba(0,0,0,0.00) 0%,
-          rgba(0,0,0,0.20) 14%,
-          rgba(0,0,0,0.54) 34%,
-          rgba(0,0,0,0.90) 62%,
-          rgba(0,0,0,0.96) 100%
-        );
-    }
     .infoCard{
       background:transparent;
       border:none;
@@ -1073,16 +1048,6 @@
       .shell.is-challenge .bottom{
         padding-top:90px;
       }
-
-      .shell.is-position .stage{
-        flex:0 0 48dvh;
-        max-height:48dvh;
-        margin-bottom:-76px;
-      }
-
-      .shell.is-position .bottom{
-        padding-top:82px;
-      }
       
     }
   
@@ -1409,7 +1374,7 @@
             <span class="progressIconMask" aria-hidden="true">
               <span class="progressIconFill" id="progressHeartFill"></span>
             </span>
-            <span class="bottomNavBadge" id="navProgressBadge">16/20</span>
+            <span class="bottomNavBadge" id="navProgressBadge">80</span>
           </span>
           <span>Progresso</span>
         </button>
@@ -1449,8 +1414,7 @@
       const COMMENT_LIST_RPC_NAME = "get_target_comments";
       const PLAYER_ID_KEY = "ij_browser_user_id";
       const SESSION_ID_KEY = "ij_browser_session_id";
-      const PROFILE_COMPLETED_TASKS = 16; // Temporal; luego vendrá del RPC.
-      const PROFILE_TOTAL_TASKS = 20; // Temporal; luego vendrá del RPC.
+      const PROFILE_PROGRESS_VALUE = 80; // Valor temporal; luego se reemplaza por el valor leído desde DB.
 
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1721,10 +1685,7 @@
       }
       function syncLayoutMode(){
         const isChallengeView = currentMode === "challenge";
-        const isPositionView = currentMode === "position";
-
         shell.classList.toggle("is-challenge", isChallengeView);
-        shell.classList.toggle("is-position", isPositionView);
       }
       
       let likeRequestInFlight = false;
@@ -2880,13 +2841,8 @@
 
           pTitle.textContent = pos.nombre || "";
 
-          // 🔴 NUEVO: mostrar grupo/categoría de posición
-          pCat.style.display = "";
-          pCat.textContent = pos.grupo || "";
-
           // 🔴 importante: esta vista ahora representa una posición individual
           currentMode = "position";
-          syncLayoutMode();
 
           await refreshActionRail({
             id: pos.id,
@@ -3753,17 +3709,11 @@
       const navProgressBadge = document.getElementById("navProgressBadge");
       const progressHeartFill = document.getElementById("progressHeartFill");
 
-      function updateProgressNav(completed, total){
-        const safeCompleted = Math.max(0, Number(completed) || 0);
-        const safeTotal = Math.max(1, Number(total) || 1);
-
-        const progressValue = Math.max(
-          0,
-          Math.min(100, (safeCompleted / safeTotal) * 100)
-        );
+      function updateProgressNavNumber(value){
+        const progressValue = Math.max(0, Math.min(100, Number(value) || 0));
 
         if (navProgressBadge) {
-          navProgressBadge.textContent = `${safeCompleted}/${safeTotal}`;
+          navProgressBadge.textContent = String(Math.round(progressValue));
         }
 
         if (progressHeartFill) {
@@ -3771,7 +3721,7 @@
         }
       }
 
-      updateProgressNav(PROFILE_COMPLETED_TASKS, PROFILE_TOTAL_TASKS);
+      updateProgressNavNumber(PROFILE_PROGRESS_VALUE);
 
       navEroticosBtn?.addEventListener("click", () => {
         const count = getAccessoryItems().length;
