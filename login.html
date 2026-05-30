@@ -414,6 +414,13 @@
       setBusy(true, "Criando conta...");
 
       try{
+        showStatus("Validando código de ativação...");
+        const preCheck = await checkActivationCodeAvailable(activationCode);
+        if (!preCheck?.ok){
+          throw new Error(preCheck?.message || "Código de ativação inválido.");
+        }
+
+        showStatus("Criando conta...");
         const { data, error } = await supabase.auth.signUp({
           ...credentials,
           options: {
@@ -464,6 +471,16 @@
       if (error) throw error;
       return data;
     }
+
+    async function checkActivationCodeAvailable(activationCode){
+      const { data, error } = await supabase.rpc("check_activation_code_available", {
+        p_code: activationCode
+      });
+
+      if (error) throw error;
+      return data;
+    }
+
 
     function getActivationCode(){
       const activationCode = activationCodeEl.value.trim().toUpperCase();
