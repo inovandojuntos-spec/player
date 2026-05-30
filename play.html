@@ -1102,13 +1102,43 @@
     }
 
     .bottomNavBtn svg{
-      width:21px;
-      height:21px;
+      width:28px;
+      height:28px;
       stroke:currentColor;
       fill:none;
-      stroke-width:1.9;
+      stroke-width:2;
       stroke-linecap:round;
       stroke-linejoin:round;
+    }
+
+    .bottomNavIconImg{
+      width:28px;
+      height:28px;
+      display:block;
+      object-fit:contain;
+      filter:brightness(0) invert(1);
+      opacity:.92;
+    }
+
+    .progressIconMask{
+      position:relative;
+      width:28px;
+      height:28px;
+      display:block;
+      background:rgba(255,255,255,0.34);
+      -webkit-mask:url("images/progreso.svg") center / contain no-repeat;
+      mask:url("images/progreso.svg") center / contain no-repeat;
+      overflow:hidden;
+    }
+
+    .progressIconFill{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      height:0%;
+      background:#e32222;
+      transition:height .25s ease;
     }
 
     .bottomNavIconWrap{
@@ -1118,6 +1148,26 @@
       display:flex;
       align-items:center;
       justify-content:center;
+    }
+
+    .toolsIconSvg,
+    .progressHeartSvg{
+      width:28px !important;
+      height:28px !important;
+      overflow:visible;
+    }
+
+    .progressHeartOutline{
+      stroke:currentColor;
+      fill:none;
+      stroke-width:5.2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    .progressHeartFill{
+      fill:#e32222;
+      transition:y .25s ease, height .25s ease;
     }
 
     .bottomNavBadge{
@@ -1305,9 +1355,7 @@
       <nav class="bottomNav">
         <button class="bottomNavBtn" id="navEroticosBtn">
           <span class="bottomNavIconWrap">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 21s-6.5-4.35-8.5-8A5.2 5.2 0 0 1 12 6a5.2 5.2 0 0 1 8.5 7c-2 3.65-8.5 8-8.5 8Z"></path>
-            </svg>
+            <img class="bottomNavIconImg" src="images/itens.svg" alt="" aria-hidden="true">
             <span class="bottomNavBadge" id="navEroticosBadge">0</span>
           </span>
           <span>Itens</span>
@@ -1315,24 +1363,20 @@
 
         <button class="bottomNavBtn" id="navAdicionalesBtn">
           <span class="bottomNavIconWrap">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M13.5 2
-                  C14 5.5 18 7 18 12
-                  C18 17 14.8 22 12 22
-                  C8.8 22 6 19.2 6 15.5
-                  C6 12 8.2 10 9.5 8
-                  C9.7 10.2 10.8 11.5 12 12.5
-                  C12.5 9 10.5 6.5 13.5 2Z"
-                fill="currentColor"
-                stroke="none">
-              </path>
-            </svg>
-
+            <img class="bottomNavIconImg" src="images/extras.svg" alt="" aria-hidden="true">
             <span class="bottomNavBadge" id="navAdicionalesBadge">0</span>
           </span>
-
           <span>Extras</span>
+        </button>
+
+        <button class="bottomNavBtn" id="navPerfilBtn">
+          <span class="bottomNavIconWrap">
+            <span class="progressIconMask" aria-hidden="true">
+              <span class="progressIconFill" id="progressHeartFill"></span>
+            </span>
+            <span class="bottomNavBadge" id="navProgressBadge">80</span>
+          </span>
+          <span>Progresso</span>
         </button>
 
         <button class="bottomNavBtn active" id="navHomeBtn">
@@ -1342,19 +1386,7 @@
               <path d="M5 9.5V21h14V9.5"></path>
             </svg>
           </span>
-
           <span>Home</span>
-        </button>
-
-        <button class="bottomNavBtn" id="navPerfilBtn">
-          <span class="bottomNavIconWrap">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="8" r="4"></circle>
-              <path d="M4 20c1.8-3.5 5-5 8-5s6.2 1.5 8 5"></path>
-            </svg>
-          </span>
-
-          <span>Perfil</span>
         </button>
       </nav>
 
@@ -1382,6 +1414,7 @@
       const COMMENT_LIST_RPC_NAME = "get_target_comments";
       const PLAYER_ID_KEY = "ij_browser_user_id";
       const SESSION_ID_KEY = "ij_browser_session_id";
+      const PROFILE_PROGRESS_VALUE = 80; // Valor temporal; luego se reemplaza por el valor leído desde DB.
 
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -3673,6 +3706,22 @@
       const navAdicionalesBtn = document.getElementById("navAdicionalesBtn");
       const navHomeBtn = document.getElementById("navHomeBtn");
       const navPerfilBtn = document.getElementById("navPerfilBtn");
+      const navProgressBadge = document.getElementById("navProgressBadge");
+      const progressHeartFill = document.getElementById("progressHeartFill");
+
+      function updateProgressNavNumber(value){
+        const progressValue = Math.max(0, Math.min(100, Number(value) || 0));
+
+        if (navProgressBadge) {
+          navProgressBadge.textContent = String(Math.round(progressValue));
+        }
+
+        if (progressHeartFill) {
+          progressHeartFill.style.height = `${progressValue}%`;
+        }
+      }
+
+      updateProgressNavNumber(PROFILE_PROGRESS_VALUE);
 
       navEroticosBtn?.addEventListener("click", () => {
         const count = getAccessoryItems().length;

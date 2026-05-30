@@ -1057,10 +1057,10 @@
       left:0;
       right:0;
       bottom:0;
-      height:88px;
+      height:69px;
       padding:
-        10px 14px
-        calc(12px + env(safe-area-inset-bottom, 0px));
+        8px 12px
+        calc(8px + env(safe-area-inset-bottom, 0px));
       background:
         linear-gradient(
           180deg,
@@ -1102,13 +1102,40 @@
     }
 
     .bottomNavBtn svg{
-      width:26px;
-      height:26px;
+      width:21px;
+      height:21px;
       stroke:currentColor;
       fill:none;
       stroke-width:1.9;
       stroke-linecap:round;
       stroke-linejoin:round;
+    }
+
+    .bottomNavIconWrap{
+      position:relative;
+      width:30px;
+      height:30px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .bottomNavBadge{
+      position:absolute;
+      top:-6px;
+      right:-10px;
+      min-width:18px;
+      height:18px;
+      padding:0 5px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.12);
+      color:#ffffff;
+      font-size:10px;
+      font-weight:900;
+      line-height:18px;
+      text-align:center;
+      box-shadow:0 4px 12px rgba(0,0,0,0.50);
     }
 
     .bottomNavBtn span{
@@ -1227,35 +1254,6 @@
               </button>
             </div>
           </div>
-
-          <div class="actions">
-            <div class="actionBar">
-              <button class="iconBtn" id="cartBtn" aria-label="Accesorios">
-                <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3" y="8" width="18" height="4" rx="1.5"></rect>
-                  <rect x="5" y="12" width="14" height="8" rx="1.5"></rect>
-                  <path d="M12 8v12"></path>
-                  <path d="M12 8H8.8a1.8 1.8 0 1 1 0-3.6c1.4 0 2.2 1 3.2 3.6Z"></path>
-                  <path d="M12 8h3.2a1.8 1.8 0 1 0 0-3.6c-1.4 0-2.2 1-3.2 3.6Z"></path>
-                </svg>
-                <span class="lbl">Accesorios</span>
-                <span class="badge" id="cartBadge">0</span>
-              </button>
-
-
-              <button class="iconBtn" id="instructionsBtn" aria-label="Instrucciones">
-                <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 4.5h10.5a2.5 2.5 0 0 1 2.5 2.5v12.5H8a3 3 0 0 0-3 3z"></path>
-                  <path d="M8 19.5h11"></path>
-                  <path d="M8 7.5h8"></path>
-                  <path d="M8 11h8"></path>
-                  <path d="M8 14.5h5"></path>
-                </svg>
-                <span class="lbl">Instrucciones</span>
-                <span class="badge" id="instructionsBadge">0</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1306,33 +1304,56 @@
 
       <nav class="bottomNav">
         <button class="bottomNavBtn" id="navEroticosBtn">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 21s-6.5-4.35-8.5-8A5.2 5.2 0 0 1 12 6a5.2 5.2 0 0 1 8.5 7c-2 3.65-8.5 8-8.5 8Z"></path>
-          </svg>
+          <span class="bottomNavIconWrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21s-6.5-4.35-8.5-8A5.2 5.2 0 0 1 12 6a5.2 5.2 0 0 1 8.5 7c-2 3.65-8.5 8-8.5 8Z"></path>
+            </svg>
+            <span class="bottomNavBadge" id="navEroticosBadge">0</span>
+          </span>
           <span>Itens</span>
         </button>
 
         <button class="bottomNavBtn" id="navAdicionalesBtn">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14"></path>
-            <path d="M5 12h14"></path>
-          </svg>
+          <span class="bottomNavIconWrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M13.5 2
+                  C14 5.5 18 7 18 12
+                  C18 17 14.8 22 12 22
+                  C8.8 22 6 19.2 6 15.5
+                  C6 12 8.2 10 9.5 8
+                  C9.7 10.2 10.8 11.5 12 12.5
+                  C12.5 9 10.5 6.5 13.5 2Z"
+                fill="currentColor"
+                stroke="none">
+              </path>
+            </svg>
+
+            <span class="bottomNavBadge" id="navAdicionalesBadge">0</span>
+          </span>
+
           <span>Extras</span>
         </button>
 
         <button class="bottomNavBtn active" id="navHomeBtn">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 10.5 12 3l9 7.5"></path>
-            <path d="M5 9.5V21h14V9.5"></path>
-          </svg>
+          <span class="bottomNavIconWrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 10.5 12 3l9 7.5"></path>
+              <path d="M5 9.5V21h14V9.5"></path>
+            </svg>
+          </span>
+
           <span>Home</span>
         </button>
 
         <button class="bottomNavBtn" id="navPerfilBtn">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="8" r="4"></circle>
-            <path d="M4 20c1.8-3.5 5-5 8-5s6.2 1.5 8 5"></path>
-          </svg>
+          <span class="bottomNavIconWrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 20c1.8-3.5 5-5 8-5s6.2 1.5 8 5"></path>
+            </svg>
+          </span>
+
           <span>Perfil</span>
         </button>
       </nav>
@@ -1380,8 +1401,8 @@
       const pTitle = document.getElementById("pTitle");
       const pCat   = document.getElementById("pCat");
       const pShort = document.getElementById("pShort");
-      const cartBadge = document.getElementById("cartBadge");
-      const instructionsBadge = document.getElementById("instructionsBadge");
+      const cartBadge = document.getElementById("navEroticosBadge");
+      const instructionsBadge = document.getElementById("navAdicionalesBadge");
 
       const itemsOverlay = document.getElementById("itemsOverlay");
       const itemsPanel = document.getElementById("itemsPanel");
@@ -3373,8 +3394,8 @@
         const accessoriesCount = getAccessoryItems().length;
         const instructionsCount = getInstructionItems().length;
 
-        cartBadge.textContent = String(accessoriesCount);
-        instructionsBadge.textContent = String(instructionsCount);
+        if (cartBadge) cartBadge.textContent = String(accessoriesCount);
+        if (instructionsBadge) instructionsBadge.textContent = String(instructionsCount);
       }
 
       function updateNavigation(){
@@ -3401,8 +3422,8 @@
           pTitle.textContent = "Sin datos";
           pCat.textContent = "";
           pShort.innerHTML = "";
-          cartBadge.textContent = "0";
-          instructionsBadge.textContent = "0";
+          if (cartBadge) cartBadge.textContent = "0";
+          if (instructionsBadge) instructionsBadge.textContent = "0";
           renderActionRail(resolveActionsForScope({ type: "challenge", key: "default" }));
           nextBtn.disabled = true;
           playerWrap.hidden = true;
@@ -3514,7 +3535,7 @@
         seekCurrentPlayableToEnd();
       });
 
-      cartBtn.addEventListener("click", () => {
+      cartBtn?.addEventListener("click", () => {
         const count = getAccessoryItems().length;
         if (!count){
           showToast("No hay accesorios recomendados");
@@ -3523,7 +3544,7 @@
         openItemsPanel("accessories");
       });
 
-      instructionsBtn.addEventListener("click", () => {
+      instructionsBtn?.addEventListener("click", () => {
         const count = getInstructionItems().length;
         if (!count){
           showToast("No hay instrucciones disponibles");
@@ -3654,11 +3675,21 @@
       const navPerfilBtn = document.getElementById("navPerfilBtn");
 
       navEroticosBtn?.addEventListener("click", () => {
-        cartBtn.click();
+        const count = getAccessoryItems().length;
+        if (!count){
+          showToast("No hay accesorios recomendados");
+          return;
+        }
+        openItemsPanel("accessories");
       });
 
       navAdicionalesBtn?.addEventListener("click", () => {
-        instructionsBtn.click();
+        const count = getInstructionItems().length;
+        if (!count){
+          showToast("No hay instrucciones disponibles");
+          return;
+        }
+        openItemsPanel("instructions");
       });
 
       navHomeBtn?.addEventListener("click", async () => {
