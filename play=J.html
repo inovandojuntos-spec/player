@@ -1435,8 +1435,6 @@
       const SUPABASE_URL = "https://rsordtljnvxonaygyuxd.supabase.co";
       const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
       const RPC_NAME = "get_challenge_full";
-      const MARK_DESAFIO_PLAYED_RPC_NAME = "mark_desafio_played";
-      const DESAFIOS_PROGRESS_RPC_NAME = "get_my_desafios_progress";
       const KAMASUTRA_RPC_NAME = "get_kamasutra_positions";
       const LAST_VIEW_KEY = "shop_last_view_v2";
       const KAMASUTRA_INTERVAL = 6000;
@@ -1451,6 +1449,10 @@
       const COMMENT_LIST_RPC_NAME = "get_target_comments";
       const PLAYER_ID_KEY = "ij_browser_user_id";
       const SESSION_ID_KEY = "ij_browser_session_id";
+      const PROFILE_COMPLETED_TASKS = 16; // Temporal; luego vendrá del RPC.
+      const PROFILE_TOTAL_TASKS = 20; // Temporal; luego vendrá del RPC.
+
+
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const mediaBox = document.getElementById("mediaBox");
@@ -1710,7 +1712,7 @@
 
         if (currentMode === "challenge" && challenge?.id){
           return {
-            targetType: "desafio",
+            targetType: "challenge",
             targetId: challenge.id
           };
         }
@@ -1893,11 +1895,6 @@
           });
 
           renderActionRail(actionState);
-
-          if (target.targetType === "desafio"){
-            await refreshDesafiosProgress();
-          }
-
           showToast(favorited ? "Guardado en realizados" : "Realizado removido");
 
         }catch(err){
@@ -2741,30 +2738,6 @@
         return normalizeChallenge(data, slug);
       }
 
-      async function markDesafioPlayed(desafioId){
-        if (!desafioId){
-          console.warn("[MARK DESAFIO PLAYED] desafioId vacío");
-          return;
-        }
-
-        if (!authUserId){
-          console.warn("[MARK DESAFIO PLAYED] usuario no autenticado");
-          return;
-        }
-
-        try{
-          const { data, error } = await supabase.rpc(MARK_DESAFIO_PLAYED_RPC_NAME, {
-            p_desafio_id: desafioId
-          });
-
-          if (error) throw error;
-
-          console.log("[MARK DESAFIO PLAYED OK]", data);
-        }catch(err){
-          console.error("[MARK DESAFIO PLAYED ERROR]", err);
-        }
-      }
-
       function loadAudio(src, autoplay = true, isLoopMode = false){
         if (!src){
           hiddenAudio.removeAttribute("src");
@@ -3399,7 +3372,7 @@
 
         if (mode === "challenge" && data?.id){
           return {
-            targetType: "desafio",
+            targetType: "challenge",
             targetId: data.id
           };
         }
@@ -3780,59 +3753,25 @@
       const navProgressBadge = document.getElementById("navProgressBadge");
       const progressHeartFill = document.getElementById("progressHeartFill");
 
-      function updateProgressNav(summary = {}){
-        const done = Math.max(0, Number(summary.done || 0));
-        const total = Math.max(0, Number(summary.total || 0));
-        const percent = Math.max(
+      function updateProgressNav(completed, total){
+        const safeCompleted = Math.max(0, Number(completed) || 0);
+        const safeTotal = Math.max(1, Number(total) || 1);
+
+        const progressValue = Math.max(
           0,
-          Math.min(100, Number(summary.percent || 0))
+          Math.min(100, (safeCompleted / safeTotal) * 100)
         );
 
         if (navProgressBadge) {
-          navProgressBadge.textContent = summary.label || `${done}/${total}`;
+          navProgressBadge.textContent = `${safeCompleted}/${safeTotal}`;
         }
 
         if (progressHeartFill) {
-          progressHeartFill.style.height = `${percent}%`;
+          progressHeartFill.style.height = `${progressValue}%`;
         }
       }
 
-      async function refreshDesafiosProgress(){
-        if (!authUserId){
-          updateProgressNav({ done: 0, total: 0, label: "0/0", percent: 0 });
-          return null;
-        }
-
-        try{
-          const { data, error } = await supabase.rpc(DESAFIOS_PROGRESS_RPC_NAME);
-
-          if (error) throw error;
-
-          const result = data?.get_my_desafios_progress ?? data;
-
-          if (result?.ok === false){
-            console.warn("[DESAFIOS PROGRESS RPC]", result);
-            updateProgressNav({ done: 0, total: 0, label: "0/0", percent: 0 });
-            return result;
-          }
-
-          updateProgressNav(result?.summary || {
-            done: 0,
-            total: 0,
-            label: "0/0",
-            percent: 0
-          });
-
-          return result;
-
-        }catch(err){
-          console.error("[DESAFIOS PROGRESS ERROR]", err);
-          updateProgressNav({ done: 0, total: 0, label: "0/0", percent: 0 });
-          return null;
-        }
-      }
-
-      updateProgressNav({ done: 0, total: 0, label: "0/0", percent: 0 });
+      updateProgressNav(PROFILE_COMPLETED_TASKS, PROFILE_TOTAL_TASKS);
 
       navEroticosBtn?.addEventListener("click", () => {
         const count = getAccessoryItems().length;
@@ -3884,9 +3823,7 @@
             throw new Error(`No se encontró el desafío con slug: ${slug}`);
           }
 
-          await markDesafioPlayed(challenge.id);
           await renderChallenge();
-          await refreshDesafiosProgress();
         }catch(err){
           console.error("Error loading challenge:", err);
           challenge = null;
