@@ -778,14 +778,14 @@
       position:relative;
       z-index:1;
       width:100%;
-      height:min(78dvh, 760px);
+      max-width:560px;
+      height:min(84dvh, 760px);
       background:#0b0b0b;
       border:1px solid rgba(255,255,255,0.08);
       border-radius:22px 22px 0 0;
       display:flex;
       flex-direction:column;
       overflow:hidden;
-      max-height:calc(100dvh - env(safe-area-inset-bottom, 0px));
     }
 
     .commentsHeader{
@@ -889,16 +889,19 @@
       flex:0 0 auto;
       position:relative;
       z-index:2;
+      display:flex;
       align-items:center;
       gap:8px;
+      width:100%;
       padding:10px 12px;
       border-top:1px solid rgba(255,255,255,0.08);
-      padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+      padding-bottom:calc(14px + env(safe-area-inset-bottom, 0px));
       background:#0b0b0b;
     }
 
     .commentInput{
-      flex:1;
+      flex:1 1 auto;
+      width:100%;
       min-width:0;
       border:none;
       outline:none;
@@ -940,6 +943,16 @@
     body.modal-open{
       overflow:hidden;
       touch-action:none;
+    }
+
+    /* Permite interacción normal dentro del modal de comentarios en mobile/iOS */
+    .commentsOverlay,
+    .commentsPanel,
+    .commentsBody,
+    .commentsForm,
+    .commentInput,
+    .commentSendBtn{
+      touch-action:auto;
     }
 
     @media (max-height: 780px){
@@ -1565,7 +1578,7 @@
       const WHATSAPP_REGISTER_RPC_NAME = "register_target_whatsapp";
       const LIKE_TOGGLE_RPC_NAME = "toggle_target_like";
       const FAVORITE_TOGGLE_RPC_NAME = "toggle_target_favorite";
-      const COMMENT_ADD_RPC_NAME = "add_target_comment";
+      const COMMENT_ADD_RPC_NAME = "create_target_comment";
       const COMMENT_LIST_RPC_NAME = "get_target_comments";
       const PLAYER_ID_KEY = "ij_browser_user_id";
       const SESSION_ID_KEY = "ij_browser_session_id";
@@ -2434,11 +2447,11 @@
         const target = getCurrentTarget();
 
         if (!target?.targetId){
-          commentsBody.innerHTML = `<div class="commentItem">Target inválido</div>`;
+          commentsBody.innerHTML = `<div class="commentItem">Alvo inválido</div>`;
           return;
         }
 
-        commentsBody.innerHTML = `<div class="commentItem">Cargando comentarios...</div>`;
+        commentsBody.innerHTML = `<div class="commentItem">Carregando comentários...</div>`;
 
         try{
           const { data, error } = await supabase.rpc(COMMENT_LIST_RPC_NAME, {
@@ -2454,7 +2467,7 @@
           const comments = Array.isArray(result?.comments) ? result.comments : [];
 
           if (!comments.length){
-            commentsBody.innerHTML = `<div class="commentItem">Sin comentarios todavía</div>`;
+            commentsBody.innerHTML = `<div class="commentItem"></div>`;
             return;
           }
 
@@ -2482,15 +2495,33 @@
       }
 
       function openCommentsPanel(){
+        const target = getCurrentTarget();
+
+        console.log("[COMMENTS OPEN]", {
+          currentMode,
+          currentActionScope,
+          target
+        });
+
+        if (!target?.targetId){
+          showToast("Target inválido para comentários");
+          console.error("[COMMENTS OPEN] target inválido", {
+            currentMode,
+            currentItem,
+            currentChallengeId: challenge?.id,
+            currentPosition: kamasutraState?.history?.[kamasutraState?.historyIndex] || null,
+            resolvedTarget: target
+          });
+          return;
+        }
+
         commentsOverlay.classList.add("show");
         commentsOverlay.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-open");
         loadComments();
 
-        setTimeout(() => {
-          commentInput?.focus();
-          commentInput?.scrollIntoView({ block: "nearest" });
-        }, 250);
+        // No hacer autofocus aquí: en iOS puede forzar zoom/teclado y parecer que el botón falla.
+        // El usuario toca el input cuando realmente quiere escribir.
       }
 
       function closeCommentsPanel(){
@@ -2575,7 +2606,11 @@
             p_user_id: authUserId,
             p_target_type: target.targetType,
             p_target_id: target.targetId,
-            p_body: body
+            p_body: body,
+            p_metadata: {
+              source: "player",
+              session_id: browserSessionId
+            }
           });
 
           if (error) throw error;
@@ -3306,7 +3341,7 @@
       function getOverlayConfig(mode){
         if (mode === "instructions"){
           return {
-            title: "",
+            title: "MATERIAL EXTRA",
             emptyText: "No hay instrucciones disponibles",
             items: getInstructionItems()
           };
@@ -3764,7 +3799,9 @@
 
       [actionLikeBtn, actionCommentBtn, actionFavoriteBtn, actionContactBtn].forEach((btn) => {
         btn.addEventListener("click", () => {
-          const key = btn.dataset.actionKey;
+          // Fallback defensivo: si renderActionRail todavía no asignó dataset,
+          // el botón de comentários igual debe abrir el panel.
+          const key = btn.dataset.actionKey || (btn === actionCommentBtn ? "comment" : "");
           if (!key) return;
           executeConfiguredAction(key);
         });
