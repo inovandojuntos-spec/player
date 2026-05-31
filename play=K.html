@@ -1712,14 +1712,24 @@
       let actionToggleState = loadActionToggleState();
 
       async function getCurrentDistributorId(){
-        if (!authUserId){
-          throw new Error("Usuario no autenticado");
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+
+        const user = userData?.user;
+        authUserId = user?.id || null;
+
+        if (!user?.id) {
+          window.location.replace(
+            `/login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+          );
+          throw new Error("Usuario no logueado");
         }
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("distributor_id")
-          .eq("id", authUserId)
+          .eq("id", user.id)
           .single();
 
         if (profileError) throw profileError;
@@ -2185,31 +2195,6 @@
       let authUserId = null;
 
       const browserSessionId = getOrCreateClientUuid(SESSION_ID_KEY);
-
-      async function requireAuth(){
-        const { data, error } = await supabase.auth.getUser();
-
-        if (error){
-          console.error("[AUTH ERROR]", error);
-        }
-
-        const user = data?.user || null;
-
-        authUserId = user?.id || null;
-
-        if (!authUserId){
-          const redirectUrl =
-            window.location.pathname + window.location.search;
-
-          window.location.replace(
-            `/login.html?redirect=${encodeURIComponent(redirectUrl)}`
-          );
-
-          return false;
-        }
-
-        return true;
-      }
 
       function saveActionToggleState(){
         try{
@@ -4144,16 +4129,7 @@
 
       async function init(){
         try{
-
-          // 🔴 VALIDACIÓN TEMPRANA
-          const authenticated = await requireAuth();
-
-          if (!authenticated){
-            return;
-          }
-
           const slug = getChallengeSlug("");
-
           if (!slug){
             throw new Error("Falta el parámetro ?id=slug_del_desafio");
           }
@@ -4165,24 +4141,12 @@
           }
 
           await markDesafioPlayed(challenge.id);
-
           await renderChallenge();
-
           await refreshDesafiosProgress();
-
         }catch(err){
-
-          // 🔴 evitar render innecesario si ya hubo redirect
-          if (!authUserId){
-            return;
-          }
-
           console.error("Error loading challenge:", err);
-
           challenge = null;
-
           await renderChallenge();
-
           showToast("Error cargando desafío");
         }
       }

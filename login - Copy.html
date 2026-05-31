@@ -306,7 +306,7 @@
     });
 
     const params = new URLSearchParams(window.location.search);
-    const redirect = sanitizeRedirect(params.get("redirect") || "/play.html?id=intro");
+    const redirect = sanitizeRedirect(params.get("redirect") || "/play/intro");
 
     const authForm = document.getElementById("authForm");
     const emailEl = document.getElementById("email");
@@ -343,19 +343,10 @@
       setBusy(true, "Verificando sessão...");
 
       try{
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
 
-        if (sessionData?.session?.user){
-          const { data: userData, error: userError } = await supabase.auth.getUser();
-
-          if (userError || !userData?.user){
-            console.warn("[AUTH USER INVALID] Limpando sessão local para evitar loop.", userError);
-            await supabase.auth.signOut({ scope: "local" }).catch(() => {});
-            clearStatus();
-            return;
-          }
-
+        if (data?.session?.user){
           window.location.replace(redirect);
           return;
         }
@@ -404,7 +395,7 @@
         if (error) throw error;
 
         showStatus("Acesso realizado. Redirecionando...", "ok");
-        window.location.replace(redirect);
+        window.location.href = redirect;
       }catch(err){
         showStatus(getFriendlyAuthError(err), "error");
         console.error("[LOGIN ERROR]", err);
@@ -457,7 +448,7 @@
 
         if (data?.session){
           showStatus("Conta criada e ativada. Redirecionando...", "ok");
-          window.location.replace(redirect);
+          window.location.href = redirect;
           return;
         }
 
@@ -529,33 +520,25 @@
     }
 
     function sanitizeRedirect(value){
-      const fallback = "/play.html?id=intro";
+      const fallback = "/play/intro";
       const raw = String(value || "").trim();
 
       if (!raw) return fallback;
 
-      let clean = raw;
-
       if (/^https?:\/\//i.test(raw)){
         try{
           const url = new URL(raw);
-          if (url.origin !== window.location.origin) return fallback;
-          clean = url.pathname + url.search + url.hash;
-        }catch{
-          return fallback;
-        }
-      }
-
-      if (!clean.startsWith("/")) return fallback;
-      if (clean.startsWith("//")) return fallback;
-
-      // Evita que login se redirija a sí mismo y cree bucle visual.
-      const pathOnly = clean.split("?")[0].split("#")[0].toLowerCase();
-      if (pathOnly.endsWith("/login.html")){
+          if (url.origin === window.location.origin){
+            return url.pathname + url.search + url.hash;
+          }
+        }catch{}
         return fallback;
       }
 
-      return clean;
+      if (!raw.startsWith("/")) return fallback;
+      if (raw.startsWith("//")) return fallback;
+
+      return raw;
     }
 
     function setBusy(isBusy, message = ""){
