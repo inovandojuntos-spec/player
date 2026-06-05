@@ -191,79 +191,6 @@
     textarea{ min-height:150px; resize:vertical; }
     textarea:focus,input[type="text"]:focus{ border-color:rgba(255,255,255,.24); background:rgba(255,255,255,.08); }
 
-
-    .signatureWrap{
-      margin-top:14px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.96);
-      overflow:hidden;
-      box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);
-    }
-
-    .signatureCanvas{
-      width:100%;
-      height:230px;
-      display:block;
-      touch-action:none;
-      background:#fff;
-    }
-
-    .signatureTools{
-      margin-top:12px;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-      flex-wrap:wrap;
-    }
-
-    .miniBtn{
-      min-height:38px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);
-      color:rgba(255,255,255,.82);
-      padding:0 14px;
-      font-size:13px;
-      font-weight:850;
-      cursor:pointer;
-    }
-
-    .signaturePreview{
-      margin-top:12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.09);
-      background:rgba(255,255,255,.035);
-      padding:10px;
-    }
-
-    .signaturePreview img{
-      width:100%;
-      max-height:120px;
-      object-fit:contain;
-      display:block;
-      background:#fff;
-      border-radius:10px;
-    }
-
-    .pdfBox{
-      margin-top:14px;
-      border-radius:16px;
-      border:1px solid rgba(131,240,161,.22);
-      background:rgba(131,240,161,.08);
-      padding:12px;
-      color:rgba(230,255,236,.92);
-      font-size:13px;
-      line-height:1.35;
-    }
-
-    .pdfBox a{
-      color:#fff;
-      font-weight:900;
-      text-decoration:underline;
-    }
-
     .reviewBox{
       margin-top:14px;
       border-radius:18px;
@@ -404,8 +331,6 @@
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import SignaturePad from "https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/+esm";
-    import { PDFDocument, StandardFonts, rgb } from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
 
     (() => {
       const SUPABASE_URL = "https://rsordtljnvxonaygyuxd.supabase.co";
@@ -426,45 +351,9 @@
       let questions = [];
       let answers = {};
       let currentIndex = 0;
-      let isSignatureStep = false;
       let isReviewStep = false;
-      let signaturePad = null;
-      let signatureDataUrl = "";
-      let pdfUrl = "";
       let saveTimer = null;
       let saving = false;
-
-
-      function renderCompletedContract() {
-
-        stepInfo.textContent = "✓";
-        barFill.style.width = "100%";
-
-        questionBox.innerHTML = `
-          <h2 class="questionTitle">Contrato já assinado</h2>
-
-          <p class="questionDesc">
-            Este contrato já foi concluído e assinado eletronicamente.
-          </p>
-
-          <div class="pdfBox">
-            <a href="${escapeHtml(pdfUrl)}"
-              target="_blank"
-              rel="noopener noreferrer">
-              Baixar contrato em PDF
-            </a>
-          </div>
-        `;
-
-        backBtn.disabled = true;
-
-        nextBtn.textContent = "Voltar ao desafio";
-
-        nextBtn.onclick = () => {
-          window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
-          
-        };
-      }
 
       function showToast(msg){
         toast.textContent = msg;
@@ -525,7 +414,7 @@
       async function loadExistingResponse(slug){
         const { data, error } = await supabase
           .from("contract_responses")
-          .select("answers,status,rendered_text,submitted_at,signature_image,signed_at,pdf_url")
+          .select("answers,status,rendered_text,submitted_at")
           .eq("desafio_slug", slug)
           .maybeSingle();
         if (error) throw error;
@@ -536,78 +425,6 @@
         if (!options) return [];
         if (Array.isArray(options)) return options;
         try{ return JSON.parse(options); }catch{ return []; }
-      }
-
-      function resizeSignatureCanvas(){
-        const canvas = document.getElementById("signatureCanvas");
-        if (!canvas) return;
-
-        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        const rect = canvas.getBoundingClientRect();
-
-        canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-        canvas.height = Math.max(1, Math.floor(rect.height * ratio));
-
-        const ctx = canvas.getContext("2d");
-        ctx.scale(ratio, ratio);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, rect.width, rect.height);
-
-        if (signatureDataUrl){
-          const img = new Image();
-          img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
-          img.src = signatureDataUrl;
-        }
-      }
-
-      function initSignaturePad(){
-        const canvas = document.getElementById("signatureCanvas");
-        if (!canvas) return;
-
-        resizeSignatureCanvas();
-
-        signaturePad = new SignaturePad(canvas, {
-          backgroundColor: "rgb(255,255,255)",
-          penColor: "rgb(0,0,0)",
-          minWidth: 0.7,
-          maxWidth: 2.4,
-          throttle: 12
-        });
-
-        if (signatureDataUrl){
-          signaturePad.fromDataURL(signatureDataUrl, {
-            ratio: Math.max(window.devicePixelRatio || 1, 1)
-          });
-        }
-
-        signaturePad.addEventListener("endStroke", () => {
-          signatureDataUrl = signaturePad.toDataURL("image/png");
-          showError("");
-          scheduleDraftSave();
-        });
-
-        document.getElementById("clearSignatureBtn")?.addEventListener("click", () => {
-          signaturePad.clear();
-          signatureDataUrl = "";
-          showError("");
-          scheduleDraftSave();
-        });
-      }
-
-      function renderSignatureStep(){
-        questionBox.innerHTML = `
-          <h2 class="questionTitle">Assinatura eletrônica</h2>
-          <p class="questionDesc">Assine com o dedo ou mouse dentro do quadro branco. Esta assinatura será anexada ao contrato final.</p>
-          <div class="signatureWrap">
-            <canvas id="signatureCanvas" class="signatureCanvas" aria-label="Campo de assinatura"></canvas>
-          </div>
-          <div class="signatureTools">
-            <button class="miniBtn" id="clearSignatureBtn" type="button">Limpar assinatura</button>
-            <span class="questionDesc" style="margin:0;">Use uma assinatura legível.</span>
-          </div>
-        `;
-
-        requestAnimationFrame(initSignaturePad);
       }
 
       function getAnswer(key){ return answers[key]; }
@@ -696,27 +513,20 @@
 
       function renderStep(){
         showError("");
-        const totalSteps = questions.length + 2;
-        const displayStep = isReviewStep ? totalSteps : isSignatureStep ? questions.length + 1 : currentIndex + 1;
+        const totalSteps = questions.length + 1;
+        const displayStep = isReviewStep ? totalSteps : currentIndex + 1;
         stepInfo.textContent = `${displayStep}/${totalSteps}`;
         barFill.style.width = `${Math.round((displayStep / totalSteps) * 100)}%`;
 
-        backBtn.disabled = currentIndex === 0 && !isSignatureStep && !isReviewStep;
-        nextBtn.textContent = isReviewStep ? "Finalizar e gerar PDF" : "Continuar";
+        backBtn.disabled = currentIndex === 0 && !isReviewStep;
+        nextBtn.textContent = isReviewStep ? "Finalizar" : "Continuar";
 
         if (isReviewStep){
           questionBox.innerHTML = `
             <h2 class="questionTitle">Revisão final</h2>
-            <p class="questionDesc">Confira as respostas e a assinatura antes de finalizar. Depois de concluir, o contrato será salvo e o PDF será gerado.</p>
+            <p class="questionDesc">Confira as respostas antes de finalizar. Depois de concluir, o contrato será salvo como enviado.</p>
             <div class="reviewBox">${escapeHtml(buildContractText())}</div>
-            ${signatureDataUrl ? `<div class="signaturePreview"><img src="${signatureDataUrl}" alt="Assinatura do usuário"></div>` : ""}
-            ${pdfUrl ? `<div class="pdfBox">PDF gerado: <a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">Baixar contrato em PDF</a></div>` : ""}
           `;
-          return;
-        }
-
-        if (isSignatureStep){
-          renderSignatureStep();
           return;
         }
 
@@ -731,7 +541,6 @@
 
       function validateCurrentStep(){
         if (isReviewStep) return true;
-        if (isSignatureStep) return !!signatureDataUrl;
         const q = questions[currentIndex];
         if (!q?.required) return true;
         const value = getAnswer(q.question_key);
@@ -761,7 +570,6 @@
           lines.push(rendered);
           lines.push("");
         });
-        lines.push(`Assinatura eletrônica: ${signatureDataUrl ? "coletada" : "não coletada"}`);
         lines.push("Status: enviado eletronicamente pelo usuário autenticado.");
         return lines.join("\n");
       }
@@ -775,9 +583,7 @@
             p_desafio_slug: desafioSlug,
             p_answers: answers,
             p_rendered_text: buildContractText(),
-            p_submit: false,
-            p_signature_image: signatureDataUrl || null,
-            p_pdf_url: pdfUrl || null
+            p_submit: false
           });
           if (error) throw error;
           setSaveState("Rascunho salvo", "ok");
@@ -794,190 +600,36 @@
         saveTimer = setTimeout(saveDraft, 550);
       }
 
-
-      function splitPdfLines(text, maxChars = 82){
-        const out = [];
-        String(text || "").split("\n").forEach(line => {
-          const words = line.split(/\s+/);
-          let current = "";
-          words.forEach(word => {
-            if ((current + " " + word).trim().length > maxChars){
-              if (current) out.push(current);
-              current = word;
-            } else {
-              current = (current + " " + word).trim();
-            }
-          });
-          out.push(current || "");
-        });
-        return out;
-      }
-
-      async function createContractPdfBytes(){
-        const pdfDoc = await PDFDocument.create();
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-        const margin = 48;
-        const pageWidth = 595.28;
-        const pageHeight = 841.89;
-        let page = pdfDoc.addPage([pageWidth, pageHeight]);
-        let y = pageHeight - margin;
-
-        const drawLine = (text, size = 10, useBold = false) => {
-          if (y < margin + 70){
-            page = pdfDoc.addPage([pageWidth, pageHeight]);
-            y = pageHeight - margin;
-          }
-
-          page.drawText(String(text || ""), {
-            x: margin,
-            y,
-            size,
-            font: useBold ? bold : font,
-            color: rgb(0.08, 0.08, 0.08)
-          });
-          y -= size + 7;
-        };
-
-        drawLine("INOVANDO JUNTOS", 18, true);
-        drawLine("Contrato interativo assinado eletronicamente", 13, true);
-        y -= 8;
-
-        splitPdfLines(buildContractText(), 88).forEach(line => {
-          const isTitle = /^(\d+\.|CONTRATO|Desafio:|Data:|Assinatura|Status:)/.test(line);
-          drawLine(line, isTitle ? 10.8 : 9.8, isTitle);
-        });
-
-        if (signatureDataUrl){
-          if (y < 170){
-            page = pdfDoc.addPage([pageWidth, pageHeight]);
-            y = pageHeight - margin;
-          }
-
-          y -= 10;
-          drawLine("Assinatura:", 11, true);
-
-          const pngImage = await pdfDoc.embedPng(signatureDataUrl);
-          const imgWidth = 260;
-          const imgHeight = Math.min(105, (pngImage.height / pngImage.width) * imgWidth);
-
-          page.drawRectangle({
-            x: margin,
-            y: y - imgHeight - 10,
-            width: imgWidth + 20,
-            height: imgHeight + 18,
-            borderColor: rgb(0.75, 0.75, 0.75),
-            borderWidth: 1,
-            color: rgb(1, 1, 1)
-          });
-
-          page.drawImage(pngImage, {
-            x: margin + 10,
-            y: y - imgHeight - 1,
-            width: imgWidth,
-            height: imgHeight
-          });
-
-          y -= imgHeight + 26;
-          drawLine(`Assinado em: ${new Date().toLocaleString("pt-BR")}`, 9.5, false);
-        }
-
-        return await pdfDoc.save();
-      }
-
-      async function uploadContractPdf(){
-        const pdfBytes = await createContractPdfBytes();
-        const filePath = `${authUserId}/${desafioSlug}-${Date.now()}.pdf`;
-        const file = new File([pdfBytes], `${desafioSlug}-contrato.pdf`, { type: "application/pdf" });
-
-        const { error: uploadError } = await supabase.storage
-          .from("contracts")
-          .upload(filePath, file, {
-            contentType: "application/pdf",
-            upsert: true
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage.from("contracts").getPublicUrl(filePath);
-        return data?.publicUrl || filePath;
-      }
-
-      async function updatePdfUrl(finalPdfUrl){
-        const { error } = await supabase.rpc("save_contract_response", {
-          p_desafio_slug: desafioSlug,
-          p_answers: answers,
-          p_rendered_text: buildContractText(),
-          p_submit: true,
-          p_signature_image: signatureDataUrl || null,
-          p_pdf_url: finalPdfUrl || null
-        });
-
-        if (error) throw error;
-      }
-
       async function submitContract(){
         nextBtn.disabled = true;
         backBtn.disabled = true;
-        setSaveState("Finalizando contrato...");
+        setSaveState("Finalizando...");
         try{
           const { error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
             p_answers: answers,
             p_rendered_text: buildContractText(),
-            p_submit: true,
-            p_signature_image: signatureDataUrl || null,
-            p_pdf_url: pdfUrl || null
+            p_submit: true
           });
           if (error) throw error;
-
-          setSaveState("Gerando PDF...");
-          pdfUrl = await uploadContractPdf();
-          await updatePdfUrl(pdfUrl);
-
-          setSaveState("Contrato finalizado e PDF gerado", "ok");
           showToast("Contrato finalizado");
-
-          questionBox.innerHTML = `
-            <h2 class="questionTitle">Contrato finalizado</h2>
-            <p class="questionDesc">Seu contrato foi salvo com assinatura eletrônica e PDF final.</p>
-            <div class="pdfBox">
-              <a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">Baixar contrato em PDF</a>
-            </div>
-          `;
-          isReviewStep = false;
-          isSignatureStep = false;
-          nextBtn.textContent = "Voltar ao desafio";
-          nextBtn.disabled = false;
-          backBtn.disabled = true;
-          nextBtn.onclick = () => {
-            window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
-          };
+          window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
         }catch(err){
           console.error("[SUBMIT ERROR]", err);
           nextBtn.disabled = false;
           backBtn.disabled = false;
           setSaveState("Erro ao finalizar", "err");
-          showError("Não foi possível finalizar ou gerar o PDF. Verifique Storage/RLS e tente novamente.");
+          showError("Não foi possível finalizar. Verifique a conexão e tente novamente.");
         }
       }
 
       backBtn.addEventListener("click", async () => {
         if (isReviewStep){
           isReviewStep = false;
-          isSignatureStep = true;
-          renderStep();
-          return;
-        }
-
-        if (isSignatureStep){
-          isSignatureStep = false;
           currentIndex = Math.max(0, questions.length - 1);
           renderStep();
           return;
         }
-
         if (currentIndex > 0){
           currentIndex--;
           renderStep();
@@ -991,24 +643,17 @@
         }
 
         if (!validateCurrentStep()){
-          showError(isSignatureStep ? "A assinatura é obrigatória para finalizar." : "Esta resposta é obrigatória para continuar.");
+          showError("Esta resposta é obrigatória para continuar.");
           return;
         }
 
         await saveDraft();
 
-        if (isSignatureStep){
-          isSignatureStep = false;
-          isReviewStep = true;
-          renderStep();
-          return;
-        }
-
         if (currentIndex < questions.length - 1){
           currentIndex++;
           renderStep();
         } else {
-          isSignatureStep = true;
+          isReviewStep = true;
           renderStep();
         }
       });
@@ -1030,12 +675,6 @@
           }
           const existing = await loadExistingResponse(desafioSlug);
           answers = existing?.answers && typeof existing.answers === "object" ? existing.answers : {};
-          signatureDataUrl = existing?.signature_image || "";
-          pdfUrl = existing?.pdf_url || "";
-          if (existing?.status === "submitted" && pdfUrl) {
-            renderCompletedContract();
-            return;
-          }
           if (existing?.status === "submitted") setSaveState("Contrato já enviado. Você pode revisar e reenviar se necessário.", "ok");
           renderStep();
         }catch(err){
@@ -1048,10 +687,6 @@
           showError("Erro carregando contrato. Revise Supabase, RLS e conexão.");
         }
       }
-
-      window.addEventListener("resize", () => {
-        if (isSignatureStep) resizeSignatureCanvas();
-      });
 
       init();
     })();

@@ -434,38 +434,6 @@
       let saveTimer = null;
       let saving = false;
 
-
-      function renderCompletedContract() {
-
-        stepInfo.textContent = "✓";
-        barFill.style.width = "100%";
-
-        questionBox.innerHTML = `
-          <h2 class="questionTitle">Contrato já assinado</h2>
-
-          <p class="questionDesc">
-            Este contrato já foi concluído e assinado eletronicamente.
-          </p>
-
-          <div class="pdfBox">
-            <a href="${escapeHtml(pdfUrl)}"
-              target="_blank"
-              rel="noopener noreferrer">
-              Baixar contrato em PDF
-            </a>
-          </div>
-        `;
-
-        backBtn.disabled = true;
-
-        nextBtn.textContent = "Voltar ao desafio";
-
-        nextBtn.onclick = () => {
-          window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
-          
-        };
-      }
-
       function showToast(msg){
         toast.textContent = msg;
         toast.classList.add("show");
@@ -1032,10 +1000,6 @@
           answers = existing?.answers && typeof existing.answers === "object" ? existing.answers : {};
           signatureDataUrl = existing?.signature_image || "";
           pdfUrl = existing?.pdf_url || "";
-          if (existing?.status === "submitted" && pdfUrl) {
-            renderCompletedContract();
-            return;
-          }
           if (existing?.status === "submitted") setSaveState("Contrato já enviado. Você pode revisar e reenviar se necessário.", "ok");
           renderStep();
         }catch(err){
