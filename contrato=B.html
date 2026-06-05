@@ -363,37 +363,11 @@
       .questionTitle{ font-size:21px; }
       .footer{ grid-template-columns:1fr 1.25fr; }
     }
-  
-.closeBtn{
-  position:absolute;
-  top:calc(12px + env(safe-area-inset-top,0px));
-  right:12px;
-  width:12px;
-  height:12px;
-  border-radius:50%;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.65);
-  color:#fff;
-  font-size:24px;
-  font-weight:700;
-  cursor:pointer;
-  z-index:100;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-}
-.closeBtn:hover{
-  background:rgba(255,255,255,.12);
-}
-
-</style>
+  </style>
 </head>
 <body>
   <div class="app">
     <main class="shell" aria-live="polite">
-      <button id="closeBtn" class="closeBtn" type="button" aria-label="Fechar contrato">✕</button>
       <header class="topbar">
         <div class="logo-center">
           <img src="images/logo.png" alt="Inovando Juntos" />
@@ -446,7 +420,6 @@
       const errorBox = document.getElementById("errorBox");
       const saveState = document.getElementById("saveState");
       const toast = document.getElementById("toast");
-      const closeBtn = document.getElementById("closeBtn");
 
       let authUserId = null;
       let desafioSlug = "";
@@ -1039,22 +1012,6 @@
           renderStep();
         }
       });
-
-      
-      closeBtn?.addEventListener("click", () => {
-        const goBack = () => {
-          window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
-        };
-
-        if (Object.keys(answers || {}).length > 0 || signatureDataUrl) {
-          if (confirm("Tem certeza que deseja sair? As respostas já salvas permanecerão armazenadas.")) {
-            goBack();
-          }
-        } else {
-          goBack();
-        }
-      });
-
 
       async function init(){
         try{
