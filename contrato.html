@@ -278,6 +278,57 @@
       overflow:auto;
     }
 
+
+
+    .acceptedPositionsBox{
+      margin-top:14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.09);
+      background:rgba(255,255,255,.035);
+      padding:14px;
+    }
+
+    .acceptedPositionsTitle{
+      margin:0 0 10px;
+      color:rgba(255,255,255,.86);
+      font-size:14px;
+      font-weight:950;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+
+    .acceptedPositionsGrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
+      gap:12px;
+    }
+
+    .acceptedPositionCard{
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.22);
+      padding:9px;
+      text-align:center;
+      overflow:hidden;
+    }
+
+    .acceptedPositionCard img{
+      width:100%;
+      aspect-ratio:1/1;
+      object-fit:cover;
+      border-radius:11px;
+      display:block;
+      background:rgba(255,255,255,.06);
+    }
+
+    .acceptedPositionName{
+      margin-top:7px;
+      color:rgba(255,255,255,.78);
+      font-size:12px;
+      font-weight:800;
+      line-height:1.25;
+    }
+
     .errorBox{
       margin-top:12px;
       display:none;
@@ -402,9 +453,9 @@
 
       <section class="content">
         <div class="hero">
-          <p class="kicker">Contrato interativo</p>
-          <h1 id="appTitle">Acordo do desafio</h1>
-          <p class="subtitle" id="appSubtitle">Responda com calma. As escolhas podem ser revisadas antes de finalizar.</p>
+          <p class="kicker">DESAFIO 19</p>
+          <h1 id="appTitle">EXPLORANDO LIMITES</h1>
+          <p class="subtitle" id="appSubtitle">Conversem abertamente sobre seus desejos, preferências e limites. Aproveitem este momento para alinhar expectativas e deixar claro o que gostariam de explorar juntos. Todas as escolhas podem ser revisadas antes da assinatura do contrato.</p>
           <div class="progressRow">
             <div class="bar" aria-hidden="true"><div class="barFill" id="barFill"></div></div>
             <div class="stepInfo" id="stepInfo">0/0</div>
@@ -432,11 +483,13 @@
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
     import SignaturePad from "https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/+esm";
     import { PDFDocument, StandardFonts, rgb } from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
+    import fontkit from "https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/+esm";
 
     (() => {
       const SUPABASE_URL = "https://rsordtljnvxonaygyuxd.supabase.co";
       const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const POSITION_STORAGE_BASE = `${SUPABASE_URL}/storage/v1/object/public/kamasutra`;
 
       const questionBox = document.getElementById("questionBox");
       const stepInfo = document.getElementById("stepInfo");
@@ -458,6 +511,7 @@
       let signaturePad = null;
       let signatureDataUrl = "";
       let pdfUrl = "";
+      let likedPositions = [];
       let saveTimer = null;
       let saving = false;
 
@@ -518,6 +572,104 @@
           .replaceAll("'", "&#039;");
       }
 
+
+
+      function extractFirstNumber(value){
+        const match = String(value || "").match(/(\d{1,3})/);
+        return match ? match[1].padStart(2, "0") : "";
+      }
+
+      function buildPositionImageUrl(position, row){
+        const directUrl =
+          position?.image_url ||
+          position?.imageUrl ||
+          position?.image ||
+          position?.img_url ||
+          row?.image_url ||
+          row?.imageUrl ||
+          row?.image;
+
+        if (directUrl) return String(directUrl);
+
+        const rawKey =
+          position?.image_file ||
+          position?.file_name ||
+          position?.slug ||
+          position?.code ||
+          row?.target_slug ||
+          row?.target_code ||
+          row?.target_id ||
+          "";
+
+        const number = extractFirstNumber(rawKey);
+        if (!number) return "";
+
+        return `${POSITION_STORAGE_BASE}/Kamasutra_pos_${number}.png`;
+      }
+
+      function normalizeLikedPosition(row, index){
+        const position = row?.positions || row?.position || row || {};
+        const name =
+          row?.nombre ||
+          row?.nome ||
+          row?.name ||
+          row?.title ||
+          position?.nombre ||
+          position?.nome ||
+          position?.name ||
+          position?.title ||
+          `Posição ${index + 1}`;
+
+        return {
+          id: row?.posicion_id || row?.position_id || row?.target_id || position?.id || `${index}`,
+          numero: row?.numero || position?.numero || null,
+          slug: row?.slug || position?.slug || "",
+          name: String(name),
+          nivel: row?.nivel || position?.nivel || null,
+          grupo: row?.grupo || position?.grupo || "",
+          imageUrl: buildPositionImageUrl(position, row)
+        };
+      }
+
+      function shouldIncludeLikedPositions(){
+        return answers?.posicoes_aceitas === "yes";
+      }
+
+      function renderAcceptedPositionsHtml(){
+        if (!shouldIncludeLikedPositions() || !likedPositions.length) return "";
+
+        return `
+          <div class="acceptedPositionsBox">
+            <p class="acceptedPositionsTitle">Posições aceitas</p>
+            <div class="acceptedPositionsGrid">
+              ${likedPositions.map(pos => `
+                <div class="acceptedPositionCard">
+                  ${pos.imageUrl ? `
+                    <img
+                      src="${escapeHtml(pos.imageUrl)}"
+                      alt="${escapeHtml(pos.name)}"
+                      loading="lazy"
+                      onerror="this.style.display='none'"
+                    />
+                  ` : ""}
+                  <div class="acceptedPositionName">✓ ${escapeHtml(pos.name)}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }
+      
+      async function refreshLikedPositionsIfAccepted(){
+        if (!shouldIncludeLikedPositions()){
+          likedPositions = [];
+          return [];
+        }
+
+        likedPositions = await loadLikedPositions();
+        return likedPositions;
+      }
+
       function getDesafioSlug(){
         const params = new URLSearchParams(window.location.search);
         const fromQuery = params.get("desafio") || params.get("id") || params.get("slug");
@@ -558,6 +710,27 @@
         if (error) throw error;
         return data || null;
       }
+
+
+
+      async function loadLikedPositions(){
+        if (!authUserId) return [];
+
+        const { data, error } = await supabase.rpc("get_user_liked_positions", {
+          p_user_id: authUserId
+        });
+
+        if (error){
+          console.error("[LIKED POSITIONS RPC ERROR]", error);
+          return [];
+        }
+
+        return (Array.isArray(data) ? data : [])
+          .map(normalizeLikedPosition)
+          .filter(pos => pos.name)
+          .filter((pos, index, arr) => arr.findIndex(p => p.id === pos.id) === index);
+      }
+
 
       function normalizeOptions(options){
         if (!options) return [];
@@ -736,6 +909,7 @@
             <h2 class="questionTitle">Revisão final</h2>
             <p class="questionDesc">Confira as respostas e a assinatura antes de finalizar. Depois de concluir, o contrato será salvo e o PDF será gerado.</p>
             <div class="reviewBox">${escapeHtml(buildContractText())}</div>
+            ${renderAcceptedPositionsHtml()}
             ${signatureDataUrl ? `<div class="signaturePreview"><img src="${signatureDataUrl}" alt="Assinatura do usuário"></div>` : ""}
             ${pdfUrl ? `<div class="pdfBox">PDF gerado: <a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">Baixar contrato em PDF</a></div>` : ""}
           `;
@@ -774,22 +948,56 @@
 
       function buildContractText(){
         const lines = [];
-        lines.push("CONTRATO INTERATIVO DO DESAFIO");
-        lines.push(`Desafio: ${desafioSlug}`);
-        lines.push(`Data: ${new Date().toLocaleString("pt-BR")}`);
+        const now = new Date().toLocaleString("pt-BR");
+
+        lines.push("CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES");
+        lines.push("INOVANDO JUNTOS - DESAFIO 19");
+        lines.push(`Documento: ${desafioSlug}`);
+        lines.push(`Data de assinatura: ${now}`);
+        lines.push("Validade: 30 (trinta) dias corridos a partir da assinatura.");
         lines.push("");
+
+        lines.push("CLÁUSULA RESUMIDA DO ACORDO");
+        lines.push("");
+        lines.push("Pelo presente instrumento, as partes declaram que participaram voluntariamente da Sessão de Exploração de Limites da INOVANDO JUNTOS e concordam, de forma livre, consciente e consensual, com os desejos, preferências, permissões, acessórios, fantasias, práticas, posições homologadas e limites registrados nos anexos deste documento. O objetivo deste acordo é promover comunicação, alinhamento de expectativas e respeito mútuo, servindo como referência para a realização das experiências aprovadas pelas partes. A validade deste acordo é de 30 (trinta) dias corridos, contados a partir da data de sua assinatura.");
+        lines.push("");
+        lines.push("Durante sua vigência, as partes comprometem-se a respeitar integralmente os desejos autorizados e os limites declarados neste documento, mantendo diálogo, consentimento contínuo e boa-fé em todas as interações. Em caso de descumprimento injustificado dos compromissos aqui assumidos, a parte infratora estará sujeita à penalidade simbólica de 07 (sete) dias de abstinência sexual, sem direito a reclamações, recursos, revisões, pedidos de reconsideração ou negociações extraordinárias, aceitando previamente a aplicação desta sanção de caráter exclusivamente bem-humorado e consensual.");
+        lines.push("");
+
+        lines.push("ANEXO I - ESCOLHAS REGISTRADAS NA APLICAÇÃO");
+        lines.push("");
+
         questions.forEach((q, idx) => {
           const raw = getAnswer(q.question_key);
           let rendered = "";
-          if (Array.isArray(raw)) rendered = raw.map(v => getOptionLabel(q, v)).join(", ");
+          if (Array.isArray(raw)) rendered = raw.map(v => getOptionLabel(q, v)).filter(Boolean).join(", ");
           else rendered = getOptionLabel(q, raw);
           if (!rendered) rendered = "Não informado";
           lines.push(`${idx + 1}. ${q.title}`);
           lines.push(rendered);
           lines.push("");
         });
+
+        if (shouldIncludeLikedPositions()){
+          lines.push("ANEXO II - POSIÇÕES HOMOLOGADAS");
+          lines.push("");
+
+          if (likedPositions.length){
+            likedPositions.forEach(pos => {
+              lines.push(`- ${pos.name}`);
+            });
+          } else {
+            lines.push("Nenhuma posição curtida encontrada para este usuário no momento da geração do contrato.");
+          }
+
+          lines.push("");
+        }
+
+        lines.push("DECLARAÇÃO FINAL");
+        lines.push("As partes declaram que as escolhas acima refletem os desejos, permissões e limites informados voluntariamente na aplicação, devendo prevalecer sempre o consentimento contínuo, o respeito mútuo e a possibilidade de interromper qualquer prática a qualquer momento.");
+        lines.push("");
         lines.push(`Assinatura eletrônica: ${signatureDataUrl ? "coletada" : "não coletada"}`);
-        lines.push("Status: enviado eletronicamente pelo usuário autenticado.");
+        lines.push("Status: assinado eletronicamente pelo usuário autenticado.");
         return lines.join("\n");
       }
 
@@ -840,10 +1048,87 @@
         return out;
       }
 
+
+
+      function getImageExtensionFromUrl(url){
+        const clean = String(url || "").split("?")[0].toLowerCase();
+        if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) return "jpg";
+        if (clean.endsWith(".png")) return "png";
+        return "";
+      }
+
+      async function embedRemoteImage(pdfDoc, imageUrl){
+        if (!imageUrl) return null;
+
+        try{
+          const response = await fetch(imageUrl, { mode:"cors" });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          const extension = getImageExtensionFromUrl(imageUrl);
+          const contentType = response.headers.get("content-type") || "";
+
+          if (extension === "jpg" || contentType.includes("jpeg")) {
+            return await pdfDoc.embedJpg(bytes);
+          }
+
+          if (extension === "png" || contentType.includes("png")) {
+            return await pdfDoc.embedPng(bytes);
+          }
+
+          return await pdfDoc.embedPng(bytes);
+        }catch(err){
+          console.warn("[PDF POSITION IMAGE ERROR]", imageUrl, err);
+          return null;
+        }
+      }
+
+
+      function sanitizePdfText(value){
+        return String(value ?? "")
+          .replace(/✓/g, "-")
+          .replace(/[“”]/g, '"')
+          .replace(/[‘’]/g, "'")
+          .replace(/[–—]/g, "-");
+      }
+
+      async function fetchFontBytes(url){
+        try{
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return await response.arrayBuffer();
+        }catch(err){
+          console.warn("[PDF FONT LOAD WARNING]", url, err);
+          return null;
+        }
+      }
+
+      async function loadPdfFonts(pdfDoc){
+        try{
+          pdfDoc.registerFontkit(fontkit);
+
+          const regularBytes = await fetchFontBytes("./fonts/NotoSans-Regular.ttf");
+          const boldBytes = await fetchFontBytes("./fonts/NotoSans-Bold.ttf");
+
+          if (regularBytes && boldBytes){
+            return {
+              font: await pdfDoc.embedFont(regularBytes, { subset: true }),
+              bold: await pdfDoc.embedFont(boldBytes, { subset: true })
+            };
+          }
+        }catch(err){
+          console.warn("[PDF FONTKIT WARNING] Usando Helvetica como fallback.", err);
+        }
+
+        return {
+          font: await pdfDoc.embedFont(StandardFonts.Helvetica),
+          bold: await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+        };
+      }
+
       async function createContractPdfBytes(){
         const pdfDoc = await PDFDocument.create();
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const { font, bold } = await loadPdfFonts(pdfDoc);
 
         const margin = 48;
         const pageWidth = 595.28;
@@ -851,39 +1136,222 @@
         let page = pdfDoc.addPage([pageWidth, pageHeight]);
         let y = pageHeight - margin;
 
-        const drawLine = (text, size = 10, useBold = false) => {
-          if (y < margin + 70){
+        const ensureSpace = (requiredHeight = 70) => {
+          if (y < margin + requiredHeight){
             page = pdfDoc.addPage([pageWidth, pageHeight]);
             y = pageHeight - margin;
           }
-
-          page.drawText(String(text || ""), {
-            x: margin,
-            y,
-            size,
-            font: useBold ? bold : font,
-            color: rgb(0.08, 0.08, 0.08)
-          });
-          y -= size + 7;
         };
 
-        drawLine("INOVANDO JUNTOS", 18, true);
-        drawLine("Contrato interativo assinado eletronicamente", 13, true);
-        y -= 8;
+        const contentWidth = pageWidth - (margin * 2);
 
-        splitPdfLines(buildContractText(), 88).forEach(line => {
-          const isTitle = /^(\d+\.|CONTRATO|Desafio:|Data:|Assinatura|Status:)/.test(line);
-          drawLine(line, isTitle ? 10.8 : 9.8, isTitle);
+        const wrapPdfText = (text, activeFont, size, maxWidth) => {
+          const cleanText = sanitizePdfText(text);
+          const words = cleanText.split(/\s+/).filter(Boolean);
+          const lines = [];
+          let current = "";
+
+          words.forEach(word => {
+            const candidate = current ? `${current} ${word}` : word;
+            const candidateWidth = activeFont.widthOfTextAtSize(candidate, size);
+
+            if (candidateWidth > maxWidth && current){
+              lines.push(current);
+              current = word;
+            } else {
+              current = candidate;
+            }
+          });
+
+          if (current) lines.push(current);
+          return lines.length ? lines : [""];
+        };
+
+        const drawJustifiedLine = (line, x, yPos, maxWidth, size, activeFont, color) => {
+          const words = String(line || "").split(/\s+/).filter(Boolean);
+          if (words.length <= 1){
+            page.drawText(line, { x, y: yPos, size, font: activeFont, color });
+            return;
+          }
+
+          const wordsWidth = words.reduce((sum, word) => sum + activeFont.widthOfTextAtSize(word, size), 0);
+          const extraSpace = (maxWidth - wordsWidth) / (words.length - 1);
+          let cursorX = x;
+
+          words.forEach((word, index) => {
+            page.drawText(word, { x: cursorX, y: yPos, size, font: activeFont, color });
+            if (index < words.length - 1){
+              cursorX += activeFont.widthOfTextAtSize(word, size) + extraSpace;
+            }
+          });
+        };
+
+        const drawTextBlock = (text, opts = {}) => {
+          const size = opts.size || 10;
+          const useBold = !!opts.bold;
+          const lineGap = opts.lineGap ?? 5;
+          const indent = opts.indent || 0;
+          const maxWidth = opts.maxWidth || (contentWidth - indent);
+          const align = opts.align || "left";
+          const activeFont = useBold ? bold : font;
+          const textColor = opts.color || rgb(0.08, 0.08, 0.08);
+          const paragraphs = String(text ?? "").split("\n");
+
+          paragraphs.forEach((paragraph, paragraphIndex) => {
+            const lines = wrapPdfText(paragraph, activeFont, size, maxWidth);
+            lines.forEach((line, lineIndex) => {
+              ensureSpace(size + lineGap + 10);
+              const lineWidth = activeFont.widthOfTextAtSize(line, size);
+              const x = align === "center"
+                ? margin + indent + ((maxWidth - lineWidth) / 2)
+                : margin + indent;
+              const isLastLine = lineIndex === lines.length - 1;
+              const canJustify = align === "justify"
+                && !isLastLine
+                && !/^[-•]/.test(line.trim())
+                && line.split(/\s+/).length > 3
+                && lineWidth > maxWidth * 0.58;
+
+              if (canJustify){
+                drawJustifiedLine(line, margin + indent, y, maxWidth, size, activeFont, textColor);
+              } else {
+                page.drawText(line, { x, y, size, font: activeFont, color: textColor });
+              }
+
+              y -= size + lineGap;
+            });
+
+            if (paragraphIndex < paragraphs.length - 1) y -= lineGap;
+          });
+        };
+
+        const drawSeparator = () => {
+          ensureSpace(18);
+          y -= 4;
+          page.drawLine({
+            start: { x: margin, y },
+            end: { x: pageWidth - margin, y },
+            thickness: 0.7,
+            color: rgb(0.72, 0.72, 0.72)
+          });
+          y -= 14;
+        };
+
+        const drawHeading = (text, size = 12) => {
+          ensureSpace(36);
+          y -= 4;
+          drawTextBlock(text, { size, bold: true, maxChars: 70, lineGap: 4 });
+          drawSeparator();
+        };
+
+        drawTextBlock("INOVANDO JUNTOS", { size: 18, bold: true, maxWidth: contentWidth, align: "center", lineGap: 5 });
+        drawTextBlock("CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", { size: 13, bold: true, maxWidth: contentWidth, align: "center", lineGap: 4 });
+        y -= 4;
+        drawTextBlock(`Desafio: ${desafioSlug} | Data: ${new Date().toLocaleString("pt-BR")} | Validade: 30 dias`, {
+          size: 9.2,
+          maxWidth: contentWidth,
+          align: "center",
+          lineGap: 4,
+          color: rgb(0.22, 0.22, 0.22)
+        });
+        y -= 10;
+        drawSeparator();
+
+        const contractText = buildContractText();
+        const sections = contractText.split("\n");
+        sections.forEach(line => {
+          const trimmed = line.trim();
+          if (!trimmed){
+            y -= 6;
+            return;
+          }
+
+          const isMainTitle = /^(CONTRATO CIVIL-AMOROSO|INOVANDO JUNTOS)/.test(trimmed);
+          const isSection = /^(CLÁUSULA RESUMIDA DO ACORDO|ANEXO I|ANEXO II|DECLARAÇÃO FINAL)$/.test(trimmed);
+          const isMeta = /^(Documento:|Data de assinatura:|Validade:|Assinatura eletrônica:|Status:)/.test(trimmed);
+          const isQuestion = /^\d+\./.test(trimmed);
+
+          if (isMainTitle) return;
+          if (isSection){
+            drawHeading(trimmed, 11.5);
+          } else if (isMeta){
+            drawTextBlock(trimmed, { size: 9.2, bold: true, maxChars: 95, lineGap: 4 });
+          } else if (isQuestion){
+            drawTextBlock(trimmed, { size: 9.6, bold: true, maxChars: 90, lineGap: 4 });
+          } else {
+            drawTextBlock(trimmed, { size: 9.3, bold: false, maxWidth: contentWidth, lineGap: 4.6, align: "justify" });
+          }
         });
 
+        if (shouldIncludeLikedPositions() && likedPositions.length){
+          y -= 8;
+          drawHeading("ANEXO VISUAL - IMAGENS DAS POSIÇÕES HOMOLOGADAS", 11.5);
+
+          const cardW = 120;
+          const cardH = 150;
+          const gap = 14;
+          const columns = 3;
+
+          for (let i = 0; i < likedPositions.length; i++){
+            const pos = likedPositions[i];
+            const col = i % columns;
+
+            if (col === 0) ensureSpace(cardH + 22);
+
+            const x = margin + col * (cardW + gap);
+            const cardY = y - cardH;
+
+            page.drawRectangle({
+              x,
+              y: cardY,
+              width: cardW,
+              height: cardH,
+              borderColor: rgb(0.82, 0.82, 0.82),
+              borderWidth: 1,
+              color: rgb(1, 1, 1)
+            });
+
+            const embeddedImage = await embedRemoteImage(pdfDoc, pos.imageUrl);
+            if (embeddedImage){
+              const imgBox = 92;
+              const ratio = embeddedImage.width / embeddedImage.height;
+              let w = imgBox;
+              let h = imgBox;
+
+              if (ratio > 1) h = imgBox / ratio;
+              else w = imgBox * ratio;
+
+              page.drawImage(embeddedImage, {
+                x: x + (cardW - w) / 2,
+                y: cardY + 46 + (imgBox - h) / 2,
+                width: w,
+                height: h
+              });
+            }
+
+            const safeName = String(pos.name || "Posição").slice(0, 30);
+            page.drawText(sanitizePdfText(`- ${safeName}`), {
+              x: x + 10,
+              y: cardY + 18,
+              size: 8.2,
+              font: bold,
+              color: rgb(0.08, 0.08, 0.08)
+            });
+
+            if (col === columns - 1 || i === likedPositions.length - 1){
+              y -= cardH + 18;
+            }
+          }
+        }
+
         if (signatureDataUrl){
-          if (y < 170){
+          if (y < 180){
             page = pdfDoc.addPage([pageWidth, pageHeight]);
             y = pageHeight - margin;
           }
 
           y -= 10;
-          drawLine("Assinatura:", 11, true);
+          drawHeading("ASSINATURA ELETRÔNICA", 11.5);
 
           const pngImage = await pdfDoc.embedPng(signatureDataUrl);
           const imgWidth = 260;
@@ -907,7 +1375,7 @@
           });
 
           y -= imgHeight + 26;
-          drawLine(`Assinado em: ${new Date().toLocaleString("pt-BR")}`, 9.5, false);
+          drawTextBlock(`Assinado em: ${new Date().toLocaleString("pt-BR")}`, { size: 9.5, maxChars: 90 });
         }
 
         return await pdfDoc.save();
@@ -949,6 +1417,8 @@
         backBtn.disabled = true;
         setSaveState("Finalizando contrato...");
         try{
+          await refreshLikedPositionsIfAccepted();
+
           const { error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
             p_answers: answers,
@@ -1025,6 +1495,7 @@
         await saveDraft();
 
         if (isSignatureStep){
+          await refreshLikedPositionsIfAccepted();
           isSignatureStep = false;
           isReviewStep = true;
           renderStep();
@@ -1073,6 +1544,7 @@
           }
           const existing = await loadExistingResponse(desafioSlug);
           answers = existing?.answers && typeof existing.answers === "object" ? existing.answers : {};
+          await refreshLikedPositionsIfAccepted();
           signatureDataUrl = existing?.signature_image || "";
           pdfUrl = existing?.pdf_url || "";
           if (existing?.status === "submitted" && pdfUrl) {
