@@ -172,7 +172,22 @@
       transition:background .12s ease, border-color .12s ease, transform .10s ease;
     }
     .option:hover{ background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.16); transform:translateY(-1px); }
-    .option input{ margin-top:2px; accent-color:white; }
+    .option:has(input:checked){
+      background:#000000;
+      border-color:rgba(255,255,255,.58);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.20), 0 10px 26px rgba(0,0,0,.55);
+    }
+    .option:has(input:checked) .optionText{
+      color:#ffffff;
+      font-weight:900;
+    }
+    .option.selected{
+      background:#000000;
+      border-color:rgba(255,255,255,.58);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.20), 0 10px 26px rgba(0,0,0,.55);
+    }
+    .option.selected .optionText{ color:#ffffff; font-weight:900; }
+    .option input{ margin-top:2px; accent-color:#000000; }
     .optionText{ flex:1; min-width:0; font-size:15px; line-height:1.32; color:rgba(255,255,255,.80); font-weight:650; }
 
     textarea,
@@ -461,8 +476,26 @@
       overflow:hidden;
     }
     .positionCard.selected{
-      border-color:rgba(131,240,161,.60);
-      background:rgba(131,240,161,.10);
+      border-color:rgba(255,255,255,.68);
+      background:#000000;
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.20), 0 12px 30px rgba(0,0,0,.60);
+    }
+    .positionCard.selected::before{
+      content:"✓";
+      position:absolute;
+      top:9px;
+      left:9px;
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#ffffff;
+      color:#000000;
+      font-size:15px;
+      font-weight:950;
+      z-index:2;
     }
     .positionCard.liked::after{
       content:"curti";
@@ -557,7 +590,7 @@
           <div class="modalTop">
             <div>
               <h2 class="modalTitle" id="positionsModalTitle">Adicionar posições</h2>
-              <p class="modalHint">Lista carregada exclusivamente pelo RPC. As posições curtidas aparecem primeiro; depois, as demais por popularidade.</p>
+              <p class="modalHint">Selecione as posições que deseja experimentar durante a experiência. As curtidas aparecem primeiro; depois, as demais por popularidade.</p>
             </div>
             <button class="closeMini" id="closePositionsModal" type="button" aria-label="Fechar">×</button>
           </div>
@@ -814,7 +847,7 @@
         return opts.map(opt => {
           const value = String(opt.value ?? opt.label ?? "");
           return `
-            <label class="option">
+            <label class="option ${current === value ? "selected" : ""}">
               <input type="radio" name="${escapeHtml(q.question_key)}" value="${escapeHtml(value)}" ${current === value ? "checked" : ""} />
               <span class="optionText">${escapeHtml(opt.label ?? value)}</span>
             </label>
@@ -828,7 +861,7 @@
         return opts.map(opt => {
           const value = String(opt.value ?? opt.label ?? "");
           return `
-            <label class="option">
+            <label class="option ${current.includes(value) ? "selected" : ""}">
               <input type="checkbox" name="${escapeHtml(q.question_key)}" value="${escapeHtml(value)}" ${current.includes(value) ? "checked" : ""} />
               <span class="optionText">${escapeHtml(opt.label ?? value)}</span>
             </label>
@@ -842,7 +875,7 @@
           { value:"yes", label:"Sim" },
           { value:"no", label:"Não" }
         ].map(opt => `
-          <label class="option">
+          <label class="option ${current === opt.value ? "selected" : ""}">
             <input type="radio" name="${escapeHtml(q.question_key)}" value="${opt.value}" ${current === opt.value ? "checked" : ""} />
             <span class="optionText">${opt.label}</span>
           </label>
@@ -886,9 +919,15 @@
           input.addEventListener("change", () => {
             if (q.question_type === "multiple"){
               const selected = [...questionBox.querySelectorAll("input:checked")].map(el => el.value);
+              questionBox.querySelectorAll(".option").forEach(label => {
+                label.classList.toggle("selected", !!label.querySelector("input")?.checked);
+              });
               setAnswer(q.question_key, selected);
             } else {
               const selected = questionBox.querySelector("input:checked")?.value || "";
+              questionBox.querySelectorAll(".option").forEach(label => {
+                label.classList.toggle("selected", !!label.querySelector("input")?.checked);
+              });
               setAnswer(q.question_key, selected);
             }
           });
@@ -924,7 +963,7 @@
         const q = questions[currentIndex];
         questionBox.innerHTML = `
           <h2 class="questionTitle">${escapeHtml(q.title)}</h2>
-          ${q.description && !isPositionsQuestion(q) ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : ""}
+          ${isPositionsQuestion(q) ? `<p class="questionDesc">Selecione as posições que deseja experimentar durante a experiência.</p>` : (q.description ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : "")}
           <div class="fieldArea">${renderQuestionInput(q)}</div>
         `;
         attachQuestionListeners(q);
