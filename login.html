@@ -184,6 +184,37 @@
       stroke-linejoin:round;
     }
 
+
+    .checkField{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:2px 2px 0;
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.35;
+    }
+
+    .checkField.is-hidden{
+      display:none;
+    }
+
+    .checkField input[type="checkbox"]{
+      width:18px;
+      min-width:18px;
+      height:18px;
+      min-height:18px;
+      margin:1px 0 0;
+      padding:0;
+      accent-color:#fff;
+      cursor:pointer;
+    }
+
+    .checkField label{
+      cursor:pointer;
+      user-select:none;
+    }
+
     .primaryBtn{
       width:100%;
       min-height:54px;
@@ -284,6 +315,11 @@
           </div>
         </div>
 
+        <div class="checkField is-hidden" id="ageConfirmField">
+          <input id="ageConfirm" name="ageConfirm" type="checkbox" />
+          <label for="ageConfirm">Declaro que tenho 18 anos ou mais e aceito acessar este conteúdo.</label>
+        </div>
+
         <button class="primaryBtn" id="submitBtn" type="submit">Entrar</button>
       </form>
 
@@ -313,6 +349,8 @@
     const passwordEl = document.getElementById("password");
     const activationCodeField = document.getElementById("activationCodeField");
     const activationCodeEl = document.getElementById("activationCode");
+    const ageConfirmField = document.getElementById("ageConfirmField");
+    const ageConfirmEl = document.getElementById("ageConfirm");
     const submitBtn = document.getElementById("submitBtn");
     const statusBox = document.getElementById("statusBox");
     const togglePassBtn = document.getElementById("togglePassBtn");
@@ -388,7 +426,14 @@
       activationCodeEl.required = isRegister;
       activationCodeEl.disabled = !isRegister;
 
-      if (!isRegister) activationCodeEl.value = "";
+      ageConfirmField.classList.toggle("is-hidden", !isRegister);
+      ageConfirmEl.required = isRegister;
+      ageConfirmEl.disabled = !isRegister;
+
+      if (!isRegister) {
+        activationCodeEl.value = "";
+        ageConfirmEl.checked = false;
+      }
 
       clearStatus();
     }
@@ -419,6 +464,8 @@
 
       const activationCode = getActivationCode();
       if (!activationCode) return;
+
+      if (!getAgeConfirmation()) return;
 
       setBusy(true, "Criando conta...");
 
@@ -454,6 +501,7 @@
         emailEl.value = "";
         passwordEl.value = "";
         activationCodeEl.value = "";
+        ageConfirmEl.checked = false;
 
         if (data?.session){
           showStatus("Conta criada e ativada. Redirecionando...", "ok");
@@ -490,6 +538,16 @@
       return data;
     }
 
+
+    function getAgeConfirmation(){
+      if (!ageConfirmEl.checked){
+        showStatus("Confirme que você tem 18 anos ou mais para criar a conta.", "error");
+        ageConfirmEl.focus();
+        return false;
+      }
+
+      return true;
+    }
 
     function getActivationCode(){
       const activationCode = activationCodeEl.value.trim().toUpperCase();
@@ -563,6 +621,7 @@
       emailEl.disabled = isBusy;
       passwordEl.disabled = isBusy;
       activationCodeEl.disabled = isBusy || mode !== "register";
+      ageConfirmEl.disabled = isBusy || mode !== "register";
       loginTab.disabled = isBusy;
       registerTab.disabled = isBusy;
 
