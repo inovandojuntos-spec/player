@@ -2979,10 +2979,12 @@
         }
       }
 
-      async function loadKamasutraPositions(nivel){
+      async function loadKamasutraPositions(mode){
+        const isCadeira = mode === "cadeira";
+
         const { data, error } = await supabase.rpc(KAMASUTRA_RPC_NAME, {
-            p_nivel: nivel,
-            p_cadera: null
+          p_nivel: isCadeira ? null : 1,
+          p_cadera: isCadeira ? true : false
         });
 
         if (error){
@@ -3139,8 +3141,7 @@
         } 
 
         (async () => {
-          const nivel = mode === "cadeira" ? 2 : 1;
-          const posiciones = await loadKamasutraPositions(nivel);
+          const posiciones = await loadKamasutraPositions(mode);
 
           if (!posiciones.length){
             const empty = document.createElement("div");
