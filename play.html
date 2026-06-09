@@ -3028,7 +3028,7 @@
         resetKamasutraState();
         mediaBox.innerHTML = "";
 
-        const bgColor = mode === "cadeira" ? "#ffffff" : "#000000";
+        const bgColor = mode === "cadeira" ? "#000000" : "#000000";
 
         const stage = document.createElement("div");
         stage.style.cssText = `
@@ -3144,7 +3144,7 @@
 
           if (!posiciones.length){
             const empty = document.createElement("div");
-            empty.style.cssText = `color:${mode === "cadeira" ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.45)"};font-size:13px;text-align:center;padding:20px;`;
+            empty.style.cssText ="color:rgba(255,255,255,0.45);font-size:13px;text-align:center;padding:20px;";
             empty.textContent = "No hay posiciones disponibles";
             mediaBox.innerHTML = "";
             mediaBox.appendChild(empty);
