@@ -3659,23 +3659,38 @@
             const title = row?.title || row?.titulo || row?.desafio_title || row?.name || row?.nome || `Desafio ${index + 1}`;
             const slug = row?.slug || row?.desafio_slug || row?.target_slug || "";
             const id = row?.id || row?.desafio_id || row?.target_id || null;
-            const playedAt = row?.last_played_at || row?.played_at || row?.last_opened_at || row?.ultima_vez_jogado || row?.last_activity_at || row?.created_at || null;
-            const isDone = !!(
-              row?.done || row?.is_done || row?.played || row?.is_played ||
-              row?.completed || row?.is_completed || row?.favorited || row?.favorite ||
-              row?.has_activity || row?.activity || playedAt
-            );
+            
+            const playedAt =
+              row?.last_played ||
+              row?.last_played_at ||
+              row?.played_at ||
+              row?.last_opened_at ||
+              row?.ultima_vez_jogado ||
+              row?.last_activity_at ||
+              null;
 
+            const playCount = Number(row?.play_count || 0);
+
+            const isDone = !!(
+              playCount > 0 ||
+              playedAt
+            );
+            const sortOrder = Number(row?.sort_order ?? index + 1);
             return {
               id,
               slug,
               title: String(title || "").trim(),
               playedAt,
-              isDone
+              isDone,
+              sortOrder
             };
           })
           .filter(item => item.title && normalizeSlug(item.slug || item.title) !== "intro")
-          .sort((a, b) => a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" }));
+          .sort((a, b) => {
+            const ao = Number(a.sortOrder ?? 999);
+            const bo = Number(b.sortOrder ?? 999);
+            return ao - bo;
+          });
       }
 
       function formatProgressPlayedAt(value){
@@ -3715,7 +3730,7 @@
           btn.innerHTML = `
             <div class="progressScratchNumber">${String(i + 1).padStart(2, "0")}</div>
             <div class="progressScratchTitle">${escapeHtml(item?.title || "Bloqueado")}</div>
-            <div class="progressScratchStatus">${enabled ? formatProgressPlayedAt(item?.playedAt) : "Raspe QR"}</div>
+            <div class="progressScratchStatus">${enabled ? "Clique aqui" : "Raspe QR"}</div>
           `;
 
           if (enabled){
