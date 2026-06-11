@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Filmes recomendados</title>
+
+  <style>
+    :root{
+      --bg:#000000;
+      --panel:#0b0b0b;
+      --edge:rgba(255,255,255,0.08);
+      --edge2:rgba(255,255,255,0.14);
+      --text:rgba(255,255,255,0.86);
+      --muted:rgba(255,255,255,0.60);
+      --soft:rgba(255,255,255,0.42);
+    }
+
+    html,body{
+      min-height:100%;
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    *{
+      box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    body{
+      overflow-x:hidden;
+    }
+
+    .app{
+      width:100vw;
+      min-height:100dvh;
+      display:flex;
+      justify-content:center;
+      background:#000;
+    }
+
+    .shell{
+      width:min(560px, 100%);
+      min-height:100dvh;
+      background:#000;
+      display:flex;
+      flex-direction:column;
+      position:relative;
+      isolation:isolate;
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:20;
+      padding:10px 14px 8px;
+      background:linear-gradient(180deg, rgba(0,0,0,0.98), rgba(0,0,0,0.82));
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+      border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+
+    .topbarRow{
+      display:grid;
+      grid-template-columns:42px 1fr 42px;
+      align-items:center;
+      gap:8px;
+    }
+
+    .backBtn,
+    .refreshBtn{
+      width:40px;
+      height:40px;
+      border-radius:13px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.04);
+      color:var(--text);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      font-weight:900;
+    }
+
+    .refreshBtn:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      min-width:0;
+    }
+
+    .brand img{
+      width:58px;
+      height:58px;
+      object-fit:contain;
+      opacity:.94;
+      margin-bottom:2px;
+    }
+
+    .pageTitle{
+      margin:0;
+      font-size:18px;
+      line-height:1.08;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      text-align:center;
+      color:var(--text);
+    }
+
+    .pageSub{
+      margin-top:5px;
+      font-size:12px;
+      line-height:1.3;
+      color:var(--muted);
+      text-align:center;
+    }
+
+    .content{
+      flex:1;
+      padding:16px 14px calc(26px + env(safe-area-inset-bottom, 0px));
+      background:
+        radial-gradient(100% 70% at 50% 0%, rgba(255,255,255,0.05), rgba(255,255,255,0.00) 58%),
+        #000;
+    }
+
+    .status{
+      display:none;
+      margin:8px 2px 14px;
+      padding:12px 13px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.035);
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .status.show{ display:block; }
+    .status.error{ color:rgba(255,210,210,0.92); border-color:rgba(255,80,80,0.20); }
+
+    .moviesList{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .movieCard{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      width:100%;
+      border:1px solid var(--edge);
+      border-radius:18px;
+      padding:10px;
+      background:rgba(255,255,255,0.03);
+      cursor:pointer;
+      transition:transform .10s ease, border-color .12s ease, background .12s ease;
+      text-align:left;
+      color:inherit;
+      text-decoration:none;
+    }
+
+    .movieCard:hover{
+      border-color:var(--edge2);
+      background:rgba(255,255,255,0.055);
+      transform:translateY(-1px);
+    }
+
+    .movieCard:active{
+      transform:scale(0.99);
+    }
+
+    .moviePoster{
+      flex:0 0 86px;
+      width:86px;
+      height:118px;
+      border-radius:15px;
+      overflow:hidden;
+      background:rgba(255,255,255,0.06);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid rgba(255,255,255,0.05);
+    }
+
+    .moviePoster img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      background:#111;
+    }
+
+    .posterFallback{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px;
+      color:rgba(255,255,255,0.40);
+      font-size:11px;
+      text-align:center;
+      line-height:1.2;
+    }
+
+    .movieContent{
+      flex:1 1 auto;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .movieName{
+      margin:0 0 7px;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:-0.02em;
+      line-height:1.13;
+      color:var(--text);
+    }
+
+    .movieDesc{
+      margin:0;
+      font-size:12.5px;
+      line-height:1.43;
+      color:var(--muted);
+      display:-webkit-box;
+      -webkit-line-clamp:4;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+
+    .movieMetaRow{
+      margin-top:10px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:24px;
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.04);
+      font-size:10.5px;
+      font-weight:900;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      color:var(--text);
+      white-space:nowrap;
+    }
+
+    .spice{
+      color:rgba(255,255,255,0.88);
+      letter-spacing:.02em;
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:calc(22px + env(safe-area-inset-bottom, 0px));
+      transform:translateX(-50%);
+      width:min(520px, calc(100vw - 28px));
+      padding:11px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(20,20,20,0.94);
+      color:var(--text);
+      font-size:12px;
+      display:none;
+      box-shadow:0 16px 38px rgba(0,0,0,0.55);
+      z-index:100;
+    }
+
+    .toast.show{ display:block; }
+
+    @media (max-width:390px){
+      .content{ padding-left:12px; padding-right:12px; }
+      .moviePoster{ flex-basis:78px; width:78px; height:108px; }
+      .movieName{ font-size:15px; }
+      .movieDesc{ font-size:12px; -webkit-line-clamp:3; }
+      .brand img{ width:52px; height:52px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <main class="shell">
+      <header class="topbar">
+        <div class="topbarRow">
+          <button class="backBtn" id="backBtn" aria-label="Voltar">‹</button>
+
+          <div class="brand">
+            <img src="images/logo.png" alt="Inovando Juntos">
+            <h1 class="pageTitle">Filmes recomendados</h1>
+            <div class="pageSub" id="pageSub">Carregando lista...</div>
+          </div>
+
+          <button class="refreshBtn" id="refreshBtn" aria-label="Atualizar">↻</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="status show" id="statusBox">Carregando filmes...</div>
+        <div class="moviesList" id="moviesList"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    (() => {
+      const SUPABASE_URL = "https://rsordtljnvxonaygyuxd.supabase.co";
+      const SUPABASE_ANON_KEY = "sb_publishable_iA35OOvF4WVTKJ4d7G0W7A_TR4FLwf9";
+      const MOVIES_RPC_NAME = "get_movies";
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const backBtn = document.getElementById("backBtn");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const pageSub = document.getElementById("pageSub");
+      const statusBox = document.getElementById("statusBox");
+      const moviesList = document.getElementById("moviesList");
+      const toast = document.getElementById("toast");
+
+      let authUserId = null;
+      let toastTimer = null;
+
+      async function requireAuth(){
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error){
+          console.error("[AUTH ERROR]", error);
+        }
+
+        const user = data?.user || null;
+        authUserId = user?.id || null;
+
+        if (!authUserId){
+          const redirectUrl = window.location.pathname + window.location.search;
+          window.location.replace(`/login.html?redirect=${encodeURIComponent(redirectUrl)}`);
+          return false;
+        }
+
+        return true;
+      }
+
+      function showToast(message){
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 1700);
+      }
+
+      function setStatus(message = "", type = "normal"){
+        statusBox.textContent = message;
+        statusBox.classList.toggle("show", !!message);
+        statusBox.classList.toggle("error", type === "error");
+      }
+
+      function escapeHtml(value){
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function normalizeMovie(row){
+        return {
+          id: row?.id ?? null,
+          slug: String(row?.slug || "").trim(),
+          name: String(row?.name || "Filme").trim(),
+          description: String(row?.description || "").trim(),
+          image_url: String(row?.image_url || "").trim(),
+          movie_url: String(row?.movie_url || "").trim(),
+          spice_level: Number(row?.spice_level || 0)
+        };
+      }
+
+      function isValidLink(url){
+        return /^(https?:\/\/|\/)/i.test(String(url || "").trim());
+      }
+
+      function formatSpice(level){
+        const n = Math.max(0, Math.min(5, Number(level || 0)));
+        if (!n) return "Sem nível";
+        return "🌶️".repeat(n);
+      }
+
+      function openMovie(movie){
+        const url = movie?.movie_url || "";
+
+        if (!isValidLink(url)){
+          showToast("Link da película não configurado");
+          return;
+        }
+
+        showToast("Abrindo filme...");
+
+        if (/^https?:\/\//i.test(url)){
+          window.open(url, "_blank", "noopener,noreferrer");
+        } else {
+          window.location.href = url;
+        }
+      }
+
+      function renderMovies(movies){
+        moviesList.innerHTML = "";
+
+        if (!movies.length){
+          pageSub.textContent = "0 filmes disponíveis";
+          setStatus("Nenhum filme ativo encontrado.");
+          return;
+        }
+
+        pageSub.textContent = `${movies.length} filme${movies.length === 1 ? "" : "s"} disponível${movies.length === 1 ? "" : "eis"}`;
+        setStatus("");
+
+        movies.forEach(movie => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "movieCard";
+          card.addEventListener("click", () => openMovie(movie));
+
+          const poster = movie.image_url
+            ? `<img src="${escapeHtml(movie.image_url)}" alt="${escapeHtml(movie.name)}" loading="lazy">`
+            : `<div class="posterFallback">Sem imagem</div>`;
+
+          card.innerHTML = `
+            <div class="moviePoster">${poster}</div>
+            <div class="movieContent">
+              <p class="movieName">${escapeHtml(movie.name)}</p>
+              <p class="movieDesc">${escapeHtml(movie.description)}</p>
+              <div class="movieMetaRow">
+                <span class="pill spice">${formatSpice(movie.spice_level)}</span>
+                <span class="pill">Assistir</span>
+              </div>
+            </div>
+          `;
+
+          moviesList.appendChild(card);
+        });
+      }
+
+      async function loadMovies(){
+        refreshBtn.disabled = true;
+        moviesList.innerHTML = "";
+        pageSub.textContent = "Carregando lista...";
+        setStatus("Carregando filmes...");
+
+        try{
+          const { data, error } = await supabase.rpc(MOVIES_RPC_NAME);
+          if (error) throw error;
+
+          const result = data?.get_movies ?? data;
+          const rows = Array.isArray(result?.data) ? result.data : [];
+          const movies = rows.map(normalizeMovie);
+
+          renderMovies(movies);
+        }catch(err){
+          console.error("[GET_MOVIES ERROR]", err);
+          pageSub.textContent = "Não foi possível carregar";
+          setStatus("Erro carregando filmes. Verifique o RPC get_movies, permissões e dados ativos na tabela movies.", "error");
+          showToast("Erro carregando filmes");
+        }finally{
+          refreshBtn.disabled = false;
+        }
+      }
+
+      backBtn.addEventListener("click", () => {
+        if (document.referrer){
+          history.back();
+          return;
+        }
+        window.location.href = "/";
+      });
+
+      refreshBtn.addEventListener("click", loadMovies);
+
+      async function init(){
+        const authenticated = await requireAuth();
+        if (!authenticated) return;
+        await loadMovies();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
