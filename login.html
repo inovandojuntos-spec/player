@@ -234,6 +234,29 @@
     .primaryBtn:active{ transform:scale(.99); }
     .primaryBtn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
 
+    .forgotBtn{
+      width:100%;
+      border:0;
+      background:transparent;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:750;
+      cursor:pointer;
+      margin-top:-4px;
+      padding:6px 4px 0;
+      text-decoration:underline;
+      text-underline-offset:4px;
+    }
+
+    .forgotBtn:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .forgotBtn.is-hidden{
+      display:none;
+    }
+
     .status{
       display:none;
       margin-top:14px;
@@ -321,6 +344,10 @@
         </div>
 
         <button class="primaryBtn" id="submitBtn" type="submit">Entrar</button>
+
+        <button class="forgotBtn" id="forgotPasswordBtn" type="button">
+          Não lembro minha senha
+        </button>
       </form>
 
       <div class="status" id="statusBox" role="status" aria-live="polite"></div>
@@ -352,6 +379,7 @@
     const ageConfirmField = document.getElementById("ageConfirmField");
     const ageConfirmEl = document.getElementById("ageConfirm");
     const submitBtn = document.getElementById("submitBtn");
+    const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
     const statusBox = document.getElementById("statusBox");
     const togglePassBtn = document.getElementById("togglePassBtn");
     const loginTab = document.getElementById("loginTab");
@@ -364,6 +392,7 @@
 
     loginTab.addEventListener("click", () => setMode("login"));
     registerTab.addEventListener("click", () => setMode("register"));
+    forgotPasswordBtn.addEventListener("click", async () => requestPasswordReset());
 
     authForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -430,12 +459,48 @@
       ageConfirmEl.required = isRegister;
       ageConfirmEl.disabled = !isRegister;
 
+      forgotPasswordBtn.classList.toggle("is-hidden", isRegister);
+
       if (!isRegister) {
         activationCodeEl.value = "";
         ageConfirmEl.checked = false;
       }
 
       clearStatus();
+    }
+
+
+    async function requestPasswordReset(){
+      const email = emailEl.value.trim().toLowerCase();
+
+      if (!email){
+        showStatus("Digite seu email para receber o link de recuperação.", "error");
+        emailEl.focus();
+        return;
+      }
+
+      if (!emailEl.validity.valid){
+        showStatus("O email informado não é válido.", "error");
+        emailEl.focus();
+        return;
+      }
+
+      setBusy(true, "Enviando link de recuperação...");
+
+      try{
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password.html`
+        });
+
+        if (error) throw error;
+
+        showStatus("Se este email estiver cadastrado, enviaremos um link para redefinir sua senha.", "ok");
+      }catch(err){
+        showStatus("Não foi possível enviar o link de recuperação. Tente novamente.", "error");
+        console.error("[RESET PASSWORD ERROR]", err);
+      }finally{
+        setBusy(false);
+      }
     }
 
     async function login(){
@@ -618,6 +683,7 @@
 
     function setBusy(isBusy, message = ""){
       submitBtn.disabled = isBusy;
+      forgotPasswordBtn.disabled = isBusy;
       emailEl.disabled = isBusy;
       passwordEl.disabled = isBusy;
       activationCodeEl.disabled = isBusy || mode !== "register";
@@ -669,6 +735,7 @@
 
     window.login = login;
     window.register = register;
+    window.requestPasswordReset = requestPasswordReset;
   </script>
 </body>
 </html>
