@@ -645,6 +645,7 @@
       let saving = false;
       let allPositions = [];
       let selectedPositionIds = [];
+      let contractTemplate = null;
 
       function showToast(msg){
         toast.textContent = msg;
@@ -700,6 +701,32 @@
           .order("step_order", { ascending:true });
         if (error) throw error;
         return Array.isArray(data) ? data : [];
+      }
+
+
+      async function loadContractTemplate(slug){
+        const { data, error } = await supabase.rpc("get_contract_template", {
+          p_desafio_slug: slug
+        });
+        if (error) throw error;
+        return Array.isArray(data) ? (data[0] || null) : (data || null);
+      }
+
+      async function tryLoadContractTemplate(slug){
+        try{
+          return await loadContractTemplate(slug);
+        }catch(err){
+          console.error("[CONTRACT TEMPLATE RPC ERROR]", err);
+          showError("Template do contrato não carregou. O questionário continuará usando apenas as perguntas configuradas.");
+          return null;
+        }
+      }
+
+      function applyContractTemplateToUi(){
+        const appTitle = document.getElementById("appTitle");
+        const appSubtitle = document.getElementById("appSubtitle");
+        if (appTitle && contractTemplate?.pdf_title) appTitle.textContent = contractTemplate.pdf_title;
+        if (appSubtitle && contractTemplate?.intro_text) appSubtitle.textContent = contractTemplate.intro_text;
       }
 
       function isPositionsQuestion(q){
@@ -1012,24 +1039,33 @@
         `;
       }
 
+      function pushSection(lines, title, body){
+        if (!body) return;
+        lines.push(String(title || "").trim().toUpperCase());
+        lines.push("");
+        lines.push(String(body).trim());
+        lines.push("");
+      }
+
       function buildContractText(){
         const lines = [];
         const now = new Date().toLocaleString("pt-BR");
         const selectedPositions = getSelectedPositions();
+        const tpl = contractTemplate || {};
+        const title = tpl.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES";
+        const footer = tpl.pdf_footer || "Status: assinado eletronicamente pelo usuário autenticado.";
 
-        lines.push("CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES");
-        lines.push("INOVANDO JUNTOS - DESAFIO 19");
+        lines.push(title);
+        lines.push("INOVANDO JUNTOS");
         lines.push(`Documento: ${desafioSlug}`);
         lines.push(`Data de assinatura: ${now}`);
-        lines.push("Validade: 30 (trinta) dias corridos a partir da assinatura.");
+        if (tpl.contract_type) lines.push(`Tipo de contrato: ${tpl.contract_type}`);
         lines.push("");
 
-        lines.push("CLÁUSULA RESUMIDA DO ACORDO");
-        lines.push("");
-        lines.push("Pelo presente instrumento, as partes declaram que participaram voluntariamente da Sessão de Exploração de Limites da INOVANDO JUNTOS e concordam, de forma livre, consciente e consensual, com os desejos, preferências, permissões, acessórios, fantasias, práticas, posições homologadas e limites registrados nos anexos deste documento. O objetivo deste acordo é promover comunicação, alinhamento de expectativas e respeito mútuo, servindo como referência para a realização das experiências aprovadas pelas partes. A validade deste acordo é de 30 (trinta) dias corridos, contados a partir da data de sua assinatura.");
-        lines.push("");
-        lines.push("Durante sua vigência, as partes comprometem-se a respeitar integralmente os desejos autorizados e os limites declarados neste documento, mantendo diálogo, consentimento contínuo e boa-fé em todas as interações. Em caso de descumprimento injustificado dos compromissos aqui assumidos, a parte infratora estará sujeita à penalidade simbólica de 07 (sete) dias de abstinência sexual, sem direito a reclamações, recursos, revisões, pedidos de reconsideração ou negociações extraordinárias, aceitando previamente a aplicação desta sanção de caráter exclusivamente bem-humorado e consensual.");
-        lines.push("");
+        pushSection(lines, "Introdução", tpl.intro_text);
+        pushSection(lines, "Cláusula resumida do acordo", tpl.summary_clause);
+        pushSection(lines, "Validade", tpl.validity_text);
+        pushSection(lines, "Penalidade", tpl.penalty_clause);
 
         lines.push("ANEXO I - ESCOLHAS REGISTRADAS NA APLICAÇÃO");
         lines.push("");
@@ -1061,11 +1097,10 @@
           lines.push("");
         }
 
-        lines.push("DECLARAÇÃO FINAL");
-        lines.push("As partes declaram que as escolhas acima refletem os desejos, permissões e limites informados voluntariamente na aplicação, devendo prevalecer sempre o consentimento contínuo, o respeito mútuo e a possibilidade de interromper qualquer prática a qualquer momento.");
-        lines.push("");
-        lines.push(`Assinatura eletrônica: ${signatureDataUrl ? "coletada" : "não coletada"}`);
-        lines.push("Status: assinado eletronicamente pelo usuário autenticado.");
+        pushSection(lines, "Declaração final", tpl.final_declaration || "As partes declaram que as escolhas acima refletem os desejos, permissões e limites informados voluntariamente na aplicação, devendo prevalecer sempre o consentimento contínuo, o respeito mútuo e a possibilidade de interromper qualquer prática a qualquer momento.");
+        pushSection(lines, "Assinatura eletrônica", tpl.signature_text || `Assinatura eletrônica: ${signatureDataUrl ? "coletada" : "não coletada"}`);
+
+        lines.push(footer);
 
         return lines.join("\n");
       }
@@ -1272,9 +1307,9 @@
         };
 
         drawTextBlock("INOVANDO JUNTOS", { size:18, bold:true, maxWidth:contentWidth, align:"center", lineGap:5 });
-        drawTextBlock("CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", { size:13, bold:true, maxWidth:contentWidth, align:"center", lineGap:4 });
+        drawTextBlock(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", { size:13, bold:true, maxWidth:contentWidth, align:"center", lineGap:4 });
         y -= 4;
-        drawTextBlock(`Desafio: ${desafioSlug} | Data: ${new Date().toLocaleString("pt-BR")} | Validade: 30 dias`, {
+        drawTextBlock(`Desafio: ${desafioSlug} | Data: ${new Date().toLocaleString("pt-BR")}${contractTemplate?.contract_type ? ` | Tipo: ${contractTemplate.contract_type}` : ""}`, {
           size:9.2,
           maxWidth:contentWidth,
           align:"center",
@@ -1292,9 +1327,9 @@
             return;
           }
 
-          const isMainTitle = /^(CONTRATO CIVIL-AMOROSO|INOVANDO JUNTOS)/.test(trimmed);
-          const isSection = /^(CLÁUSULA RESUMIDA DO ACORDO|ANEXO I|ANEXO II|DECLARAÇÃO FINAL)$/.test(trimmed);
-          const isMeta = /^(Documento:|Data de assinatura:|Validade:|Assinatura eletrônica:|Status:)/.test(trimmed);
+          const isMainTitle = trimmed === "INOVANDO JUNTOS" || trimmed === String(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES").trim();
+          const isSection = /^(INTRODUÇÃO|CLÁUSULA RESUMIDA DO ACORDO|VALIDADE|PENALIDADE|ANEXO I|ANEXO II|DECLARAÇÃO FINAL|ASSINATURA ELETRÔNICA)/.test(trimmed);
+          const isMeta = /^(Documento:|Data de assinatura:|Tipo de contrato:|Status:)/.test(trimmed);
           const isQuestion = /^\d+\./.test(trimmed);
 
           if (isMainTitle) return;
@@ -1604,6 +1639,8 @@
           if (!ok) return;
           desafioSlug = getDesafioSlug();
           questions = await loadQuestions(desafioSlug);
+          contractTemplate = await tryLoadContractTemplate(desafioSlug);
+          applyContractTemplateToUi();
           if (questions.some(isPositionsQuestion)){
             try{
               await loadAllPositions();
