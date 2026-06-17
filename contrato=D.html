@@ -611,6 +611,7 @@
     import SignaturePad from "https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/+esm";
     import { PDFDocument, StandardFonts, rgb } from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
     import fontkit from "https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/+esm";
+    import QRCode from "https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm";
 
     (() => {
       const SUPABASE_URL = "https://rsordtljnvxonaygyuxd.supabase.co";
@@ -641,6 +642,7 @@
       let signaturePad = null;
       let signatureDataUrl = "";
       let pdfUrl = "";
+      let contractResponseId = "";
       let saveTimer = null;
       let saving = false;
       let allPositions = [];
@@ -678,6 +680,66 @@
         if (fromQuery) return fromQuery.trim();
         const parts = window.location.pathname.split("/").map(p => p.trim()).filter(Boolean);
         return parts[parts.length - 1] || "desafio_20";
+      }
+
+      function createClientUuid(){
+        if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+          (Number(c) ^ window.crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16)
+        );
+      }
+
+      function getStableContractResponseId(){
+        if (!contractResponseId) contractResponseId = createClientUuid();
+        return contractResponseId;
+      }
+
+      function getContractNumber(){
+        const date = new Date();
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+
+        const shortId = String(getStableContractResponseId())
+          .replaceAll("-", "")
+          .slice(0, 8)
+          .toUpperCase();
+
+        return `IJ-${desafioSlug.toUpperCase()}-${y}${m}${d}-${shortId}`;
+      }
+
+      function getVerificationUrl(){
+        return `${window.location.origin}/contrato-verificar.html?id=${encodeURIComponent(getStableContractResponseId())}`;
+      }
+
+      function enrichContractMetadata(){
+        answers = {
+          ...answers,
+          contract_response_id: getStableContractResponseId(),
+          contract_number: getContractNumber(),
+          verification_url: getVerificationUrl()
+        };
+      }
+
+      function normalizeRpcSingle(data){
+        return Array.isArray(data) ? (data[0] || null) : (data || null);
+      }
+
+      function applyResponseIdentity(response){
+        const id = response?.id || response?.contract_response_id || response?.answers?.contract_response_id || "";
+        if (id) contractResponseId = String(id);
+      }
+
+      async function refreshContractResponseIdentity(){
+        try{
+          const saved = await loadExistingResponse(desafioSlug);
+          applyResponseIdentity(saved);
+          if (saved?.pdf_url) pdfUrl = saved.pdf_url || pdfUrl;
+          return saved;
+        }catch(err){
+          console.warn("[CONTRACT RESPONSE ID REFRESH WARNING]", err);
+          return null;
+        }
       }
 
       async function requireAuth(){
@@ -767,13 +829,12 @@
       }
 
       async function loadExistingResponse(slug){
-        const { data, error } = await supabase
-          .from("contract_responses")
-          .select("answers,status,rendered_text,submitted_at,signature_image,signed_at,pdf_url")
-          .eq("desafio_slug", slug)
-          .maybeSingle();
+        const { data, error } = await supabase.rpc("get_contract_response", {
+          p_desafio_slug: slug
+        });
+
         if (error) throw error;
-        return data || null;
+        return normalizeRpcSingle(data);
       }
 
       function normalizeOptions(options){
@@ -1057,6 +1118,11 @@
 
         lines.push(title);
         lines.push("INOVANDO JUNTOS");
+        lines.push("CONEXÃO • COMUNICAÇÃO • INTIMIDADE");
+        lines.push(`Documento: ${getContractNumber()}`);
+        lines.push(`ID do contrato: ${getStableContractResponseId()}`);
+        lines.push(`Verificação digital: ${getVerificationUrl()}`);
+        lines.push(`Data de emissão: ${new Date().toLocaleDateString("pt-BR")}`);
         lines.push("");
 
         pushSection(lines, "Introdução", tpl.intro_text);
@@ -1105,7 +1171,8 @@
         saving = true;
         setSaveState("Salvando rascunho...");
         try{
-          const { error } = await supabase.rpc("save_contract_response", {
+          enrichContractMetadata();
+          const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
             p_answers: answers,
             p_rendered_text: buildContractText(),
@@ -1114,6 +1181,8 @@
             p_pdf_url: pdfUrl || null
           });
           if (error) throw error;
+          applyResponseIdentity(normalizeRpcSingle(data));
+          enrichContractMetadata();
           setSaveState("Rascunho salvo", "ok");
         }catch(err){
           console.error("[SAVE DRAFT ERROR]", err);
@@ -1191,6 +1260,14 @@
           console.warn("[PDF POSITION IMAGE ERROR]", imageUrl, err);
           return null;
         }
+      }
+
+      async function createQrDataUrl(text){
+        return await QRCode.toDataURL(text, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 220
+        });
       }
 
       async function createContractPdfBytes(){
@@ -1302,6 +1379,27 @@
         };
 
         drawTextBlock("INOVANDO JUNTOS", { size:18, bold:true, maxWidth:contentWidth, align:"center", lineGap:5 });
+        drawTextBlock("CONEXÃO • COMUNICAÇÃO • INTIMIDADE", {
+          size:8.5,
+          bold:true,
+          maxWidth:contentWidth,
+          align:"center",
+          lineGap:4,
+          color:rgb(0.45, 0.45, 0.45)
+        });
+        drawTextBlock(`Documento: ${getContractNumber()}`, {
+          size:9,
+          bold:true,
+          maxWidth:contentWidth,
+          align:"center",
+          lineGap:4
+        });
+        drawTextBlock(`Data: ${new Date().toLocaleDateString("pt-BR")}`, {
+          size:8.5,
+          maxWidth:contentWidth,
+          align:"center",
+          lineGap:4
+        });
         drawTextBlock(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", { size:13, bold:true, maxWidth:contentWidth, align:"center", lineGap:4 });
         y -= 12;
         drawSeparator();
@@ -1315,11 +1413,12 @@
           }
 
           const isMainTitle = trimmed === "INOVANDO JUNTOS" || trimmed === String(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES").trim();
+          const isPremiumHeaderMeta = /^(CONEXÃO|Documento:|ID do contrato:|Verificação digital:|Data de emissão:)/.test(trimmed);
           const isSection = /^(INTRODUÇÃO|CLÁUSULA RESUMIDA DO ACORDO|VALIDADE|PENALIDADE|ANEXO I|ANEXO II|DECLARAÇÃO FINAL|ASSINATURA ELETRÔNICA)/.test(trimmed);
-          const isMeta = /^(Documento:|Data de assinatura:|Tipo de contrato:|Status:)/.test(trimmed);
+          const isMeta = /^(Data de assinatura:|Tipo de contrato:|Status:)/.test(trimmed);
           const isQuestion = /^\d+\./.test(trimmed);
 
-          if (isMainTitle) return;
+          if (isMainTitle || isPremiumHeaderMeta) return;
           if (isSection) drawHeading(trimmed, 11.5);
           else if (isMeta) drawTextBlock(trimmed, { size:9.2, bold:true, lineGap:4 });
           else if (isQuestion) drawTextBlock(trimmed, { size:9.6, bold:true, lineGap:4 });
@@ -1417,10 +1516,80 @@
           drawTextBlock(`Assinado em: ${new Date().toLocaleString("pt-BR")}`, { size:9.5 });
         }
 
+        const drawVerificationQrBlock = async () => {
+          const verificationUrl = getVerificationUrl();
+          const contractNumber = getContractNumber();
+          const qrDataUrl = await createQrDataUrl(verificationUrl);
+          const qrImage = await pdfDoc.embedPng(qrDataUrl);
+          const blockHeight = 128;
+          const qrSize = 92;
+
+          ensureSpace(blockHeight + 28);
+          y -= 10;
+          drawSeparator();
+          ensureSpace(blockHeight + 18);
+
+          const blockY = y - blockHeight;
+          page.drawRectangle({
+            x:margin,
+            y:blockY,
+            width:contentWidth,
+            height:blockHeight,
+            borderColor:rgb(0.72, 0.72, 0.72),
+            borderWidth:1,
+            color:rgb(0.985, 0.985, 0.985)
+          });
+
+          page.drawImage(qrImage, {
+            x:margin + 16,
+            y:blockY + 18,
+            width:qrSize,
+            height:qrSize
+          });
+
+          const textX = margin + 126;
+          let textY = blockY + blockHeight - 27;
+          const textMaxWidth = contentWidth - 146;
+
+          page.drawText("VERIFICAÇÃO DIGITAL", {
+            x:textX,
+            y:textY,
+            size:10.5,
+            font:bold,
+            color:rgb(0.08, 0.08, 0.08)
+          });
+
+          textY -= 17;
+          wrapPdfText(`Contrato: ${contractNumber}`, bold, 8.5, textMaxWidth).forEach(line => {
+            page.drawText(line, { x:textX, y:textY, size:8.5, font:bold, color:rgb(0.08, 0.08, 0.08) });
+            textY -= 12;
+          });
+
+          wrapPdfText(`ID: ${getStableContractResponseId()}`, font, 7.8, textMaxWidth).forEach(line => {
+            page.drawText(line, { x:textX, y:textY, size:7.8, font, color:rgb(0.22, 0.22, 0.22) });
+            textY -= 11;
+          });
+
+          wrapPdfText(`URL: ${verificationUrl}`, font, 7.4, textMaxWidth).forEach(line => {
+            page.drawText(line, { x:textX, y:textY, size:7.4, font, color:rgb(0.22, 0.22, 0.22) });
+            textY -= 10.5;
+          });
+
+          wrapPdfText("O QR aponta para a página de verificação do contrato, não para o arquivo bruto do PDF.", font, 7.6, textMaxWidth).forEach(line => {
+            page.drawText(line, { x:textX, y:textY, size:7.6, font, color:rgb(0.35, 0.35, 0.35) });
+            textY -= 10.5;
+          });
+
+          y -= blockHeight + 18;
+        };
+
+        await drawVerificationQrBlock();
+
         return await pdfDoc.save();
       }
 
       async function uploadContractPdf(){
+        enrichContractMetadata();
         const pdfBytes = await createContractPdfBytes();
         const filePath = `${authUserId}/${desafioSlug}-${Date.now()}.pdf`;
         const file = new File([pdfBytes], `${desafioSlug}-contrato.pdf`, { type: "application/pdf" });
@@ -1439,7 +1608,8 @@
       }
 
       async function updatePdfUrl(finalPdfUrl){
-        const { error } = await supabase.rpc("save_contract_response", {
+        enrichContractMetadata();
+        const { data, error } = await supabase.rpc("save_contract_response", {
           p_desafio_slug: desafioSlug,
           p_answers: answers,
           p_rendered_text: buildContractText(),
@@ -1449,6 +1619,8 @@
         });
 
         if (error) throw error;
+        applyResponseIdentity(normalizeRpcSingle(data));
+        enrichContractMetadata();
       }
 
       async function submitContract(){
@@ -1456,7 +1628,8 @@
         backBtn.disabled = true;
         setSaveState("Finalizando contrato...");
         try{
-          const { error } = await supabase.rpc("save_contract_response", {
+          enrichContractMetadata();
+          const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
             p_answers: answers,
             p_rendered_text: buildContractText(),
@@ -1465,6 +1638,10 @@
             p_pdf_url: pdfUrl || null
           });
           if (error) throw error;
+
+          applyResponseIdentity(normalizeRpcSingle(data));
+          await refreshContractResponseIdentity();
+          enrichContractMetadata();
 
           setSaveState("Gerando PDF...");
           pdfUrl = await uploadContractPdf();
@@ -1646,6 +1823,9 @@
           }
           const existing = await loadExistingResponse(desafioSlug);
           answers = existing?.answers && typeof existing.answers === "object" ? existing.answers : {};
+          applyResponseIdentity(existing);
+          contractResponseId = contractResponseId || answers.contract_response_id || createClientUuid();
+          enrichContractMetadata();
           const positionQuestion = questions.find(isPositionsQuestion);
           selectedPositionIds = positionQuestion ? normalizeSelectedPositions(answers[positionQuestion.question_key]) : [];
           syncPositionsAnswer();
