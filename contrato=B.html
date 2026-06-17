@@ -639,9 +639,7 @@
       let isSignatureStep = false;
       let isReviewStep = false;
       let signaturePad = null;
-      let signatureDataUrl1 = "";
-      let signatureDataUrl2 = "";
-      let currentSignatureOwner = 1;
+      let signatureDataUrl = "";
       let pdfUrl = "";
       let saveTimer = null;
       let saving = false;
@@ -799,11 +797,10 @@
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, rect.width, rect.height);
 
-        const activeSignatureDataUrl = currentSignatureOwner === 2 ? signatureDataUrl2 : signatureDataUrl1;
-        if (activeSignatureDataUrl){
+        if (signatureDataUrl){
           const img = new Image();
           img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
-          img.src = activeSignatureDataUrl;
+          img.src = signatureDataUrl;
         }
       }
 
@@ -821,81 +818,38 @@
           throttle: 12
         });
 
-        const activeSignatureDataUrl = currentSignatureOwner === 2 ? signatureDataUrl2 : signatureDataUrl1;
-        if (activeSignatureDataUrl){
-          signaturePad.fromDataURL(activeSignatureDataUrl, {
+        if (signatureDataUrl){
+          signaturePad.fromDataURL(signatureDataUrl, {
             ratio: Math.max(window.devicePixelRatio || 1, 1)
           });
         }
 
         signaturePad.addEventListener("endStroke", () => {
-          if (currentSignatureOwner === 2) signatureDataUrl2 = signaturePad.toDataURL("image/png");
-          else signatureDataUrl1 = signaturePad.toDataURL("image/png");
-          syncSignatureAnswers();
+          signatureDataUrl = signaturePad.toDataURL("image/png");
           showError("");
           scheduleDraftSave();
-          renderStep();
         });
 
         document.getElementById("clearSignatureBtn")?.addEventListener("click", () => {
           signaturePad.clear();
-          if (currentSignatureOwner === 2) signatureDataUrl2 = "";
-          else signatureDataUrl1 = "";
-          syncSignatureAnswers();
+          signatureDataUrl = "";
           showError("");
           scheduleDraftSave();
-          renderStep();
         });
       }
 
-      function syncSignatureAnswers(){
-        answers = {
-          ...answers,
-          signature_participant_1: signatureDataUrl1 || "",
-          signature_participant_2: signatureDataUrl2 || ""
-        };
-      }
-
       function renderSignatureStep(){
-        const activeTitle = currentSignatureOwner === 2 ? "Assinatura Participante 2" : "Assinatura Participante 1";
         questionBox.innerHTML = `
           <h2 class="questionTitle">Assinatura eletrônica</h2>
-          <p class="questionDesc">Cada participante deve assinar com o dedo ou mouse dentro do quadro branco. As duas assinaturas serão anexadas ao contrato final.</p>
-
-          <div class="signatureTools" style="justify-content:flex-start;">
-            <button class="miniBtn ${currentSignatureOwner === 1 ? "selected" : ""}" id="signatureOwner1Btn" type="button">Assinatura Participante 1 ${signatureDataUrl1 ? "✓" : ""}</button>
-            <button class="miniBtn ${currentSignatureOwner === 2 ? "selected" : ""}" id="signatureOwner2Btn" type="button">Assinatura Participante 2 ${signatureDataUrl2 ? "✓" : ""}</button>
-          </div>
-
-          <p class="questionDesc" style="margin-top:14px;font-weight:900;color:rgba(255,255,255,.86);">${activeTitle}</p>
+          <p class="questionDesc">Assine com o dedo ou mouse dentro do quadro branco. Esta assinatura será anexada ao contrato final.</p>
           <div class="signatureWrap">
             <canvas id="signatureCanvas" class="signatureCanvas" aria-label="Campo de assinatura"></canvas>
           </div>
           <div class="signatureTools">
-            <button class="miniBtn" id="clearSignatureBtn" type="button">Limpar assinatura atual</button>
+            <button class="miniBtn" id="clearSignatureBtn" type="button">Limpar assinatura</button>
             <span class="questionDesc" style="margin:0;">Use uma assinatura legível.</span>
           </div>
         `;
-
-        document.getElementById("signatureOwner1Btn")?.addEventListener("click", () => {
-          if (signaturePad && !signaturePad.isEmpty()){
-            if (currentSignatureOwner === 2) signatureDataUrl2 = signaturePad.toDataURL("image/png");
-            else signatureDataUrl1 = signaturePad.toDataURL("image/png");
-            syncSignatureAnswers();
-          }
-          currentSignatureOwner = 1;
-          renderStep();
-        });
-
-        document.getElementById("signatureOwner2Btn")?.addEventListener("click", () => {
-          if (signaturePad && !signaturePad.isEmpty()){
-            if (currentSignatureOwner === 2) signatureDataUrl2 = signaturePad.toDataURL("image/png");
-            else signatureDataUrl1 = signaturePad.toDataURL("image/png");
-            syncSignatureAnswers();
-          }
-          currentSignatureOwner = 2;
-          renderStep();
-        });
 
         requestAnimationFrame(initSignaturePad);
       }
@@ -1024,8 +978,7 @@
             <p class="questionDesc">Confira as respostas e a assinatura antes de finalizar. Depois de concluir, o contrato será salvo e o PDF será gerado.</p>
             <div class="reviewBox">${escapeHtml(buildContractText())}</div>
             ${renderSelectedPositionsReviewHtml()}
-            ${signatureDataUrl1 ? `<div class="signaturePreview"><p class="questionDesc" style="margin:0 0 8px;">Assinatura Participante 1</p><img src="${signatureDataUrl1}" alt="Assinatura Participante 1"></div>` : ""}
-            ${signatureDataUrl2 ? `<div class="signaturePreview"><p class="questionDesc" style="margin:0 0 8px;">Assinatura Participante 2</p><img src="${signatureDataUrl2}" alt="Assinatura Participante 2"></div>` : ""}
+            ${signatureDataUrl ? `<div class="signaturePreview"><img src="${signatureDataUrl}" alt="Assinatura do usuário"></div>` : ""}
             ${pdfUrl ? `<div class="pdfBox">PDF gerado: <a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">Baixar contrato em PDF</a></div>` : ""}
           `;
           return;
@@ -1047,7 +1000,7 @@
 
       function validateCurrentStep(){
         if (isReviewStep) return true;
-        if (isSignatureStep) return !!signatureDataUrl1 && !!signatureDataUrl2;
+        if (isSignatureStep) return !!signatureDataUrl;
         const q = questions[currentIndex];
         if (isPositionsQuestion(q)) return selectedPositionIds.length > 0;
         if (!q?.required) return true;
@@ -1145,7 +1098,7 @@
         }
 
         pushSection(lines, "Declaração final", tpl.final_declaration || "As partes declaram que as escolhas acima refletem os desejos, permissões e limites informados voluntariamente na aplicação, devendo prevalecer sempre o consentimento contínuo, o respeito mútuo e a possibilidade de interromper qualquer prática a qualquer momento.");
-        pushSection(lines, "Assinatura eletrônica", tpl.signature_text || `Assinatura Participante 1: ${signatureDataUrl1 ? "coletada" : "não coletada"}\nAssinatura Participante 2: ${signatureDataUrl2 ? "coletada" : "não coletada"}`);
+        pushSection(lines, "Assinatura eletrônica", tpl.signature_text || `Assinatura eletrônica: ${signatureDataUrl ? "coletada" : "não coletada"}`);
 
         lines.push(footer);
 
@@ -1162,7 +1115,7 @@
             p_answers: answers,
             p_rendered_text: buildContractText(),
             p_submit: false,
-            p_signature_image: signatureDataUrl1 || null,
+            p_signature_image: signatureDataUrl || null,
             p_pdf_url: pdfUrl || null
           });
           if (error) throw error;
@@ -1444,46 +1397,37 @@
           }
         }
 
-        if (signatureDataUrl1 || signatureDataUrl2){
-          if (y < 220){
+        if (signatureDataUrl){
+          if (y < 180){
             page = pdfDoc.addPage([pageWidth, pageHeight]);
             y = pageHeight - margin;
           }
 
           y -= 10;
-          drawHeading("ASSINATURAS ELETRÔNICAS", 11.5);
+          drawHeading("ASSINATURA ELETRÔNICA", 11.5);
 
-          const drawSignatureImage = async (dataUrl, label) => {
-            if (!dataUrl) return;
-            ensureSpace(150);
-            drawTextBlock(label, { size:9.8, bold:true, lineGap:4 });
+          const pngImage = await pdfDoc.embedPng(signatureDataUrl);
+          const imgWidth = 260;
+          const imgHeight = Math.min(105, (pngImage.height / pngImage.width) * imgWidth);
 
-            const pngImage = await pdfDoc.embedPng(dataUrl);
-            const imgWidth = 260;
-            const imgHeight = Math.min(92, (pngImage.height / pngImage.width) * imgWidth);
+          page.drawRectangle({
+            x:margin,
+            y:y - imgHeight - 10,
+            width:imgWidth + 20,
+            height:imgHeight + 18,
+            borderColor:rgb(0.75, 0.75, 0.75),
+            borderWidth:1,
+            color:rgb(1, 1, 1)
+          });
 
-            page.drawRectangle({
-              x:margin,
-              y:y - imgHeight - 10,
-              width:imgWidth + 20,
-              height:imgHeight + 18,
-              borderColor:rgb(0.75, 0.75, 0.75),
-              borderWidth:1,
-              color:rgb(1, 1, 1)
-            });
+          page.drawImage(pngImage, {
+            x:margin + 10,
+            y:y - imgHeight - 1,
+            width:imgWidth,
+            height:imgHeight
+          });
 
-            page.drawImage(pngImage, {
-              x:margin + 10,
-              y:y - imgHeight - 1,
-              width:imgWidth,
-              height:imgHeight
-            });
-
-            y -= imgHeight + 24;
-          };
-
-          await drawSignatureImage(signatureDataUrl1, "Assinatura Participante 1");
-          await drawSignatureImage(signatureDataUrl2, "Assinatura Participante 2");
+          y -= imgHeight + 26;
           drawTextBlock(`Assinado em: ${new Date().toLocaleString("pt-BR")}`, { size:9.5 });
         }
 
@@ -1514,7 +1458,7 @@
           p_answers: answers,
           p_rendered_text: buildContractText(),
           p_submit: true,
-          p_signature_image: signatureDataUrl1 || null,
+          p_signature_image: signatureDataUrl || null,
           p_pdf_url: finalPdfUrl || null
         });
 
@@ -1531,7 +1475,7 @@
             p_answers: answers,
             p_rendered_text: buildContractText(),
             p_submit: true,
-            p_signature_image: signatureDataUrl1 || null,
+            p_signature_image: signatureDataUrl || null,
             p_pdf_url: pdfUrl || null
           });
           if (error) throw error;
@@ -1667,7 +1611,7 @@
         }
 
         if (!validateCurrentStep()){
-          showError(isSignatureStep ? "As duas assinaturas são obrigatórias para finalizar." : "Esta resposta é obrigatória para continuar.");
+          showError(isSignatureStep ? "A assinatura é obrigatória para finalizar." : "Esta resposta é obrigatória para continuar.");
           return;
         }
 
@@ -1719,9 +1663,7 @@
           const positionQuestion = questions.find(isPositionsQuestion);
           selectedPositionIds = positionQuestion ? normalizeSelectedPositions(answers[positionQuestion.question_key]) : [];
           syncPositionsAnswer();
-          signatureDataUrl1 = answers.signature_participant_1 || existing?.signature_image || "";
-          signatureDataUrl2 = answers.signature_participant_2 || "";
-          syncSignatureAnswers();
+          signatureDataUrl = existing?.signature_image || "";
           pdfUrl = existing?.pdf_url || "";
           if (existing?.status === "submitted") setSaveState("Contrato já enviado. Você pode revisar e reenviar se necessário.", "ok");
           renderStep();
