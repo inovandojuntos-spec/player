@@ -159,6 +159,35 @@
 
     .fieldArea{ margin-top:18px; display:flex; flex-direction:column; gap:10px; }
 
+    .infoBox{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));
+      padding:15px;
+      color:rgba(255,255,255,.82);
+      font-size:14px;
+      line-height:1.5;
+      white-space:pre-wrap;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+    }
+
+    .infoBadge{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      max-width:100%;
+      margin-bottom:10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.62);
+      padding:5px 9px;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+
     .option{
       width:100%;
       display:flex;
@@ -315,6 +344,10 @@
     }
     .saveState.ok{ color:rgba(131,240,161,.85); }
     .saveState.err{ color:rgba(255,92,92,.9); }
+
+    .footer.singleAction{
+      grid-template-columns:1fr;
+    }
 
     .footer{
       position:absolute;
@@ -639,6 +672,7 @@
       let currentIndex = 0;
       let isSignatureStep = false;
       let isReviewStep = false;
+      let isSubmittedSummary = false;
       let signaturePad = null;
       let signatureDataUrl = "";
       let pdfUrl = "";
@@ -728,6 +762,75 @@
       function applyResponseIdentity(response){
         const id = response?.id || response?.contract_response_id || response?.answers?.contract_response_id || "";
         if (id) contractResponseId = String(id);
+      }
+
+      function isFinalizedResponse(response){
+        return String(response?.status || "").toLowerCase() === "submitted" || !!response?.submitted_at || !!response?.signed_at;
+      }
+
+      function formatDateTimePt(value){
+        if (!value) return "Não informado";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString("pt-BR");
+      }
+
+      function goToChallenge(){
+        window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
+      }
+
+
+      async function refreshSubmittedSummaryPdf(){
+        if (!pdfUrl) return;
+        const link = document.getElementById("submittedPdfLink");
+        if (link) link.href = pdfUrl;
+      }
+
+      function renderSubmittedSummary(response = {}){
+        isSubmittedSummary = true;
+        isReviewStep = false;
+        isSignatureStep = false;
+        showError("");
+        clearTimeout(saveTimer);
+
+        applyResponseIdentity(response);
+        answers = response?.answers && typeof response.answers === "object" ? response.answers : answers;
+        enrichContractMetadata();
+        signatureDataUrl = response?.signature_image || signatureDataUrl || "";
+        pdfUrl = response?.pdf_url || pdfUrl || "";
+
+        const contractNumber = answers.contract_number || getContractNumber();
+        const submittedAt = response?.submitted_at || response?.signed_at || "";
+        const renderedText = response?.rendered_text || buildContractText();
+
+        stepInfo.textContent = "Finalizado";
+        barFill.style.width = "100%";
+        setSaveState("Contrato já assinado. Modo somente leitura.", "ok");
+
+        document.querySelector(".footer")?.classList.add("singleAction");
+        backBtn.style.display = "none";
+
+        questionBox.innerHTML = `
+          <h2 class="questionTitle">Contrato finalizado</h2>
+          <p class="questionDesc">Este contrato já foi assinado e está bloqueado para edição. Você pode consultar o resumo ou baixar o PDF final.</p>
+
+          <div class="pdfBox">
+            <strong>Documento:</strong> ${escapeHtml(contractNumber)}<br>
+            <strong>ID:</strong> ${escapeHtml(getStableContractResponseId())}<br>
+            <strong>Status:</strong> Assinado eletronicamente<br>
+            <strong>Assinado em:</strong> ${escapeHtml(formatDateTimePt(submittedAt))}
+          </div>
+
+          ${pdfUrl ? `<div class="pdfBox">PDF final: <a id="submittedPdfLink" href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">Baixar contrato em PDF</a></div>` : `<div class="pdfBox">PDF ainda não localizado nesta resposta. Verifique se o campo <strong>pdf_url</strong> foi salvo pelo RPC.</div>`}
+
+          ${signatureDataUrl ? `<div class="signaturePreview"><img src="${signatureDataUrl}" alt="Assinatura eletrônica registrada"></div>` : ""}
+
+          <div class="reviewBox">${escapeHtml(renderedText)}</div>
+        `;
+
+        backBtn.disabled = true;
+        nextBtn.disabled = false;
+        nextBtn.textContent = "Voltar ao desafio";
       }
 
       async function refreshContractResponseIdentity(){
@@ -843,6 +946,25 @@
         try{ return JSON.parse(options); }catch{ return []; }
       }
 
+      function isInfoQuestion(q){
+        return String(q?.question_type || "").trim().toLowerCase() === "info";
+      }
+
+      function getInfoAnswerText(q){
+        return String(q?.description || q?.title || "").trim();
+      }
+
+      function applyInformativeAnswers(){
+        if (!Array.isArray(questions) || !questions.length) return;
+        const nextAnswers = { ...answers };
+        questions.forEach(q => {
+          if (isInfoQuestion(q)){
+            nextAnswers[q.question_key] = getInfoAnswerText(q);
+          }
+        });
+        answers = nextAnswers;
+      }
+
       function resizeSignatureCanvas(){
         const canvas = document.getElementById("signatureCanvas");
         if (!canvas) return;
@@ -930,6 +1052,16 @@
         `;
       }
 
+      function renderInfo(q){
+        const infoText = getInfoAnswerText(q);
+        answers = { ...answers, [q.question_key]: infoText };
+        return `
+          <div class="infoBox" role="note" aria-readonly="true">
+            <div>${escapeHtml(infoText)}</div>
+          </div>
+        `;
+      }
+
       function renderSingle(q){
         const opts = normalizeOptions(q.options);
         const current = String(getAnswer(q.question_key) || "");
@@ -985,6 +1117,7 @@
 
       function renderQuestionInput(q){
         if (isPositionsQuestion(q)) return renderPositionsQuestion();
+        if (isInfoQuestion(q)) return renderInfo(q);
         if (q.question_type === "text") return renderText(q);
         if (q.question_type === "single") return renderSingle(q);
         if (q.question_type === "multiple") return renderMultiple(q);
@@ -995,6 +1128,10 @@
       function attachQuestionListeners(q){
         if (isPositionsQuestion(q)){
           document.getElementById("openPositionsBtn")?.addEventListener("click", openPositionsModal);
+          return;
+        }
+
+        if (isInfoQuestion(q)){
           return;
         }
 
@@ -1024,6 +1161,8 @@
       }
 
       function renderStep(){
+        document.querySelector(".footer")?.classList.remove("singleAction");
+        backBtn.style.display = "";
         showError("");
         const totalSteps = questions.length + 2;
         const displayStep = isReviewStep ? totalSteps : isSignatureStep ? questions.length + 1 : currentIndex + 1;
@@ -1053,7 +1192,7 @@
         const q = questions[currentIndex];
         questionBox.innerHTML = `
           <h2 class="questionTitle">${escapeHtml(q.title)}</h2>
-          ${isPositionsQuestion(q) ? `<p class="questionDesc">Selecione as posições que deseja experimentar durante a experiência.</p>` : (q.description ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : "")}
+          ${isPositionsQuestion(q) ? `<p class="questionDesc">Selecione as posições que deseja experimentar durante a experiência.</p>` : (!isInfoQuestion(q) && q.description ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : "")}
           <div class="fieldArea">${renderQuestionInput(q)}</div>
         `;
         attachQuestionListeners(q);
@@ -1064,6 +1203,10 @@
         if (isSignatureStep) return !!signatureDataUrl;
         const q = questions[currentIndex];
         if (isPositionsQuestion(q)) return selectedPositionIds.length > 0;
+        if (isInfoQuestion(q)){
+          answers = { ...answers, [q.question_key]: getInfoAnswerText(q) };
+          return true;
+        }
         if (!q?.required) return true;
         const value = getAnswer(q.question_key);
         if (q.question_type === "multiple") return Array.isArray(value) && value.length > 0;
@@ -1071,6 +1214,7 @@
       }
 
       function getOptionLabel(q, value){
+        if (isInfoQuestion(q)) return getInfoAnswerText(q);
         if (q.question_type === "yes_no") return value === "yes" ? "Sim" : value === "no" ? "Não" : "";
         const opt = normalizeOptions(q.options).find(o => String(o.value ?? o.label ?? "") === String(value));
         return opt?.label ?? value;
@@ -1121,7 +1265,6 @@
         lines.push("CONEXÃO • COMUNICAÇÃO • INTIMIDADE");
         lines.push(`Documento: ${getContractNumber()}`);
         lines.push(`ID do contrato: ${getStableContractResponseId()}`);
-        lines.push(`Verificação digital: ${getVerificationUrl()}`);
         lines.push(`Data de emissão: ${new Date().toLocaleDateString("pt-BR")}`);
         lines.push("");
 
@@ -1137,7 +1280,9 @@
           const raw = getAnswer(q.question_key);
           let rendered = "";
 
-          if (isPositionsQuestion(q)) {
+          if (isInfoQuestion(q)) {
+            rendered = getInfoAnswerText(q);
+          } else if (isPositionsQuestion(q)) {
             rendered = selectedPositions.map(getPositionName).filter(Boolean).join(", ");
           } else if (Array.isArray(raw)) {
             rendered = raw.map(v => getOptionLabel(q, v)).filter(Boolean).join(", ");
@@ -1167,10 +1312,12 @@
       }
 
       async function saveDraft(){
+        if (isSubmittedSummary) return;
         if (!authUserId || !questions.length || saving) return;
         saving = true;
         setSaveState("Salvando rascunho...");
         try{
+          applyInformativeAnswers();
           enrichContractMetadata();
           const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
@@ -1193,6 +1340,7 @@
       }
 
       function scheduleDraftSave(){
+        if (isSubmittedSummary) return;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveDraft, 550);
       }
@@ -1225,8 +1373,8 @@
 
           if (regularBytes && boldBytes){
             return {
-              font: await pdfDoc.embedFont(regularBytes, { subset:true }),
-              bold: await pdfDoc.embedFont(boldBytes, { subset:true })
+              font: await pdfDoc.embedFont(regularBytes, { subset:false }),
+              bold: await pdfDoc.embedFont(boldBytes, { subset:false })
             };
           }
         }catch(err){
@@ -1273,17 +1421,36 @@
       async function createContractPdfBytes(){
         const pdfDoc = await PDFDocument.create();
         const { font, bold } = await loadPdfFonts(pdfDoc);
+        const watermarkLogo = await embedRemoteImage(pdfDoc, "images/logo_bn.png");
 
         const margin = 48;
         const pageWidth = 595.28;
         const pageHeight = 841.89;
+
+        function drawWatermark(targetPage){
+          if (!watermarkLogo) return;
+
+          const wmWidth = 260;
+          const wmHeight = (watermarkLogo.height / watermarkLogo.width) * wmWidth;
+
+          targetPage.drawImage(watermarkLogo, {
+            x:(pageWidth - wmWidth) / 2,
+            y:(pageHeight - wmHeight) / 2,
+            width:wmWidth,
+            height:wmHeight,
+            opacity:0.055
+          });
+        }
+
         let page = pdfDoc.addPage([pageWidth, pageHeight]);
+        drawWatermark(page);
         let y = pageHeight - margin;
         const contentWidth = pageWidth - (margin * 2);
 
         const ensureSpace = (requiredHeight = 70) => {
           if (y < margin + requiredHeight){
             page = pdfDoc.addPage([pageWidth, pageHeight]);
+            drawWatermark(page);
             y = pageHeight - margin;
           }
         };
@@ -1378,11 +1545,62 @@
           drawSeparator();
         };
 
-        drawTextBlock("INOVANDO JUNTOS", { size:18, bold:true, maxWidth:contentWidth, align:"center", lineGap:5 });
+        const drawImageInsideBox = (embeddedImage, x, yPos, boxW, boxH) => {
+          if (!embeddedImage) return;
+          const ratio = embeddedImage.width / embeddedImage.height;
+          let width = boxW;
+          let height = boxH;
+          if (ratio > boxW / boxH) height = boxW / ratio;
+          else width = boxH * ratio;
+
+          page.drawImage(embeddedImage, {
+            x:x + (boxW - width) / 2,
+            y:yPos + (boxH - height) / 2,
+            width,
+            height
+          });
+        };
+
+        const drawHeaderBrandAssets = async () => {
+          const assetSize = 64;
+          const assetY = pageHeight - margin - assetSize;
+
+          try{
+            const logoImage = await embedRemoteImage(pdfDoc, "images/logo_bn.png");
+            drawImageInsideBox(logoImage, margin, assetY, assetSize, assetSize);
+          }catch(err){
+            console.warn("[PDF HEADER LOGO WARNING]", err);
+          }
+
+          try{
+            const qrDataUrl = await createQrDataUrl(getVerificationUrl());
+            const qrImage = await pdfDoc.embedPng(qrDataUrl);
+            drawImageInsideBox(qrImage, pageWidth - margin - assetSize, assetY, assetSize, assetSize);
+          }catch(err){
+            console.warn("[PDF HEADER QR WARNING]", err);
+          }
+        };
+
+        await drawHeaderBrandAssets();
+
+        const headerAssetSize = 64;
+        const headerAssetGap = 18;
+        const headerTextIndent = headerAssetSize + headerAssetGap;
+        const headerTextWidth = contentWidth - (headerTextIndent * 2);
+
+        drawTextBlock("INOVANDO JUNTOS", {
+          size:18,
+          bold:true,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
+          align:"center",
+          lineGap:5
+        });
         drawTextBlock("CONEXÃO • COMUNICAÇÃO • INTIMIDADE", {
           size:8.5,
           bold:true,
-          maxWidth:contentWidth,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
           align:"center",
           lineGap:4,
           color:rgb(0.45, 0.45, 0.45)
@@ -1390,17 +1608,26 @@
         drawTextBlock(`Documento: ${getContractNumber()}`, {
           size:9,
           bold:true,
-          maxWidth:contentWidth,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
           align:"center",
           lineGap:4
         });
         drawTextBlock(`Data: ${new Date().toLocaleDateString("pt-BR")}`, {
           size:8.5,
-          maxWidth:contentWidth,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
           align:"center",
           lineGap:4
         });
-        drawTextBlock(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", { size:13, bold:true, maxWidth:contentWidth, align:"center", lineGap:4 });
+        drawTextBlock(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", {
+          size:13,
+          bold:true,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
+          align:"center",
+          lineGap:4
+        });
         y -= 12;
         drawSeparator();
 
@@ -1413,7 +1640,7 @@
           }
 
           const isMainTitle = trimmed === "INOVANDO JUNTOS" || trimmed === String(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES").trim();
-          const isPremiumHeaderMeta = /^(CONEXÃO|Documento:|ID do contrato:|Verificação digital:|Data de emissão:)/.test(trimmed);
+          const isPremiumHeaderMeta = /^(CONEXÃO|Documento:|ID do contrato:|Data de emissão:)/.test(trimmed);
           const isSection = /^(INTRODUÇÃO|CLÁUSULA RESUMIDA DO ACORDO|VALIDADE|PENALIDADE|ANEXO I|ANEXO II|DECLARAÇÃO FINAL|ASSINATURA ELETRÔNICA)/.test(trimmed);
           const isMeta = /^(Data de assinatura:|Tipo de contrato:|Status:)/.test(trimmed);
           const isQuestion = /^\d+\./.test(trimmed);
@@ -1486,6 +1713,7 @@
         if (signatureDataUrl){
           if (y < 180){
             page = pdfDoc.addPage([pageWidth, pageHeight]);
+            drawWatermark(page);
             y = pageHeight - margin;
           }
 
@@ -1516,79 +1744,11 @@
           drawTextBlock(`Assinado em: ${new Date().toLocaleString("pt-BR")}`, { size:9.5 });
         }
 
-        const drawVerificationQrBlock = async () => {
-          const verificationUrl = getVerificationUrl();
-          const contractNumber = getContractNumber();
-          const qrDataUrl = await createQrDataUrl(verificationUrl);
-          const qrImage = await pdfDoc.embedPng(qrDataUrl);
-          const blockHeight = 128;
-          const qrSize = 92;
-
-          ensureSpace(blockHeight + 28);
-          y -= 10;
-          drawSeparator();
-          ensureSpace(blockHeight + 18);
-
-          const blockY = y - blockHeight;
-          page.drawRectangle({
-            x:margin,
-            y:blockY,
-            width:contentWidth,
-            height:blockHeight,
-            borderColor:rgb(0.72, 0.72, 0.72),
-            borderWidth:1,
-            color:rgb(0.985, 0.985, 0.985)
-          });
-
-          page.drawImage(qrImage, {
-            x:margin + 16,
-            y:blockY + 18,
-            width:qrSize,
-            height:qrSize
-          });
-
-          const textX = margin + 126;
-          let textY = blockY + blockHeight - 27;
-          const textMaxWidth = contentWidth - 146;
-
-          page.drawText("VERIFICAÇÃO DIGITAL", {
-            x:textX,
-            y:textY,
-            size:10.5,
-            font:bold,
-            color:rgb(0.08, 0.08, 0.08)
-          });
-
-          textY -= 17;
-          wrapPdfText(`Contrato: ${contractNumber}`, bold, 8.5, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:8.5, font:bold, color:rgb(0.08, 0.08, 0.08) });
-            textY -= 12;
-          });
-
-          wrapPdfText(`ID: ${getStableContractResponseId()}`, font, 7.8, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:7.8, font, color:rgb(0.22, 0.22, 0.22) });
-            textY -= 11;
-          });
-
-          wrapPdfText(`URL: ${verificationUrl}`, font, 7.4, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:7.4, font, color:rgb(0.22, 0.22, 0.22) });
-            textY -= 10.5;
-          });
-
-          wrapPdfText("O QR aponta para a página de verificação do contrato, não para o arquivo bruto do PDF.", font, 7.6, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:7.6, font, color:rgb(0.35, 0.35, 0.35) });
-            textY -= 10.5;
-          });
-
-          y -= blockHeight + 18;
-        };
-
-        await drawVerificationQrBlock();
-
         return await pdfDoc.save();
       }
 
       async function uploadContractPdf(){
+        applyInformativeAnswers();
         enrichContractMetadata();
         const pdfBytes = await createContractPdfBytes();
         const filePath = `${authUserId}/${desafioSlug}-${Date.now()}.pdf`;
@@ -1608,6 +1768,7 @@
       }
 
       async function updatePdfUrl(finalPdfUrl){
+        applyInformativeAnswers();
         enrichContractMetadata();
         const { data, error } = await supabase.rpc("save_contract_response", {
           p_desafio_slug: desafioSlug,
@@ -1628,6 +1789,7 @@
         backBtn.disabled = true;
         setSaveState("Finalizando contrato...");
         try{
+          applyInformativeAnswers();
           enrichContractMetadata();
           const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
@@ -1647,24 +1809,19 @@
           pdfUrl = await uploadContractPdf();
           await updatePdfUrl(pdfUrl);
 
+          const finalResponse = {
+            id: getStableContractResponseId(),
+            answers,
+            status: "submitted",
+            rendered_text: buildContractText(),
+            submitted_at: new Date().toISOString(),
+            signature_image: signatureDataUrl || null,
+            pdf_url: pdfUrl || null
+          };
+
           setSaveState("Contrato finalizado e PDF gerado", "ok");
           showToast("Contrato finalizado");
-
-          questionBox.innerHTML = `
-            <h2 class="questionTitle">Contrato finalizado</h2>
-            <p class="questionDesc">Seu contrato foi salvo com assinatura eletrônica e PDF final.</p>
-            <div class="pdfBox">
-              <a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">Baixar contrato em PDF</a>
-            </div>
-          `;
-          isReviewStep = false;
-          isSignatureStep = false;
-          nextBtn.textContent = "Voltar ao desafio";
-          nextBtn.disabled = false;
-          backBtn.disabled = true;
-          nextBtn.onclick = () => {
-            window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
-          };
+          renderSubmittedSummary(finalResponse);
         }catch(err){
           console.error("[SUBMIT ERROR]", err);
           nextBtn.disabled = false;
@@ -1733,6 +1890,7 @@
       function closePositionsSelector(){
         positionsModal?.classList.remove("show");
         positionsModal?.setAttribute("aria-hidden", "true");
+        if (isSubmittedSummary) return;
         syncPositionsAnswer();
         scheduleDraftSave();
         renderStep();
@@ -1747,6 +1905,11 @@
       });
 
       backBtn.addEventListener("click", async () => {
+        if (isSubmittedSummary){
+          goToChallenge();
+          return;
+        }
+
         if (isReviewStep){
           isReviewStep = false;
           isSignatureStep = true;
@@ -1768,6 +1931,11 @@
       });
 
       nextBtn.addEventListener("click", async () => {
+        if (isSubmittedSummary){
+          goToChallenge();
+          return;
+        }
+
         if (isReviewStep){
           await submitContract();
           return;
@@ -1823,6 +1991,7 @@
           }
           const existing = await loadExistingResponse(desafioSlug);
           answers = existing?.answers && typeof existing.answers === "object" ? existing.answers : {};
+          applyInformativeAnswers();
           applyResponseIdentity(existing);
           contractResponseId = contractResponseId || answers.contract_response_id || createClientUuid();
           enrichContractMetadata();
@@ -1831,7 +2000,17 @@
           syncPositionsAnswer();
           signatureDataUrl = existing?.signature_image || "";
           pdfUrl = existing?.pdf_url || "";
-          if (existing?.status === "submitted") setSaveState("Contrato já enviado. Você pode revisar e reenviar se necessário.", "ok");
+
+          if (isFinalizedResponse(existing)){
+            renderSubmittedSummary(existing);
+            return;
+          }
+
+          isSubmittedSummary = false;
+          document.querySelector(".footer")?.classList.remove("singleAction");
+          backBtn.style.display = "";
+          backBtn.textContent = "Voltar";
+          nextBtn.textContent = "Continuar";
           renderStep();
         }catch(err){
           console.error("[INIT ERROR]", err);

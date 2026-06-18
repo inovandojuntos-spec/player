@@ -159,6 +159,35 @@
 
     .fieldArea{ margin-top:18px; display:flex; flex-direction:column; gap:10px; }
 
+    .infoBox{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));
+      padding:15px;
+      color:rgba(255,255,255,.82);
+      font-size:14px;
+      line-height:1.5;
+      white-space:pre-wrap;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+    }
+
+    .infoBadge{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      max-width:100%;
+      margin-bottom:10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.62);
+      padding:5px 9px;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+
     .option{
       width:100%;
       display:flex;
@@ -315,6 +344,10 @@
     }
     .saveState.ok{ color:rgba(131,240,161,.85); }
     .saveState.err{ color:rgba(255,92,92,.9); }
+
+    .footer.singleAction{
+      grid-template-columns:1fr;
+    }
 
     .footer{
       position:absolute;
@@ -746,9 +779,6 @@
         window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
       }
 
-      function goToVerification(){
-        window.location.href = getVerificationUrl();
-      }
 
       async function refreshSubmittedSummaryPdf(){
         if (!pdfUrl) return;
@@ -770,7 +800,6 @@
         pdfUrl = response?.pdf_url || pdfUrl || "";
 
         const contractNumber = answers.contract_number || getContractNumber();
-        const verificationUrl = answers.verification_url || getVerificationUrl();
         const submittedAt = response?.submitted_at || response?.signed_at || "";
         const renderedText = response?.rendered_text || buildContractText();
 
@@ -778,9 +807,12 @@
         barFill.style.width = "100%";
         setSaveState("Contrato já assinado. Modo somente leitura.", "ok");
 
+        document.querySelector(".footer")?.classList.add("singleAction");
+        backBtn.style.display = "none";
+
         questionBox.innerHTML = `
           <h2 class="questionTitle">Contrato finalizado</h2>
-          <p class="questionDesc">Este contrato já foi assinado e está bloqueado para edição. Você pode consultar o resumo, baixar o PDF ou abrir a página de verificação.</p>
+          <p class="questionDesc">Este contrato foi assinado digitalmente e está bloqueado para edição. Você pode consultar o resumo, baixar o PDF final e compartilhá-lo com seu parceiro(a).</p>
 
           <div class="pdfBox">
             <strong>Documento:</strong> ${escapeHtml(contractNumber)}<br>
@@ -791,17 +823,12 @@
 
           ${pdfUrl ? `<div class="pdfBox">PDF final: <a id="submittedPdfLink" href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">Baixar contrato em PDF</a></div>` : `<div class="pdfBox">PDF ainda não localizado nesta resposta. Verifique se o campo <strong>pdf_url</strong> foi salvo pelo RPC.</div>`}
 
-          <div class="pdfBox">
-            Verificação digital: <a href="${escapeHtml(verificationUrl)}" target="_blank" rel="noopener noreferrer">Abrir página de verificação</a>
-          </div>
-
           ${signatureDataUrl ? `<div class="signaturePreview"><img src="${signatureDataUrl}" alt="Assinatura eletrônica registrada"></div>` : ""}
 
           <div class="reviewBox">${escapeHtml(renderedText)}</div>
         `;
 
-        backBtn.disabled = false;
-        backBtn.textContent = "Verificar";
+        backBtn.disabled = true;
         nextBtn.disabled = false;
         nextBtn.textContent = "Voltar ao desafio";
       }
@@ -919,6 +946,25 @@
         try{ return JSON.parse(options); }catch{ return []; }
       }
 
+      function isInfoQuestion(q){
+        return String(q?.question_type || "").trim().toLowerCase() === "info";
+      }
+
+      function getInfoAnswerText(q){
+        return String(q?.description || q?.title || "").trim();
+      }
+
+      function applyInformativeAnswers(){
+        if (!Array.isArray(questions) || !questions.length) return;
+        const nextAnswers = { ...answers };
+        questions.forEach(q => {
+          if (isInfoQuestion(q)){
+            nextAnswers[q.question_key] = getInfoAnswerText(q);
+          }
+        });
+        answers = nextAnswers;
+      }
+
       function resizeSignatureCanvas(){
         const canvas = document.getElementById("signatureCanvas");
         if (!canvas) return;
@@ -1006,6 +1052,16 @@
         `;
       }
 
+      function renderInfo(q){
+        const infoText = getInfoAnswerText(q);
+        answers = { ...answers, [q.question_key]: infoText };
+        return `
+          <div class="infoBox" role="note" aria-readonly="true">
+            <div>${escapeHtml(infoText)}</div>
+          </div>
+        `;
+      }
+
       function renderSingle(q){
         const opts = normalizeOptions(q.options);
         const current = String(getAnswer(q.question_key) || "");
@@ -1061,6 +1117,7 @@
 
       function renderQuestionInput(q){
         if (isPositionsQuestion(q)) return renderPositionsQuestion();
+        if (isInfoQuestion(q)) return renderInfo(q);
         if (q.question_type === "text") return renderText(q);
         if (q.question_type === "single") return renderSingle(q);
         if (q.question_type === "multiple") return renderMultiple(q);
@@ -1071,6 +1128,10 @@
       function attachQuestionListeners(q){
         if (isPositionsQuestion(q)){
           document.getElementById("openPositionsBtn")?.addEventListener("click", openPositionsModal);
+          return;
+        }
+
+        if (isInfoQuestion(q)){
           return;
         }
 
@@ -1100,6 +1161,8 @@
       }
 
       function renderStep(){
+        document.querySelector(".footer")?.classList.remove("singleAction");
+        backBtn.style.display = "";
         showError("");
         const totalSteps = questions.length + 2;
         const displayStep = isReviewStep ? totalSteps : isSignatureStep ? questions.length + 1 : currentIndex + 1;
@@ -1129,7 +1192,7 @@
         const q = questions[currentIndex];
         questionBox.innerHTML = `
           <h2 class="questionTitle">${escapeHtml(q.title)}</h2>
-          ${isPositionsQuestion(q) ? `<p class="questionDesc">Selecione as posições que deseja experimentar durante a experiência.</p>` : (q.description ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : "")}
+          ${isPositionsQuestion(q) ? `<p class="questionDesc">Selecione as posições que deseja experimentar durante a experiência.</p>` : (!isInfoQuestion(q) && q.description ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : "")}
           <div class="fieldArea">${renderQuestionInput(q)}</div>
         `;
         attachQuestionListeners(q);
@@ -1140,6 +1203,10 @@
         if (isSignatureStep) return !!signatureDataUrl;
         const q = questions[currentIndex];
         if (isPositionsQuestion(q)) return selectedPositionIds.length > 0;
+        if (isInfoQuestion(q)){
+          answers = { ...answers, [q.question_key]: getInfoAnswerText(q) };
+          return true;
+        }
         if (!q?.required) return true;
         const value = getAnswer(q.question_key);
         if (q.question_type === "multiple") return Array.isArray(value) && value.length > 0;
@@ -1147,6 +1214,7 @@
       }
 
       function getOptionLabel(q, value){
+        if (isInfoQuestion(q)) return getInfoAnswerText(q);
         if (q.question_type === "yes_no") return value === "yes" ? "Sim" : value === "no" ? "Não" : "";
         const opt = normalizeOptions(q.options).find(o => String(o.value ?? o.label ?? "") === String(value));
         return opt?.label ?? value;
@@ -1197,7 +1265,6 @@
         lines.push("CONEXÃO • COMUNICAÇÃO • INTIMIDADE");
         lines.push(`Documento: ${getContractNumber()}`);
         lines.push(`ID do contrato: ${getStableContractResponseId()}`);
-        lines.push(`Verificação digital: ${getVerificationUrl()}`);
         lines.push(`Data de emissão: ${new Date().toLocaleDateString("pt-BR")}`);
         lines.push("");
 
@@ -1213,7 +1280,9 @@
           const raw = getAnswer(q.question_key);
           let rendered = "";
 
-          if (isPositionsQuestion(q)) {
+          if (isInfoQuestion(q)) {
+            rendered = getInfoAnswerText(q);
+          } else if (isPositionsQuestion(q)) {
             rendered = selectedPositions.map(getPositionName).filter(Boolean).join(", ");
           } else if (Array.isArray(raw)) {
             rendered = raw.map(v => getOptionLabel(q, v)).filter(Boolean).join(", ");
@@ -1248,6 +1317,7 @@
         saving = true;
         setSaveState("Salvando rascunho...");
         try{
+          applyInformativeAnswers();
           enrichContractMetadata();
           const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
@@ -1278,7 +1348,6 @@
 
       function sanitizePdfText(value){
         return String(value ?? "")
-          .replace(/✓/g, "-")
           .replace(/[“”]/g, '"')
           .replace(/[‘’]/g, "'")
           .replace(/[–—]/g, "-");
@@ -1303,8 +1372,8 @@
 
           if (regularBytes && boldBytes){
             return {
-              font: await pdfDoc.embedFont(regularBytes, { subset:true }),
-              bold: await pdfDoc.embedFont(boldBytes, { subset:true })
+              font: await pdfDoc.embedFont(regularBytes, { subset:false }),
+              bold: await pdfDoc.embedFont(boldBytes, { subset:false })
             };
           }
         }catch(err){
@@ -1351,30 +1420,110 @@
       async function createContractPdfBytes(){
         const pdfDoc = await PDFDocument.create();
         const { font, bold } = await loadPdfFonts(pdfDoc);
+        const watermarkLogo = await embedRemoteImage(pdfDoc, "images/logo_bn.png");
+        const pdfIconX = await embedRemoteImage(pdfDoc, "images/x.png");
+        const pdfIconCheck = await embedRemoteImage(pdfDoc, "images/check.png");
+        const PDF_ICON_X_TOKEN = "__PDF_ICON_X__";
+        const PDF_ICON_CHECK_TOKEN = "__PDF_ICON_CHECK__";
 
         const margin = 48;
         const pageWidth = 595.28;
         const pageHeight = 841.89;
+
+        function drawWatermark(targetPage){
+          if (!watermarkLogo) return;
+
+          const wmWidth = 260;
+          const wmHeight = (watermarkLogo.height / watermarkLogo.width) * wmWidth;
+
+          targetPage.drawImage(watermarkLogo, {
+            x:(pageWidth - wmWidth) / 2,
+            y:(pageHeight - wmHeight) / 2,
+            width:wmWidth,
+            height:wmHeight,
+            opacity:0.055
+          });
+        }
+
         let page = pdfDoc.addPage([pageWidth, pageHeight]);
+        drawWatermark(page);
         let y = pageHeight - margin;
         const contentWidth = pageWidth - (margin * 2);
 
         const ensureSpace = (requiredHeight = 70) => {
           if (y < margin + requiredHeight){
             page = pdfDoc.addPage([pageWidth, pageHeight]);
+            drawWatermark(page);
             y = pageHeight - margin;
           }
         };
 
+        const normalizePdfIconTokens = (text) => {
+          return sanitizePdfText(text)
+            .replace(/❌/g, ` ${PDF_ICON_X_TOKEN} `)
+            .replace(/[✅✓]/g, ` ${PDF_ICON_CHECK_TOKEN} `)
+            .replace(/\s+([,.;:!?])/g, "$1")
+            .trim();
+        };
+
+        const isPdfIconToken = (word) => word === PDF_ICON_X_TOKEN || word === PDF_ICON_CHECK_TOKEN;
+        const getPdfIconForToken = (word) => word === PDF_ICON_X_TOKEN ? pdfIconX : word === PDF_ICON_CHECK_TOKEN ? pdfIconCheck : null;
+        const getPdfIconSize = (size) => Math.max(size + 1.5, 11)*0.5;
+
+        const measurePdfWord = (word, activeFont, size) => {
+          if (isPdfIconToken(word)) return getPdfIconSize(size);
+          return activeFont.widthOfTextAtSize(word, size);
+        };
+
+        const measurePdfLine = (line, activeFont, size) => {
+          const words = String(line || "").split(/\s+/).filter(Boolean);
+          if (!words.length) return 0;
+          const spaceWidth = activeFont.widthOfTextAtSize(" ", size);
+          return words.reduce((sum, word, index) => {
+            return sum + measurePdfWord(word, activeFont, size) + (index ? spaceWidth : 0);
+          }, 0);
+        };
+
+        const drawPdfInlineLine = (line, x, yPos, size, activeFont, color) => {
+          const words = String(line || "").split(/\s+/).filter(Boolean);
+          if (!words.some(isPdfIconToken)){
+            page.drawText(line, { x, y:yPos, size, font:activeFont, color });
+            return;
+          }
+
+          const spaceWidth = activeFont.widthOfTextAtSize(" ", size);
+          let cursorX = x;
+
+          words.forEach((word, index) => {
+            if (index > 0) cursorX += spaceWidth;
+
+            const icon = getPdfIconForToken(word);
+            if (icon){
+              const iconSize = getPdfIconSize(size);
+              page.drawImage(icon, {
+                x:cursorX,
+                y:yPos - 1,
+                width:iconSize,
+                height:iconSize
+              });
+              cursorX += iconSize;
+              return;
+            }
+
+            page.drawText(word, { x:cursorX, y:yPos, size, font:activeFont, color });
+            cursorX += activeFont.widthOfTextAtSize(word, size);
+          });
+        };
+
         const wrapPdfText = (text, activeFont, size, maxWidth) => {
-          const cleanText = sanitizePdfText(text);
+          const cleanText = normalizePdfIconTokens(text);
           const words = cleanText.split(/\s+/).filter(Boolean);
           const lines = [];
           let current = "";
 
           words.forEach(word => {
             const candidate = current ? `${current} ${word}` : word;
-            const candidateWidth = activeFont.widthOfTextAtSize(candidate, size);
+            const candidateWidth = measurePdfLine(candidate, activeFont, size);
             if (candidateWidth > maxWidth && current){
               lines.push(current);
               current = word;
@@ -1389,8 +1538,8 @@
 
         const drawJustifiedLine = (line, x, yPos, maxWidth, size, activeFont, color) => {
           const words = String(line || "").split(/\s+/).filter(Boolean);
-          if (words.length <= 1){
-            page.drawText(line, { x, y:yPos, size, font:activeFont, color });
+          if (words.length <= 1 || words.some(isPdfIconToken)){
+            drawPdfInlineLine(line, x, yPos, size, activeFont, color);
             return;
           }
 
@@ -1420,17 +1569,18 @@
             const lines = wrapPdfText(paragraph, activeFont, size, maxWidth);
             lines.forEach((line, lineIndex) => {
               ensureSpace(size + lineGap + 10);
-              const lineWidth = activeFont.widthOfTextAtSize(line, size);
+              const lineWidth = measurePdfLine(line, activeFont, size);
               const x = align === "center" ? margin + indent + ((maxWidth - lineWidth) / 2) : margin + indent;
               const isLastLine = lineIndex === lines.length - 1;
               const canJustify = align === "justify"
                 && !isLastLine
                 && !/^[-•]/.test(line.trim())
+                && !line.split(/\s+/).some(isPdfIconToken)
                 && line.split(/\s+/).length > 3
                 && lineWidth > maxWidth * 0.58;
 
               if (canJustify) drawJustifiedLine(line, margin + indent, y, maxWidth, size, activeFont, textColor);
-              else page.drawText(line, { x, y, size, font:activeFont, color:textColor });
+              else drawPdfInlineLine(line, x, y, size, activeFont, textColor);
               y -= size + lineGap;
             });
             if (paragraphIndex < paragraphs.length - 1) y -= lineGap;
@@ -1456,11 +1606,62 @@
           drawSeparator();
         };
 
-        drawTextBlock("INOVANDO JUNTOS", { size:18, bold:true, maxWidth:contentWidth, align:"center", lineGap:5 });
+        const drawImageInsideBox = (embeddedImage, x, yPos, boxW, boxH) => {
+          if (!embeddedImage) return;
+          const ratio = embeddedImage.width / embeddedImage.height;
+          let width = boxW;
+          let height = boxH;
+          if (ratio > boxW / boxH) height = boxW / ratio;
+          else width = boxH * ratio;
+
+          page.drawImage(embeddedImage, {
+            x:x + (boxW - width) / 2,
+            y:yPos + (boxH - height) / 2,
+            width,
+            height
+          });
+        };
+
+        const drawHeaderBrandAssets = async () => {
+          const assetSize = 64;
+          const assetY = pageHeight - margin - assetSize;
+
+          try{
+            const logoImage = await embedRemoteImage(pdfDoc, "images/logo_bn.png");
+            drawImageInsideBox(logoImage, margin, assetY, assetSize, assetSize);
+          }catch(err){
+            console.warn("[PDF HEADER LOGO WARNING]", err);
+          }
+
+          try{
+            const qrDataUrl = await createQrDataUrl(getVerificationUrl());
+            const qrImage = await pdfDoc.embedPng(qrDataUrl);
+            drawImageInsideBox(qrImage, pageWidth - margin - assetSize, assetY, assetSize, assetSize);
+          }catch(err){
+            console.warn("[PDF HEADER QR WARNING]", err);
+          }
+        };
+
+        await drawHeaderBrandAssets();
+
+        const headerAssetSize = 64;
+        const headerAssetGap = 18;
+        const headerTextIndent = headerAssetSize + headerAssetGap;
+        const headerTextWidth = contentWidth - (headerTextIndent * 2);
+
+        drawTextBlock("INOVANDO JUNTOS", {
+          size:18,
+          bold:true,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
+          align:"center",
+          lineGap:5
+        });
         drawTextBlock("CONEXÃO • COMUNICAÇÃO • INTIMIDADE", {
           size:8.5,
           bold:true,
-          maxWidth:contentWidth,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
           align:"center",
           lineGap:4,
           color:rgb(0.45, 0.45, 0.45)
@@ -1468,17 +1669,26 @@
         drawTextBlock(`Documento: ${getContractNumber()}`, {
           size:9,
           bold:true,
-          maxWidth:contentWidth,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
           align:"center",
           lineGap:4
         });
         drawTextBlock(`Data: ${new Date().toLocaleDateString("pt-BR")}`, {
           size:8.5,
-          maxWidth:contentWidth,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
           align:"center",
           lineGap:4
         });
-        drawTextBlock(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", { size:13, bold:true, maxWidth:contentWidth, align:"center", lineGap:4 });
+        drawTextBlock(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES", {
+          size:13,
+          bold:true,
+          indent:headerTextIndent,
+          maxWidth:headerTextWidth,
+          align:"center",
+          lineGap:4
+        });
         y -= 12;
         drawSeparator();
 
@@ -1491,7 +1701,7 @@
           }
 
           const isMainTitle = trimmed === "INOVANDO JUNTOS" || trimmed === String(contractTemplate?.pdf_title || "CONTRATO CIVIL-AMOROSO DE EXPLORAÇÃO DE LIMITES").trim();
-          const isPremiumHeaderMeta = /^(CONEXÃO|Documento:|ID do contrato:|Verificação digital:|Data de emissão:)/.test(trimmed);
+          const isPremiumHeaderMeta = /^(CONEXÃO|Documento:|ID do contrato:|Data de emissão:)/.test(trimmed);
           const isSection = /^(INTRODUÇÃO|CLÁUSULA RESUMIDA DO ACORDO|VALIDADE|PENALIDADE|ANEXO I|ANEXO II|DECLARAÇÃO FINAL|ASSINATURA ELETRÔNICA)/.test(trimmed);
           const isMeta = /^(Data de assinatura:|Tipo de contrato:|Status:)/.test(trimmed);
           const isQuestion = /^\d+\./.test(trimmed);
@@ -1564,6 +1774,7 @@
         if (signatureDataUrl){
           if (y < 180){
             page = pdfDoc.addPage([pageWidth, pageHeight]);
+            drawWatermark(page);
             y = pageHeight - margin;
           }
 
@@ -1594,79 +1805,11 @@
           drawTextBlock(`Assinado em: ${new Date().toLocaleString("pt-BR")}`, { size:9.5 });
         }
 
-        const drawVerificationQrBlock = async () => {
-          const verificationUrl = getVerificationUrl();
-          const contractNumber = getContractNumber();
-          const qrDataUrl = await createQrDataUrl(verificationUrl);
-          const qrImage = await pdfDoc.embedPng(qrDataUrl);
-          const blockHeight = 128;
-          const qrSize = 92;
-
-          ensureSpace(blockHeight + 28);
-          y -= 10;
-          drawSeparator();
-          ensureSpace(blockHeight + 18);
-
-          const blockY = y - blockHeight;
-          page.drawRectangle({
-            x:margin,
-            y:blockY,
-            width:contentWidth,
-            height:blockHeight,
-            borderColor:rgb(0.72, 0.72, 0.72),
-            borderWidth:1,
-            color:rgb(0.985, 0.985, 0.985)
-          });
-
-          page.drawImage(qrImage, {
-            x:margin + 16,
-            y:blockY + 18,
-            width:qrSize,
-            height:qrSize
-          });
-
-          const textX = margin + 126;
-          let textY = blockY + blockHeight - 27;
-          const textMaxWidth = contentWidth - 146;
-
-          page.drawText("VERIFICAÇÃO DIGITAL", {
-            x:textX,
-            y:textY,
-            size:10.5,
-            font:bold,
-            color:rgb(0.08, 0.08, 0.08)
-          });
-
-          textY -= 17;
-          wrapPdfText(`Contrato: ${contractNumber}`, bold, 8.5, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:8.5, font:bold, color:rgb(0.08, 0.08, 0.08) });
-            textY -= 12;
-          });
-
-          wrapPdfText(`ID: ${getStableContractResponseId()}`, font, 7.8, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:7.8, font, color:rgb(0.22, 0.22, 0.22) });
-            textY -= 11;
-          });
-
-          wrapPdfText(`URL: ${verificationUrl}`, font, 7.4, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:7.4, font, color:rgb(0.22, 0.22, 0.22) });
-            textY -= 10.5;
-          });
-
-          wrapPdfText("O QR aponta para a página de verificação do contrato, não para o arquivo bruto do PDF.", font, 7.6, textMaxWidth).forEach(line => {
-            page.drawText(line, { x:textX, y:textY, size:7.6, font, color:rgb(0.35, 0.35, 0.35) });
-            textY -= 10.5;
-          });
-
-          y -= blockHeight + 18;
-        };
-
-        await drawVerificationQrBlock();
-
         return await pdfDoc.save();
       }
 
       async function uploadContractPdf(){
+        applyInformativeAnswers();
         enrichContractMetadata();
         const pdfBytes = await createContractPdfBytes();
         const filePath = `${authUserId}/${desafioSlug}-${Date.now()}.pdf`;
@@ -1686,6 +1829,7 @@
       }
 
       async function updatePdfUrl(finalPdfUrl){
+        applyInformativeAnswers();
         enrichContractMetadata();
         const { data, error } = await supabase.rpc("save_contract_response", {
           p_desafio_slug: desafioSlug,
@@ -1706,6 +1850,7 @@
         backBtn.disabled = true;
         setSaveState("Finalizando contrato...");
         try{
+          applyInformativeAnswers();
           enrichContractMetadata();
           const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
@@ -1822,7 +1967,7 @@
 
       backBtn.addEventListener("click", async () => {
         if (isSubmittedSummary){
-          goToVerification();
+          goToChallenge();
           return;
         }
 
@@ -1907,6 +2052,7 @@
           }
           const existing = await loadExistingResponse(desafioSlug);
           answers = existing?.answers && typeof existing.answers === "object" ? existing.answers : {};
+          applyInformativeAnswers();
           applyResponseIdentity(existing);
           contractResponseId = contractResponseId || answers.contract_response_id || createClientUuid();
           enrichContractMetadata();
@@ -1922,6 +2068,8 @@
           }
 
           isSubmittedSummary = false;
+          document.querySelector(".footer")?.classList.remove("singleAction");
+          backBtn.style.display = "";
           backBtn.textContent = "Voltar";
           nextBtn.textContent = "Continuar";
           renderStep();
