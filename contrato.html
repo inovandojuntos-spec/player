@@ -220,7 +220,8 @@
     .optionText{ flex:1; min-width:0; font-size:15px; line-height:1.32; color:rgba(255,255,255,.80); font-weight:650; }
 
     textarea,
-    input[type="text"]{
+    input[type="text"],
+    input[type="date"]{
       width:100%;
       border:1px solid rgba(255,255,255,.10);
       border-radius:16px;
@@ -233,7 +234,9 @@
       font-family:inherit;
     }
     textarea{ min-height:150px; resize:vertical; }
-    textarea:focus,input[type="text"]:focus{ border-color:rgba(255,255,255,.24); background:rgba(255,255,255,.08); }
+    textarea:focus,
+    input[type="text"]:focus,
+    input[type="date"]:focus{ border-color:rgba(255,255,255,.24); background:rgba(255,255,255,.08); }
 
 
     .signatureWrap{
@@ -775,6 +778,13 @@
         return date.toLocaleString("pt-BR");
       }
 
+      function formatDatePt(value){
+        if (!value) return "";
+        const [year, month, day] = String(value).split("-");
+        if (!year || !month || !day) return String(value);
+        return `${day}/${month}/${year}`;
+      }
+
       function goToChallenge(){
         window.location.href = `/play/${encodeURIComponent(desafioSlug)}`;
       }
@@ -1052,6 +1062,19 @@
         `;
       }
 
+      function renderDate(q){
+        const current = getAnswer(q.question_key) || "";
+
+        return `
+          <input 
+            id="fieldDate" 
+            type="date" 
+            value="${escapeHtml(current)}"
+            aria-label="${escapeHtml(q.title || 'Data')}"
+          />
+        `;
+      }
+
       function renderInfo(q){
         const infoText = getInfoAnswerText(q);
         answers = { ...answers, [q.question_key]: infoText };
@@ -1119,6 +1142,7 @@
         if (isPositionsQuestion(q)) return renderPositionsQuestion();
         if (isInfoQuestion(q)) return renderInfo(q);
         if (q.question_type === "text") return renderText(q);
+        if (q.question_type === "date") return renderDate(q);
         if (q.question_type === "single") return renderSingle(q);
         if (q.question_type === "multiple") return renderMultiple(q);
         if (q.question_type === "yes_no") return renderYesNo(q);
@@ -1138,6 +1162,12 @@
         if (q.question_type === "text"){
           const el = document.getElementById("fieldText");
           el?.addEventListener("input", () => setAnswer(q.question_key, el.value.trim()));
+          return;
+        }
+
+        if (q.question_type === "date"){
+          const el = document.getElementById("fieldDate");
+          el?.addEventListener("change", () => setAnswer(q.question_key, el.value));
           return;
         }
 
@@ -1215,7 +1245,15 @@
 
       function getOptionLabel(q, value){
         if (isInfoQuestion(q)) return getInfoAnswerText(q);
-        if (q.question_type === "yes_no") return value === "yes" ? "Sim" : value === "no" ? "Não" : "";
+
+        if (q.question_type === "yes_no") {
+          return value === "yes" ? "Sim" : value === "no" ? "Não" : "";
+        }
+
+        if (q.question_type === "date") {
+          return formatDatePt(value);
+        }
+
         const opt = normalizeOptions(q.options).find(o => String(o.value ?? o.label ?? "") === String(value));
         return opt?.label ?? value;
       }

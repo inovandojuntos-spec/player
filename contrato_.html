@@ -159,6 +159,35 @@
 
     .fieldArea{ margin-top:18px; display:flex; flex-direction:column; gap:10px; }
 
+    .infoBox{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));
+      padding:15px;
+      color:rgba(255,255,255,.82);
+      font-size:14px;
+      line-height:1.5;
+      white-space:pre-wrap;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+    }
+
+    .infoBadge{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      max-width:100%;
+      margin-bottom:10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.62);
+      padding:5px 9px;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+
     .option{
       width:100%;
       display:flex;
@@ -783,7 +812,7 @@
 
         questionBox.innerHTML = `
           <h2 class="questionTitle">Contrato finalizado</h2>
-          <p class="questionDesc">Este contrato já foi assinado e está bloqueado para edição. Você pode consultar o resumo ou baixar o PDF final.</p>
+          <p class="questionDesc">Este contrato foi assinado digitalmente e está bloqueado para edição. Você pode consultar o resumo, baixar o PDF final e compartilhá-lo com seu parceiro(a).</p>
 
           <div class="pdfBox">
             <strong>Documento:</strong> ${escapeHtml(contractNumber)}<br>
@@ -917,6 +946,25 @@
         try{ return JSON.parse(options); }catch{ return []; }
       }
 
+      function isInfoQuestion(q){
+        return String(q?.question_type || "").trim().toLowerCase() === "info";
+      }
+
+      function getInfoAnswerText(q){
+        return String(q?.description || q?.title || "").trim();
+      }
+
+      function applyInformativeAnswers(){
+        if (!Array.isArray(questions) || !questions.length) return;
+        const nextAnswers = { ...answers };
+        questions.forEach(q => {
+          if (isInfoQuestion(q)){
+            nextAnswers[q.question_key] = getInfoAnswerText(q);
+          }
+        });
+        answers = nextAnswers;
+      }
+
       function resizeSignatureCanvas(){
         const canvas = document.getElementById("signatureCanvas");
         if (!canvas) return;
@@ -1004,6 +1052,16 @@
         `;
       }
 
+      function renderInfo(q){
+        const infoText = getInfoAnswerText(q);
+        answers = { ...answers, [q.question_key]: infoText };
+        return `
+          <div class="infoBox" role="note" aria-readonly="true">
+            <div>${escapeHtml(infoText)}</div>
+          </div>
+        `;
+      }
+
       function renderSingle(q){
         const opts = normalizeOptions(q.options);
         const current = String(getAnswer(q.question_key) || "");
@@ -1059,6 +1117,7 @@
 
       function renderQuestionInput(q){
         if (isPositionsQuestion(q)) return renderPositionsQuestion();
+        if (isInfoQuestion(q)) return renderInfo(q);
         if (q.question_type === "text") return renderText(q);
         if (q.question_type === "single") return renderSingle(q);
         if (q.question_type === "multiple") return renderMultiple(q);
@@ -1069,6 +1128,10 @@
       function attachQuestionListeners(q){
         if (isPositionsQuestion(q)){
           document.getElementById("openPositionsBtn")?.addEventListener("click", openPositionsModal);
+          return;
+        }
+
+        if (isInfoQuestion(q)){
           return;
         }
 
@@ -1129,7 +1192,7 @@
         const q = questions[currentIndex];
         questionBox.innerHTML = `
           <h2 class="questionTitle">${escapeHtml(q.title)}</h2>
-          ${isPositionsQuestion(q) ? `<p class="questionDesc">Selecione as posições que deseja experimentar durante a experiência.</p>` : (q.description ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : "")}
+          ${isPositionsQuestion(q) ? `<p class="questionDesc">Selecione as posições que deseja experimentar durante a experiência.</p>` : (!isInfoQuestion(q) && q.description ? `<p class="questionDesc">${escapeHtml(q.description)}</p>` : "")}
           <div class="fieldArea">${renderQuestionInput(q)}</div>
         `;
         attachQuestionListeners(q);
@@ -1140,6 +1203,10 @@
         if (isSignatureStep) return !!signatureDataUrl;
         const q = questions[currentIndex];
         if (isPositionsQuestion(q)) return selectedPositionIds.length > 0;
+        if (isInfoQuestion(q)){
+          answers = { ...answers, [q.question_key]: getInfoAnswerText(q) };
+          return true;
+        }
         if (!q?.required) return true;
         const value = getAnswer(q.question_key);
         if (q.question_type === "multiple") return Array.isArray(value) && value.length > 0;
@@ -1147,6 +1214,7 @@
       }
 
       function getOptionLabel(q, value){
+        if (isInfoQuestion(q)) return getInfoAnswerText(q);
         if (q.question_type === "yes_no") return value === "yes" ? "Sim" : value === "no" ? "Não" : "";
         const opt = normalizeOptions(q.options).find(o => String(o.value ?? o.label ?? "") === String(value));
         return opt?.label ?? value;
@@ -1212,7 +1280,9 @@
           const raw = getAnswer(q.question_key);
           let rendered = "";
 
-          if (isPositionsQuestion(q)) {
+          if (isInfoQuestion(q)) {
+            rendered = getInfoAnswerText(q);
+          } else if (isPositionsQuestion(q)) {
             rendered = selectedPositions.map(getPositionName).filter(Boolean).join(", ");
           } else if (Array.isArray(raw)) {
             rendered = raw.map(v => getOptionLabel(q, v)).filter(Boolean).join(", ");
@@ -1247,6 +1317,7 @@
         saving = true;
         setSaveState("Salvando rascunho...");
         try{
+          applyInformativeAnswers();
           enrichContractMetadata();
           const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
@@ -1277,7 +1348,6 @@
 
       function sanitizePdfText(value){
         return String(value ?? "")
-          .replace(/✓/g, "-")
           .replace(/[“”]/g, '"')
           .replace(/[‘’]/g, "'")
           .replace(/[–—]/g, "-");
@@ -1302,8 +1372,8 @@
 
           if (regularBytes && boldBytes){
             return {
-              font: await pdfDoc.embedFont(regularBytes, { subset:true }),
-              bold: await pdfDoc.embedFont(boldBytes, { subset:true })
+              font: await pdfDoc.embedFont(regularBytes, { subset:false }),
+              bold: await pdfDoc.embedFont(boldBytes, { subset:false })
             };
           }
         }catch(err){
@@ -1351,6 +1421,10 @@
         const pdfDoc = await PDFDocument.create();
         const { font, bold } = await loadPdfFonts(pdfDoc);
         const watermarkLogo = await embedRemoteImage(pdfDoc, "images/logo_bn.png");
+        const pdfIconX = await embedRemoteImage(pdfDoc, "images/x.png");
+        const pdfIconCheck = await embedRemoteImage(pdfDoc, "images/check.png");
+        const PDF_ICON_X_TOKEN = "__PDF_ICON_X__";
+        const PDF_ICON_CHECK_TOKEN = "__PDF_ICON_CHECK__";
 
         const margin = 48;
         const pageWidth = 595.28;
@@ -1384,15 +1458,72 @@
           }
         };
 
+        const normalizePdfIconTokens = (text) => {
+          return sanitizePdfText(text)
+            .replace(/❌/g, ` ${PDF_ICON_X_TOKEN} `)
+            .replace(/[✅✓]/g, ` ${PDF_ICON_CHECK_TOKEN} `)
+            .replace(/\s+([,.;:!?])/g, "$1")
+            .trim();
+        };
+
+        const isPdfIconToken = (word) => word === PDF_ICON_X_TOKEN || word === PDF_ICON_CHECK_TOKEN;
+        const getPdfIconForToken = (word) => word === PDF_ICON_X_TOKEN ? pdfIconX : word === PDF_ICON_CHECK_TOKEN ? pdfIconCheck : null;
+        const getPdfIconSize = (size) => Math.max(size + 1.5, 11)*0.5;
+
+        const measurePdfWord = (word, activeFont, size) => {
+          if (isPdfIconToken(word)) return getPdfIconSize(size);
+          return activeFont.widthOfTextAtSize(word, size);
+        };
+
+        const measurePdfLine = (line, activeFont, size) => {
+          const words = String(line || "").split(/\s+/).filter(Boolean);
+          if (!words.length) return 0;
+          const spaceWidth = activeFont.widthOfTextAtSize(" ", size);
+          return words.reduce((sum, word, index) => {
+            return sum + measurePdfWord(word, activeFont, size) + (index ? spaceWidth : 0);
+          }, 0);
+        };
+
+        const drawPdfInlineLine = (line, x, yPos, size, activeFont, color) => {
+          const words = String(line || "").split(/\s+/).filter(Boolean);
+          if (!words.some(isPdfIconToken)){
+            page.drawText(line, { x, y:yPos, size, font:activeFont, color });
+            return;
+          }
+
+          const spaceWidth = activeFont.widthOfTextAtSize(" ", size);
+          let cursorX = x;
+
+          words.forEach((word, index) => {
+            if (index > 0) cursorX += spaceWidth;
+
+            const icon = getPdfIconForToken(word);
+            if (icon){
+              const iconSize = getPdfIconSize(size);
+              page.drawImage(icon, {
+                x:cursorX,
+                y:yPos - 1,
+                width:iconSize,
+                height:iconSize
+              });
+              cursorX += iconSize;
+              return;
+            }
+
+            page.drawText(word, { x:cursorX, y:yPos, size, font:activeFont, color });
+            cursorX += activeFont.widthOfTextAtSize(word, size);
+          });
+        };
+
         const wrapPdfText = (text, activeFont, size, maxWidth) => {
-          const cleanText = sanitizePdfText(text);
+          const cleanText = normalizePdfIconTokens(text);
           const words = cleanText.split(/\s+/).filter(Boolean);
           const lines = [];
           let current = "";
 
           words.forEach(word => {
             const candidate = current ? `${current} ${word}` : word;
-            const candidateWidth = activeFont.widthOfTextAtSize(candidate, size);
+            const candidateWidth = measurePdfLine(candidate, activeFont, size);
             if (candidateWidth > maxWidth && current){
               lines.push(current);
               current = word;
@@ -1407,8 +1538,8 @@
 
         const drawJustifiedLine = (line, x, yPos, maxWidth, size, activeFont, color) => {
           const words = String(line || "").split(/\s+/).filter(Boolean);
-          if (words.length <= 1){
-            page.drawText(line, { x, y:yPos, size, font:activeFont, color });
+          if (words.length <= 1 || words.some(isPdfIconToken)){
+            drawPdfInlineLine(line, x, yPos, size, activeFont, color);
             return;
           }
 
@@ -1438,17 +1569,18 @@
             const lines = wrapPdfText(paragraph, activeFont, size, maxWidth);
             lines.forEach((line, lineIndex) => {
               ensureSpace(size + lineGap + 10);
-              const lineWidth = activeFont.widthOfTextAtSize(line, size);
+              const lineWidth = measurePdfLine(line, activeFont, size);
               const x = align === "center" ? margin + indent + ((maxWidth - lineWidth) / 2) : margin + indent;
               const isLastLine = lineIndex === lines.length - 1;
               const canJustify = align === "justify"
                 && !isLastLine
                 && !/^[-•]/.test(line.trim())
+                && !line.split(/\s+/).some(isPdfIconToken)
                 && line.split(/\s+/).length > 3
                 && lineWidth > maxWidth * 0.58;
 
               if (canJustify) drawJustifiedLine(line, margin + indent, y, maxWidth, size, activeFont, textColor);
-              else page.drawText(line, { x, y, size, font:activeFont, color:textColor });
+              else drawPdfInlineLine(line, x, y, size, activeFont, textColor);
               y -= size + lineGap;
             });
             if (paragraphIndex < paragraphs.length - 1) y -= lineGap;
@@ -1677,6 +1809,7 @@
       }
 
       async function uploadContractPdf(){
+        applyInformativeAnswers();
         enrichContractMetadata();
         const pdfBytes = await createContractPdfBytes();
         const filePath = `${authUserId}/${desafioSlug}-${Date.now()}.pdf`;
@@ -1696,6 +1829,7 @@
       }
 
       async function updatePdfUrl(finalPdfUrl){
+        applyInformativeAnswers();
         enrichContractMetadata();
         const { data, error } = await supabase.rpc("save_contract_response", {
           p_desafio_slug: desafioSlug,
@@ -1716,6 +1850,7 @@
         backBtn.disabled = true;
         setSaveState("Finalizando contrato...");
         try{
+          applyInformativeAnswers();
           enrichContractMetadata();
           const { data, error } = await supabase.rpc("save_contract_response", {
             p_desafio_slug: desafioSlug,
@@ -1917,6 +2052,7 @@
           }
           const existing = await loadExistingResponse(desafioSlug);
           answers = existing?.answers && typeof existing.answers === "object" ? existing.answers : {};
+          applyInformativeAnswers();
           applyResponseIdentity(existing);
           contractResponseId = contractResponseId || answers.contract_response_id || createClientUuid();
           enrichContractMetadata();
