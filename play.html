@@ -2783,6 +2783,7 @@
         if (!currentMediaVideoEl) return;
         try{
           currentMediaVideoEl.pause();
+          if (currentMediaVideoEl._hls){ currentMediaVideoEl._hls.destroy(); currentMediaVideoEl._hls = null; }
           if (reset) currentMediaVideoEl.currentTime = 0;
         }catch{}
       }
@@ -3263,12 +3264,27 @@
         try {
           const guid = src.slice("bunny:".length);
           const url = await getBunnySignedUrl(guid);
-          if (url){ attachHls(videoEl, url); try { await videoEl.play(); } catch(_){} }
+          if (!url) return;
+          // Si mientras firmábamos el usuario navegó a otro contenido, el <video>
+          // ya no está en el DOM -> abortar para no reproducir dos videos a la vez.
+          if (!videoEl.isConnected) return;
+          attachHls(videoEl, url);
+          try { await videoEl.play(); } catch(_){}
         } catch (e){ console.error("[BUNNY] no se pudo cargar el video", e); }
+      }
+
+      // Detiene y libera el video/HLS actual por completo.
+      function destroyCurrentMedia(){
+        if (currentMediaVideoEl){
+          try { currentMediaVideoEl.pause(); } catch(_){}
+          try { if (currentMediaVideoEl._hls){ currentMediaVideoEl._hls.destroy(); currentMediaVideoEl._hls = null; } } catch(_){}
+          try { currentMediaVideoEl.removeAttribute("src"); currentMediaVideoEl.load(); } catch(_){}
+        }
       }
 
       function renderMedia(data){
         resetKamasutraState();
+        destroyCurrentMedia();
         mediaBox.innerHTML = "";
         currentMediaVideoEl = null;
 
