@@ -113,6 +113,15 @@
   .itemMetaRow{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
   .itemPrice{font-size:13px;font-weight:800;color:var(--silver-bright);font-variant-numeric:tabular-nums}
   .itemPill{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--silver)}
+  .itemPill.solid{background:var(--metal);color:#0a0a0b;border-color:transparent}
+  .itemPill.ghost{color:var(--muted)}
+  .itemMedia{position:relative}
+  .itemPlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.32);color:#fff}
+  .itemBar{position:absolute;left:12px;right:12px;top:calc(58px + env(safe-area-inset-top,0px));z-index:45;display:none;align-items:center;gap:10px;background:rgba(10,10,12,.92);backdrop-filter:blur(10px);border:1px solid var(--line2);border-radius:14px;padding:9px 10px 9px 12px;box-shadow:0 10px 28px rgba(0,0,0,.5)}
+  .itemBar.show{display:flex}
+  .itemBar .nm{flex:1;min-width:0;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--silver-bright)}
+  .itemBar .nm small{display:block;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .itemBar .bk{flex:none;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--silver);border-radius:10px;padding:7px 11px;font-size:11.5px;font-weight:700;cursor:pointer}
   .chev{color:var(--muted2);flex:none}
 
   /* extras card (improved icons) */
@@ -272,6 +281,7 @@ const ICON={
   comment:'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.5 7.2L3 20l1.3-4A8 8 0 1 1 21 11.5z"/></svg>',
   flame:'<svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.9 3.2 5.2 4.4 5.2 8.3A5.2 5.2 0 0 1 6.8 11.3c0-1.7.7-3 1.6-4 .6 1 1.6 1.4 2 .2.4-1.2-.2-2.6 1.6-4.5z"/></svg>',
   play:'<svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  playMini:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
   chev:'<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
   link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>',
   book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M19 17H6a2 2 0 0 0-2 2"/></svg>'
@@ -381,6 +391,7 @@ async function getChallenge(slug){
 
 async function activate(slide){
   if(slide===currentSlide) { return; }
+  if(itemPlaying){ itemPlaying=false; hideItemBar(); }
   currentSlide=slide;
   const seq=++activeSeq;
   const slug=slide.dataset.slug, id=slide.dataset.id;
@@ -487,37 +498,92 @@ function renderItens(){
   if(!products.length){ panelBody.innerHTML='<div class="empty">Nenhum item recomendado para este desafio.</div>'; return; }
   const groups={};
   products.forEach(it=>{ const c=it.category||'Outros'; (groups[c]=groups[c]||[]).push(it); });
-  let html='<p class="pSub">Produtos selecionados para viver este desafio ao máximo.</p>';
+  const flat=[];
+  let html='<p class="pSub">Toque para reproduzir o vídeo e o áudio de cada item.</p>';
   Object.keys(groups).forEach(cat=>{
     html+=`<div class="grpTitle">${esc(cat)}</div>`;
     groups[cat].forEach(it=>{
-      const img=it.image||it.video||'';
-      const isVid=/\.(mp4|webm|m3u8)$/i.test(img)||String(img).startsWith('bunny:');
-      const media= img ? (isVid && !String(img).startsWith('bunny:')
+      const idx=flat.push(it)-1;
+      const img=it.image||'';
+      const media= img ? (/\.(mp4|webm|m3u8)$/i.test(img)
           ? `<video src="${esc(img)}" muted loop autoplay playsinline></video>`
           : `<img src="${esc(img)}" alt="" onerror="this.style.display='none'">`) : '';
-      const price=fmtPrice(it);
       const link=(it.external_url||'').trim();
-      html+=`<div class="itemCard" data-link="${esc(link)}">
-        <div class="itemMedia">${media}</div>
+      const playable=!!(it.video||it.audio);
+      html+=`<div class="itemCard" data-idx="${idx}">
+        <div class="itemMedia">${media}${playable?'<span class="itemPlay">'+ICON.playMini+'</span>':''}</div>
         <div class="itemBody">
           <p class="itemName">${esc(it.name||'Item')}</p>
           ${it.description?`<p class="itemDesc">${esc(it.description)}</p>`:''}
           <div class="itemMetaRow">
-            ${price?`<span class="itemPrice">${esc(price)}</span>`:''}
-            ${link?`<span class="itemPill">Ver produto</span>`:''}
+            ${playable?'<span class="itemPill solid">▶ Reproduzir</span>':''}
+            ${link?`<span class="itemPill ghost" data-link="${esc(link)}">Ver produto</span>`:''}
           </div>
         </div>
-        ${link?ICON.chev:''}
+        ${ICON.chev}
       </div>`;
     });
   });
   panelBody.innerHTML=html;
   panelBody.querySelectorAll('.itemCard').forEach(c=>{
-    const link=c.dataset.link;
-    if(link) c.addEventListener('click',()=>openLink(link));
-    else c.style.cursor='default';
+    c.addEventListener('click',(e)=>{
+      const pill=e.target.closest('.itemPill.ghost');
+      if(pill){ e.stopPropagation(); openLink(pill.dataset.link); return; }
+      const it=flat[Number(c.dataset.idx)];
+      if(it&&(it.video||it.audio)) playItem(it);
+      else if(it&&(it.external_url||'').trim()) openLink(it.external_url);
+      else toast('Sem mídia disponível');
+    });
   });
+}
+
+/* ===== Reproduzir mídia de um item (vídeo Bunny + áudio sbaudio) ===== */
+let itemPlaying=false, itemBarEl=null;
+function ensureItemBar(){
+  if(itemBarEl) return itemBarEl;
+  itemBarEl=document.createElement('div'); itemBarEl.className='itemBar';
+  itemBarEl.innerHTML='<div class="nm"><small>Item</small><span id="itemBarNm"></span></div><button class="bk" id="itemBarBk">Voltar</button>';
+  $('#app').appendChild(itemBarEl);
+  itemBarEl.querySelector('#itemBarBk').addEventListener('click',restoreChallenge);
+  return itemBarEl;
+}
+function showItemBar(item){ const b=ensureItemBar(); b.querySelector('#itemBarNm').textContent=item.name||'Item'; b.querySelector('.nm small').textContent=item.category||'Item'; b.classList.add('show'); }
+function hideItemBar(){ if(itemBarEl) itemBarEl.classList.remove('show'); }
+
+async function playItem(item){
+  closePanel();
+  const slide=currentSlide; if(!slide) return;
+  const seq=++activeSeq;
+  itemPlaying=true;
+  const v=slide.querySelector('video');
+  master.pause();
+  const vid=String(item.video||'');
+  try{
+    if(vid.startsWith('bunny:')){
+      const {data:vd}=await supabase.functions.invoke('get-video-url',{body:{guid:vid.slice(6)}});
+      if(seq!==activeSeq) return;
+      if(vd&&vd.url){ attachHls(v,vd.url); v.muted=true; v.play().catch(()=>{}); }
+    } else if(/\.(mp4|webm|m3u8)$/i.test(vid)){
+      if(v._hls){try{v._hls.destroy()}catch(_){}; v._hls=null;}
+      v.src=vid; v.muted=true; v.classList.add('ready'); v.play().catch(()=>{});
+    }
+  }catch(e){ console.error('[item video]',e); }
+  const aud=String(item.audio||'');
+  try{
+    if(aud.startsWith('sbaudio:')){
+      const {data:sd}=await supabase.storage.from('audios').createSignedUrl(aud.slice(8),3600);
+      if(seq!==activeSeq) return;
+      if(sd&&sd.signedUrl){ master.src=sd.signedUrl; master.load(); master.play().catch(()=>{}); }
+    } else if(aud){ master.src=aud; master.load(); master.play().catch(()=>{}); }
+    else { master.removeAttribute('src'); }
+  }catch(e){ console.error('[item audio]',e); }
+  showItemBar(item);
+  toast('▶ '+(item.name||'Item'));
+}
+function restoreChallenge(){
+  itemPlaying=false; hideItemBar();
+  const slide=currentSlide; if(!slide) return;
+  currentSlide=null; activate(slide);
 }
 
 function renderExtras(){
