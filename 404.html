@@ -32,46 +32,54 @@
       document.body.innerHTML = "Página no encontrada";
     }
 
+    // Aceita tanto /play/<slug> (rota antiga) quanto a URL direta da raspadinha /<slug>
+    const slugLc = (slug || "").toLowerCase();
+    const isIntro = slugLc === "intro";
+    const isDesafio = /^desafio[_-]?\w+/i.test(slugLc);
+
     async function main(){
-      if (parts[0] !== "play" || !slug) {
+      if (!slugLc || (!isIntro && !isDesafio)) {
         goNotFound();
         return;
       }
 
-      const targetUrl = `/play.html?id=${encodeURIComponent(slug)}`;
+      const targetUrl = `/play.html?id=${encodeURIComponent(slugLc)}`;
 
       try {
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
 
         const isLogged = !!data?.session?.user;
-        const isIntro = slug.toLowerCase() === "intro";
 
-        // Caso 1: /play/intro
-        // Si no está logueado, puede crear cuenta.
-        // Luego login.html lo devuelve a INTRO_URL.
+        // INTRO: se não está logado pode criar conta; login.html devolve a INTRO_URL.
         if (isIntro) {
           if (isLogged) {
             window.location.replace(INTRO_URL);
             return;
           }
-
           window.location.replace(
             `/login.html?mode=register&redirect=${encodeURIComponent(INTRO_URL)}`
           );
           return;
         }
 
-        // Caso 2: /play/desafio_xx
-        // Solo redirecciona al desafío si ya está logueado.
+        // DESAFIO: esta URL só existe a partir do QR da raspadinha.
+        // Se já está logado -> marcamos como DESBLOQUEADO (play_count++) e abrimos o player.
         if (isLogged) {
+          try {
+            await supabase.rpc("mark_desafio_played_by_slug", { p_slug: slugLc });
+          } catch (e) {
+            console.error("[MARK SCAN ERROR]", e);
+          }
           window.location.replace(targetUrl);
           return;
         }
 
-        // Si intenta entrar directo a un desafío sin login,
-        // debe pasar primero por intro.
-        window.location.replace(INTRO_PUBLIC_URL);
+        // Sem login: redireciona para criar conta. Após o cadastro, login.html
+        // devolve para a URL do desafio escaneado, que então é liberado.
+        window.location.replace(
+          `/login.html?mode=register&redirect=${encodeURIComponent("/" + slugLc)}`
+        );
 
       } catch (err) {
         console.error("[404 AUTH CHECK ERROR]", err);
