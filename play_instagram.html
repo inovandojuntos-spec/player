@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Inovando Juntos — UI Instagram (protótipo)</title>
+<style>
+  :root{
+    --bg:#000;
+    --surface:#0b0b0d;
+    --surface2:#141417;
+    --line:rgba(255,255,255,0.10);
+    --text:#fff;
+    --muted:rgba(255,255,255,0.62);
+    --muted2:rgba(255,255,255,0.45);
+    --brand:#ff2d6b;          /* rosa/magenta tipo IG-reels */
+    --brand2:#ff5e3a;
+    --like:#ff2d55;
+    --save:#ffd54a;
+    --nav-h:62px;
+    --rail-gap:22px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:#05050a;color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  body{display:flex;align-items:center;justify-content:center;overflow:hidden;}
+
+  /* ===== Phone shell ===== */
+  .app{
+    position:relative;width:min(460px,100vw);height:100dvh;max-height:980px;
+    background:var(--bg);overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);
+  }
+  @media (min-width:480px){ .app{ border-radius:26px; height:min(900px,96dvh); border:1px solid var(--line);} }
+
+  /* ===== Top bar ===== */
+  .topbar{
+    position:absolute;top:0;left:0;right:0;z-index:40;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;
+    background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(0,0,0,0));
+  }
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.3px;font-size:17px}
+  .brand .dot{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--brand),var(--brand2));font-size:15px}
+  .topIcons{display:flex;gap:6px}
+  .iconBtn{width:40px;height:40px;border:none;background:transparent;color:#fff;
+    display:grid;place-items:center;cursor:pointer;border-radius:12px}
+  .iconBtn:active{background:rgba(255,255,255,.08)}
+
+  /* ===== Feed (vertical, snap) ===== */
+  .feed{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none}
+  .feed::-webkit-scrollbar{display:none}
+  .slide{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;
+    display:flex;align-items:center;justify-content:center;background:#000}
+  .slide video,.slide img.media{width:100%;height:100%;object-fit:cover;display:block;background:#000}
+  .slide .scrim{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 55%,rgba(0,0,0,.85) 100%)}
+  .playPing{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);
+    width:84px;height:84px;border-radius:50%;background:rgba(0,0,0,.45);display:grid;place-items:center;
+    opacity:0;transition:opacity .25s, transform .25s;pointer-events:none}
+  .playPing.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+  /* ===== Right action rail (IG style) ===== */
+  .rail{position:absolute;right:10px;bottom:calc(118px);z-index:30;
+    display:flex;flex-direction:column;gap:var(--rail-gap);align-items:center}
+  .act{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border:none;background:none;color:#fff}
+  .act svg{filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));transition:transform .15s}
+  .act:active svg{transform:scale(.82)}
+  .act .cnt{font-size:12px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+  .act.liked svg{color:var(--like);fill:var(--like);animation:pop .35s}
+  .act.saved svg{color:var(--save);fill:var(--save)}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+  .avatarRail{width:46px;height:46px;border-radius:50%;border:2px solid #fff;object-fit:cover;margin-bottom:2px}
+  .followDot{margin-top:-12px;width:20px;height:20px;border-radius:50%;background:var(--brand);
+    display:grid;place-items:center;font-size:14px;line-height:1;border:2px solid #000}
+
+  /* ===== Caption / info (bottom-left, IG style) ===== */
+  .caption{position:absolute;left:14px;right:80px;bottom:calc(96px);z-index:25}
+  .capUser{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+  .capUser .badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;
+    background:linear-gradient(135deg,var(--brand),var(--brand2))}
+  .capCat{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:7px 0 4px}
+  .capText{font-size:13.5px;line-height:1.4;color:rgba(255,255,255,.92);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .capText.expanded{-webkit-line-clamp:unset}
+  .more{color:var(--muted);font-weight:600}
+
+  /* ===== Progress bar (current item) ===== */
+  .pbar{position:absolute;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));z-index:35;
+    height:3px;background:rgba(255,255,255,.18)}
+  .pbar > i{display:block;height:100%;width:0;background:#fff;border-radius:2px}
+
+  /* ===== Bottom nav ===== */
+  .nav{position:relative;z-index:40;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    display:flex;align-items:stretch;justify-content:space-around;
+    background:rgba(8,8,10,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-top:1px solid var(--line)}
+  .tab{flex:1;border:none;background:none;color:var(--muted2);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:10px;font-weight:600;letter-spacing:.2px;position:relative;transition:color .15s}
+  .tab .ic{position:relative;display:grid;place-items:center}
+  .tab.active{color:#fff}
+  .tab.active .ic svg{stroke:#fff}
+  .tab.active::before{content:"";position:absolute;top:0;width:26px;height:2.5px;border-radius:0 0 3px 3px;
+    background:linear-gradient(90deg,var(--brand),var(--brand2))}
+  .tab .badge{position:absolute;top:-5px;right:50%;transform:translateX(20px);
+    min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--brand);
+    color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;border:1.5px solid #08080a}
+  .ring{--p:80;width:26px;height:26px;border-radius:50%;
+    background:conic-gradient(var(--brand) calc(var(--p)*1%), rgba(255,255,255,.18) 0);
+    display:grid;place-items:center}
+  .ring i{width:19px;height:19px;border-radius:50%;background:#08080a;display:grid;place-items:center;
+    font-size:8.5px;font-weight:800;color:#fff}
+
+  /* ===== Comments sheet ===== */
+  .sheet{position:absolute;inset:0;z-index:60;display:none}
+  .sheet.open{display:block}
+  .sheet .bd{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .25s}
+  .sheet.open .bd{opacity:1}
+  .sheet .panel{position:absolute;left:0;right:0;bottom:0;height:74%;background:var(--surface);
+    border-radius:18px 18px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.22,1,.36,1);
+    display:flex;flex-direction:column;border-top:1px solid var(--line)}
+  .sheet.open .panel{transform:translateY(0)}
+  .grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:10px auto}
+  .sheetHd{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 12px;
+    border-bottom:1px solid var(--line);font-weight:700}
+  .sheetHd .x{font-size:20px;color:var(--muted);cursor:pointer;background:none;border:none}
+  .cList{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:16px}
+  .cItem{display:flex;gap:10px}
+  .cAv{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;
+    background:linear-gradient(135deg,#5b2a86,#b13a7a);font-size:13px}
+  .cBody .u{font-size:12.5px;font-weight:700}
+  .cBody .t{font-size:13.5px;line-height:1.35;margin-top:2px}
+  .cBody .m{font-size:11px;color:var(--muted2);margin-top:4px}
+  .cForm{display:flex;gap:8px;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));
+    border-top:1px solid var(--line);background:var(--surface)}
+  .cForm input{flex:1;background:var(--surface2);border:1px solid var(--line);color:#fff;border-radius:999px;
+    padding:11px 16px;font-size:14px;outline:none}
+  .cForm button{border:none;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
+    border-radius:999px;padding:0 18px;font-weight:700;cursor:pointer}
+
+  .hint{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:45;
+    background:rgba(0,0,0,.6);border:1px solid var(--line);border-radius:999px;
+    padding:6px 14px;font-size:11px;color:var(--muted);pointer-events:none;
+    animation:fade 4.5s forwards}
+  @keyframes fade{0%,70%{opacity:1}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="brand"><span class="dot">IJ</span> Inovando Juntos</div>
+    <div class="topIcons">
+      <button class="iconBtn" title="Buscar" aria-label="Buscar">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+      </button>
+      <button class="iconBtn" title="Loja" aria-label="Loja">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="hint">Deslize ↑ para o próximo • toque para play</div>
+
+  <!-- FEED -->
+  <div class="feed" id="feed"></div>
+
+  <!-- progress bar of current slide -->
+  <div class="pbar"><i id="pfill"></i></div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="nav" id="nav">
+    <button class="tab active" data-tab="home">
+      <span class="ic"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.6V21h5v-6h4v6h5V9.6"/></svg></span>
+      Início
+    </button>
+    <button class="tab" data-tab="itens">
+      <span class="ic">
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="badge">3</span>
+      </span>
+      Itens
+    </button>
+    <button class="tab" data-tab="extras">
+      <span class="ic"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg></span>
+      Extras
+    </button>
+    <button class="tab" data-tab="progresso">
+      <span class="ic"><span class="ring" id="ring" style="--p:80"><i id="ringTxt">16/20</i></span></span>
+      Progresso
+    </button>
+    <button class="tab" data-tab="perfil">
+      <span class="ic"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+      Perfil
+    </button>
+  </nav>
+
+  <!-- COMMENTS SHEET -->
+  <div class="sheet" id="sheet">
+    <div class="bd" id="sheetBd"></div>
+    <div class="panel">
+      <div class="grab"></div>
+      <div class="sheetHd"><span>Comentários</span><button class="x" id="sheetX">✕</button></div>
+      <div class="cList" id="cList"></div>
+      <form class="cForm" id="cForm">
+        <input id="cInput" maxlength="300" placeholder="Adicionar comentário..." />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- ICONS (inline, nítidos) ---------- */
+const ICON = {
+  heart:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.2C.6 8.9 2 5.5 5.2 5.1 7 4.9 8.6 5.9 12 9c3.4-3.1 5-4.1 6.8-3.9C22 5.5 23.4 8.9 22 11.8 19.5 16.4 12 21 12 21z"/></svg>',
+  comment:'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.5 7.2L3 20l1.3-4A8 8 0 1 1 21 11.5z"/></svg>',
+  bookmark:'<svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>',
+  share:'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
+  play:'<svg width="40" height="40" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>'
+};
+
+/* ---------- MOCK DATA (usa teus vídeos reais da pasta /images) ---------- */
+const FEED = [
+  {user:"Inovando Juntos", cat:"Desafio 01", text:"O primeiro passo para reacender a conexão. Pressione play e deixem-se levar 🔥",
+   media:"images/Desafio_01.mp4", type:"video", likes:1280, comments:96, av:"D"},
+  {user:"Massagem Sensual", cat:"Relaxamento", text:"Técnica de massagem para iniciar a noite com calma e toque. Óleo morno recomendado.",
+   media:"images/01_Masaje.mp4", type:"video", likes:842, comments:54, av:"M"},
+  {user:"Beijáveis", cat:"Acessórios", text:"Sabores que despertam os sentidos. Disponível na loja parceira.",
+   media:"images/beijaveis.mp4", type:"video", likes:631, comments:38, av:"B"},
+  {user:"Bondage Suave", cat:"Fantasia", text:"Confiança e consentimento primeiro. Um jogo de entrega para casais.",
+   media:"images/bondage_01.mp4", type:"video", likes:990, comments:71, av:"F"}
+];
+
+const COMMENTS = [
+  {u:"Ana & Léo", t:"Adoramos esse! Mudou nossa rotina 😍", m:"há 2 h"},
+  {u:"Carla", t:"O áudio guiado é perfeito.", m:"há 5 h"},
+  {u:"Rafa", t:"Mais conteúdos assim por favor 🙏", m:"ontem"},
+];
+
+/* ---------- RENDER FEED ---------- */
+const feed = document.getElementById('feed');
+let current = 0;
+
+FEED.forEach((item, i) => {
+  const s = document.createElement('div');
+  s.className = 'slide';
+  s.dataset.i = i;
+  s.innerHTML = `
+    ${item.type==='video'
+      ? `<video class="media" src="${item.media}" loop playsinline webkit-playsinline preload="metadata"></video>`
+      : `<img class="media" src="${item.media}" alt="">`}
+    <div class="scrim"></div>
+    <div class="playPing" id="ping${i}">${ICON.play}</div>
+
+    <div class="rail">
+      <button class="act likeBtn" data-i="${i}" aria-label="Curtir">${ICON.heart}<span class="cnt likeCnt">${fmt(item.likes)}</span></button>
+      <button class="act cmtBtn" data-i="${i}" aria-label="Comentar">${ICON.comment}<span class="cnt">${fmt(item.comments)}</span></button>
+      <button class="act saveBtn" data-i="${i}" aria-label="Salvar">${ICON.bookmark}<span class="cnt">Salvar</span></button>
+      <button class="act shareBtn" data-i="${i}" aria-label="Compartilhar">${ICON.share}<span class="cnt">Enviar</span></button>
+    </div>
+
+    <div class="caption">
+      <div class="capUser">@${item.user.toLowerCase().replace(/ /g,'_')} <span class="badge">Premium</span></div>
+      <div class="capCat">${item.cat}</div>
+      <div class="capText" data-cap="${i}">${item.text}</div>
+    </div>`;
+  feed.appendChild(s);
+});
+
+function fmt(n){ return n>=1000 ? (n/1000).toFixed(1).replace('.0','')+'k' : n; }
+
+/* ---------- VIDEO play/pause on tap + autoplay current ---------- */
+const slides = [...document.querySelectorAll('.slide')];
+
+function videoAt(i){ return slides[i]?.querySelector('video'); }
+
+function setCurrent(i){
+  if(i===current) return;
+  const old = videoAt(current); if(old){ old.pause(); }
+  current = i;
+  playCurrent();
+  syncProgressBinding();
+}
+
+function playCurrent(){
+  const v = videoAt(current);
+  slides.forEach((s,idx)=>{ const vv=s.querySelector('video'); if(vv && idx!==current){vv.pause();} });
+  if(v){ v.muted=false; v.play().catch(()=>{ v.muted=true; v.play().catch(()=>{}); }); }
+}
+
+slides.forEach((s,i)=>{
+  s.addEventListener('click', (e)=>{
+    if(e.target.closest('.act')) return;
+    const v = videoAt(i); if(!v) return;
+    const ping = document.getElementById('ping'+i);
+    if(v.paused){ v.play(); ping.classList.remove('show'); }
+    else { v.pause(); ping.classList.add('show'); }
+  });
+});
+
+/* observe which slide is in view */
+const io = new IntersectionObserver((ents)=>{
+  ents.forEach(en=>{ if(en.isIntersecting){ setCurrent(+en.target.dataset.i); } });
+},{root:feed, threshold:.6});
+slides.forEach(s=>io.observe(s));
+
+/* progress bar */
+const pfill = document.getElementById('pfill');
+function syncProgressBinding(){
+  const v = videoAt(current);
+  pfill.style.width='0%';
+  if(!v) return;
+  v.ontimeupdate = ()=>{ if(v.duration){ pfill.style.width=(v.currentTime/v.duration*100)+'%'; } };
+}
+
+/* ---------- ACTIONS: like / save / comment / share ---------- */
+feed.addEventListener('click',(e)=>{
+  const like = e.target.closest('.likeBtn');
+  const save = e.target.closest('.saveBtn');
+  const cmt  = e.target.closest('.cmtBtn');
+  const share= e.target.closest('.shareBtn');
+  if(like){
+    like.classList.toggle('liked');
+    const c=like.querySelector('.likeCnt'); let base=FEED[+like.dataset.i].likes;
+    c.textContent = fmt(like.classList.contains('liked')? base+1 : base);
+  }
+  if(save){ save.classList.toggle('saved'); }
+  if(cmt){ openSheet(); }
+  if(share){ navigator.share ? navigator.share({title:'Inovando Juntos',text:'Olha isso 🔥'}).catch(()=>{}) : toast('Link copiado'); }
+});
+
+/* expand caption */
+feed.addEventListener('click',(e)=>{
+  const cap=e.target.closest('.capText'); if(cap) cap.classList.toggle('expanded');
+});
+
+/* ---------- COMMENTS SHEET ---------- */
+const sheet=document.getElementById('sheet');
+function openSheet(){
+  const list=document.getElementById('cList');
+  list.innerHTML = COMMENTS.map(c=>`
+    <div class="cItem">
+      <div class="cAv">${c.u[0]}</div>
+      <div class="cBody"><div class="u">${esc(c.u)}</div><div class="t">${esc(c.t)}</div><div class="m">${esc(c.m)}</div></div>
+    </div>`).join('');
+  sheet.classList.add('open');
+}
+function closeSheet(){ sheet.classList.remove('open'); }
+document.getElementById('sheetBd').onclick=closeSheet;
+document.getElementById('sheetX').onclick=closeSheet;
+document.getElementById('cForm').addEventListener('submit',(e)=>{
+  e.preventDefault();
+  const inp=document.getElementById('cInput'); const val=inp.value.trim(); if(!val) return;
+  const list=document.getElementById('cList');
+  const div=document.createElement('div'); div.className='cItem';
+  div.innerHTML=`<div class="cAv">EU</div><div class="cBody"><div class="u">Você</div><div class="t">${esc(val)}</div><div class="m">agora</div></div>`;
+  list.appendChild(div); inp.value=''; list.scrollTop=list.scrollHeight;
+});
+
+/* ---------- BOTTOM NAV ---------- */
+document.getElementById('nav').addEventListener('click',(e)=>{
+  const t=e.target.closest('.tab'); if(!t) return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  if(t.dataset.tab!=='home') toast('Aba "'+t.textContent.trim()+'" (protótipo)');
+});
+
+/* ---------- helpers ---------- */
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+let toastT;
+function toast(msg){
+  let el=document.getElementById('__t');
+  if(!el){el=document.createElement('div');el.id='__t';
+    el.style.cssText='position:absolute;left:50%;bottom:90px;transform:translateX(-50%);z-index:70;background:rgba(0,0,0,.85);border:1px solid var(--line);padding:9px 16px;border-radius:999px;font-size:12.5px;transition:opacity .25s';
+    document.getElementById('app').appendChild(el);}
+  el.textContent=msg; el.style.opacity='1'; clearTimeout(toastT);
+  toastT=setTimeout(()=>el.style.opacity='0',1600);
+}
+
+/* kick off first video after first user gesture (autoplay policy) */
+document.getElementById('app').addEventListener('click',function once(){ playCurrent(); syncProgressBinding(); }, {once:true});
+syncProgressBinding();
+</script>
+</body>
+</html>

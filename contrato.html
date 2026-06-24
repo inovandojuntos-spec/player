@@ -914,6 +914,23 @@
         });
         if (error) throw error;
         allPositions = Array.isArray(data) ? data : [];
+
+        // Bucket "kamasutra" es privado: firmamos las URLs y las escribimos en image_url
+        // para que el render y la generación del PDF (que usan pos.image_url) sigan funcionando.
+        try {
+          const paths = [...new Set(allPositions.map(p => p.image_path).filter(Boolean))];
+          if (paths.length){
+            const { data: signed, error: sErr } =
+              await supabase.storage.from("kamasutra").createSignedUrls(paths, 3600);
+            if (!sErr && Array.isArray(signed)){
+              const map = {};
+              signed.forEach(s => { if (s && s.path && s.signedUrl) map[s.path] = s.signedUrl; });
+              allPositions.forEach(p => { if (p.image_path && map[p.image_path]) p.image_url = map[p.image_path]; });
+            }
+          }
+        } catch (e) {
+          console.warn("No se pudieron firmar las URLs de kamasutra:", e);
+        }
       }
 
       function normalizeSelectedPositions(value){

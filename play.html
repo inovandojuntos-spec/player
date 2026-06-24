@@ -1559,6 +1559,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -3237,6 +3238,35 @@
         })();
       }
 
+      // ---- Bunny Stream (video de pago, protegido con URL firmada) ----
+      function isBunnyVideo(src){ return typeof src === "string" && src.startsWith("bunny:"); }
+
+      async function getBunnySignedUrl(guid){
+        const { data, error } = await supabase.functions.invoke("get-video-url", { body: { guid } });
+        if (error) throw error;
+        return data?.url;
+      }
+
+      function attachHls(videoEl, url){
+        if (window.Hls && window.Hls.isSupported()){
+          try { if (videoEl._hls) videoEl._hls.destroy(); } catch(_){}
+          const hls = new window.Hls({ maxBufferLength: 30 });
+          hls.loadSource(url);
+          hls.attachMedia(videoEl);
+          videoEl._hls = hls;
+        } else {
+          videoEl.src = url; // Safari / iOS: HLS nativo
+        }
+      }
+
+      async function loadBunnyInto(videoEl, src){
+        try {
+          const guid = src.slice("bunny:".length);
+          const url = await getBunnySignedUrl(guid);
+          if (url){ attachHls(videoEl, url); try { await videoEl.play(); } catch(_){} }
+        } catch (e){ console.error("[BUNNY] no se pudo cargar el video", e); }
+      }
+
       function renderMedia(data){
         resetKamasutraState();
         mediaBox.innerHTML = "";
@@ -3258,9 +3288,9 @@
           return;
         }
 
-        if (isVideo(src)){
+        if (isBunnyVideo(src) || isVideo(src)){
           const v = document.createElement("video");
-          v.src = src;
+          if (!isBunnyVideo(src)) v.src = src;
           v.muted = true;
           v.autoplay = true;
           v.loop = false;
@@ -3272,6 +3302,7 @@
           mediaBox.appendChild(v);
           currentMediaVideoEl = v;
           syncVideoToAudio(hiddenAudio, currentMediaVideoEl);
+          if (isBunnyVideo(src)) loadBunnyInto(v, src);
           return;
         }
 
@@ -3412,14 +3443,15 @@
               : (item.image || item.video || "");
 
             if (src){
-              if (isVideo(src)){
+              if (isBunnyVideo(src) || isVideo(src)){
                 const v = document.createElement("video");
-                v.src = src;
+                if (!isBunnyVideo(src)) v.src = src;
                 v.muted = true;
                 v.loop = true;
                 v.autoplay = true;
                 v.playsInline = true;
                 media.appendChild(v);
+                if (isBunnyVideo(src)) loadBunnyInto(v, src);
               } else {
                 const img = document.createElement("img");
                 img.src = src;
