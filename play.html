@@ -2940,7 +2940,22 @@
         }
       }
 
+      // Resuelve el src del audio: firma si es de Supabase privado (sbaudio:<path>).
+      async function resolveAudioSrc(src){
+        if (typeof src === "string" && src.startsWith("sbaudio:")){
+          const path = src.slice("sbaudio:".length);
+          const { data, error } = await supabase.storage.from("audios").createSignedUrl(path, 3600);
+          if (error){ console.error("[AUDIO sign]", error); return ""; }
+          return data?.signedUrl || "";
+        }
+        return src; // URL normal o ruta local
+      }
+
+      let audioLoadSeq = 0;
+
       function loadAudio(src, autoplay = true, isLoopMode = false){
+        const seq = ++audioLoadSeq;
+
         if (!src){
           hiddenAudio.removeAttribute("src");
           hiddenAudio.loop = false;
@@ -2955,9 +2970,7 @@
           return;
         }
 
-        hiddenAudio.src = src;
         hiddenAudio.loop = isLoopMode;
-        hiddenAudio.load();
         playerWrap.hidden = false;
         progress.value = 0;
         currentTimeEl.textContent = "0:00";
@@ -2974,11 +2987,18 @@
 
         updatePlayUI();
 
-        if (autoplay){
-          setTimeout(() => {
-            hiddenAudio.play().catch(() => {});
-          }, 120);
-        }
+        // Firma/resuelve la URL y, si el usuario no cambió de audio, la carga.
+        resolveAudioSrc(src).then(url => {
+          if (seq !== audioLoadSeq) return;   // navegó a otro audio mientras firmábamos
+          if (!url) return;
+          hiddenAudio.src = url;
+          hiddenAudio.load();
+          if (autoplay){
+            setTimeout(() => {
+              if (seq === audioLoadSeq) hiddenAudio.play().catch(() => {});
+            }, 120);
+          }
+        });
       }
 
       async function loadKamasutraPositions(mode){
