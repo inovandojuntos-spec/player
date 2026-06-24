@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<title>Inovando Juntos — V4</title>
+<title>Inovando Juntos</title>
 <style>
   :root{
     --bg:#000; --surface:#0b0b0d; --surface2:#141417;
@@ -545,7 +545,6 @@ function renderItens(){
           <p class="itemName">${esc(it.name||'Item')}</p>
           ${it.description?`<p class="itemDesc">${esc(it.description)}</p>`:''}
           <div class="itemMetaRow">
-            ${playable?'<span class="itemPill solid">▶ Reproduzir</span>':''}
             ${link?`<span class="itemPill ghost" data-link="${esc(link)}">Ver produto</span>`:''}
           </div>
         </div>
