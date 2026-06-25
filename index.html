@@ -274,7 +274,12 @@
     src:url("fonts/bodoni-moda/BodoniModa.ttf") format("truetype");
     font-weight:100 900; font-style:normal; font-display:swap;
   }
-  .hero h1{ font-family:"Jost", "Century Gothic", "Futura", system-ui, sans-serif;
+  @font-face{
+    font-family:"Jost Local";
+    src:url("fonts/jost/Jost.ttf") format("truetype");
+    font-weight:100 900; font-style:normal; font-display:swap;
+  }
+  .hero h1{ font-family:"Jost Local", "Jost", "Century Gothic", "Futura", system-ui, sans-serif;
     font-size:clamp(40px,7.2vw,104px); font-weight:400; letter-spacing:.12em; line-height:1.12;
     text-transform:uppercase; margin-bottom:4px; }
   .hero h1 .ln{ display:block; overflow:visible; }              /* sin recorte de letras */
@@ -301,9 +306,10 @@
   .hero .sign{ opacity:0; animation:fadeUp .8s ease .95s forwards; }
   @keyframes fadeUp{ from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none} }
   /* indicador scroll */
-  .hero-scroll{ position:absolute; left:50%; bottom:22px; z-index:3; transform:translateX(-50%);
+  .hero-scroll{ position:absolute; left:0; right:0; bottom:22px; z-index:3;
     display:flex; flex-direction:column; align-items:center; gap:7px; color:var(--soft);
-    font-size:10px; letter-spacing:.24em; text-transform:uppercase; opacity:0; animation:fadeUp .8s ease 1.2s forwards; }
+    font-size:10px; letter-spacing:.24em; text-transform:uppercase; text-align:center;
+    opacity:0; animation:fadeUp .8s ease 1.2s forwards; }
   .hero-scroll .mw{ width:22px; height:34px; border:1px solid var(--edge2); border-radius:14px; position:relative; }
   .hero-scroll .mw::after{ content:""; position:absolute; left:50%; top:7px; width:3px; height:7px; border-radius:3px;
     background:var(--text); transform:translateX(-50%); animation:wheel 1.8s ease-in-out infinite; }
