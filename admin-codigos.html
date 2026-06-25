@@ -94,6 +94,16 @@
     .primaryBtn:active{ transform:scale(.99); }
     .primaryBtn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
 
+    .backBtn{
+      display:inline-flex; align-items:center; gap:8px; margin:10px auto 2px;
+      border:1px solid var(--edge2); border-radius:999px; background:rgba(255,255,255,.06);
+      color:var(--text); cursor:pointer; font-size:13.5px; font-weight:800;
+      padding:11px 20px; letter-spacing:-.01em;
+      transition:background .14s ease, border-color .14s ease, transform .10s ease;
+    }
+    .backBtn:hover{ background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.30); }
+    .backBtn:active{ transform:scale(.98); }
+
     .status{
       display:none; margin-top:16px; border:1px solid var(--edge); border-radius:14px;
       padding:12px 13px; background:rgba(255,255,255,.055); color:var(--muted);
@@ -171,7 +181,11 @@
         <div id="content" class="hidden">
           <h1>Gerar código de ativação</h1>
           <p class="who" id="whoami"></p>
-          <p style="text-align:center;margin:6px 0 0"><a href="/player_V4_live.html" style="color:var(--muted);font-size:12.5px;text-decoration:underline;text-underline-offset:3px">← Voltar ao app</a></p>
+          <div style="text-align:center">
+            <button type="button" class="backBtn" id="backBtn">
+              <span aria-hidden="true">←</span> Voltar ao app
+            </button>
+          </div>
 
           <form class="form" id="genForm" novalidate>
             <div class="field">
@@ -395,6 +409,17 @@
       resultBox.classList.remove("show");
       clearStatus();
       $("buyerName").focus();
+    });
+
+    // Voltar: regresa a la pestaña/página anterior (mismo tab, sin abrir nuevas)
+    $("backBtn").addEventListener("click", () => {
+      const sameOriginRef = document.referrer && document.referrer.startsWith(location.origin);
+      if (sameOriginRef && history.length > 1) {
+        history.back();
+      } else {
+        // No hay historial propio: navega en el MISMO tab al app
+        location.replace("/player_V4_live.html");
+      }
     });
 
     init();

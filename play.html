@@ -641,8 +641,15 @@ function fmtPrice(it){
 }
 function openLink(url){
   const u=(url||'').trim(); if(!u) return false;
-  if(/^(https?:|mailto:|tel:)/i.test(u)) window.open(u,'_blank','noopener,noreferrer');
-  else window.location.href=u;
+  // mailto/tel no abrem aba: dispara o handler do sistema
+  if(/^(mailto:|tel:)/i.test(u)){ window.location.href=u; return true; }
+  // http(s): reutiliza SEMPRE a mesma aba (nome fixo) em vez de abrir várias
+  if(/^https?:/i.test(u)){
+    const w=window.open(u,'ij_external');
+    if(w){ try{ w.opener=null; }catch(_){} try{ w.focus(); }catch(_){} }
+    return true;
+  }
+  window.location.href=u;
   return true;
 }
 
