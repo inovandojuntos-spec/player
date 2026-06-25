@@ -1157,6 +1157,8 @@ async function loadPerfil(){
   }catch(e){ console.error('[profile]',e); }
   let partner=null;
   try{ const {data:pt}=await supabase.rpc('get_my_partner'); partner=(pt&&pt.display_name)?pt.display_name:null; }catch(e){ console.error('[partner]',e); }
+  let canIssue=false;
+  try{ const {data:ci}=await supabase.rpc('current_user_can_issue_codes'); canIssue=ci===true; }catch(e){ console.error('[canIssue]',e); }
   const name=pr.display_name||'';
   const initial=(name||authEmail||'?').trim()[0]?.toUpperCase()||'?';
   const avatar=pr.avatar_url?`<img src="${esc(pr.avatar_url)}" alt="" onerror="this.replaceWith(document.createTextNode('${esc(initial)}'))">`:esc(initial);
@@ -1199,11 +1201,17 @@ async function loadPerfil(){
       <span class="prDesejosTx"><b>Intercâmbio de desejos</b><small>A realizar e já vividos · seus e do parceir@</small></span>
       <span class="prDesejosChev">›</span>
     </button>
+    ${canIssue?`<button type="button" class="prDesejos" id="pfAdminCodes">
+      <span class="prDesejosIc">⚡</span>
+      <span class="prDesejosTx"><b>Gerar códigos de ativação</b><small>Painel de emissão · acesso restrito</small></span>
+      <span class="prDesejosChev">›</span>
+    </button>`:''}
     <button class="prOut" id="pfOut">Sair da conta</button>
     <p class="prMeta">Membro desde ${pr.created_at?new Date(pr.created_at).toLocaleDateString('pt-BR'):'—'}<br>Inovando Juntos · Premium</p>
   `;
   $('#pfSave').addEventListener('click',savePerfil);
   $('#pfDesejos').addEventListener('click',openDesejos);
+  if(canIssue){ const ac=$('#pfAdminCodes'); if(ac) ac.addEventListener('click',()=>{ location.href='/admin-codigos.html'; }); }
   $('#pfOut').addEventListener('click',async()=>{ try{ await supabase.auth.signOut(); }catch(_){} location.replace('/login.html'); });
 }
 async function savePerfil(){
