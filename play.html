@@ -161,6 +161,24 @@
   .kmNum{font-size:11px;letter-spacing:.18em;color:var(--silver-dim);font-weight:800;text-transform:uppercase}
   .kmName{font-size:21px;font-weight:850;margin-top:4px}
   .kmHint{font-size:11px;color:var(--muted2);margin-top:9px}
+  .ruletaScreen{position:absolute;inset:0;z-index:59;background:radial-gradient(120% 80% at 50% 0%,#161617,#070708 62%,#000);display:none;flex-direction:column;align-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 20px;overflow-y:auto}
+  .ruletaScreen.open{display:flex}
+  .rlClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:rgba(0,0,0,.5);color:#fff;font-size:17px;cursor:pointer}
+  .rlTitle{font-size:13px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;background:var(--metal);-webkit-background-clip:text;background-clip:text;color:transparent;margin:2px 0 8px}
+  .rlWheelWrap{position:relative;width:min(82vw,340px);aspect-ratio:1/1;display:grid;place-items:center;margin:4px auto 2px}
+  .rlWheel{width:100%;height:100%;border-radius:50%;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+  .rlPin{position:absolute;top:-3px;left:50%;transform:translateX(-50%);z-index:2;width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:22px solid var(--silver-bright);filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+  .rlHub{position:absolute;width:62px;height:62px;border-radius:50%;border:2px solid #0a0a0b;background:var(--metal);display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.6)}
+  .rlHub span{font-size:10px;font-weight:900;color:#0a0a0b;letter-spacing:.04em}
+  .rlResult{width:min(94%,420px);margin:14px auto 0;border:1px solid var(--line2);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.01));padding:16px;text-align:center;min-height:92px;display:flex;flex-direction:column;gap:9px;justify-content:center}
+  .rlCat{align-self:center;font-size:10.5px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:#0a0a0b;background:var(--metal);padding:4px 14px;border-radius:999px}
+  .rlQ{font-size:15.5px;line-height:1.45;font-weight:650;color:#fff}
+  .rlHint{font-size:12.5px;color:var(--muted2);line-height:1.5}
+  .rlRow{display:flex;gap:10px;width:min(94%,420px);margin:14px auto 0}
+  .rlSpin{flex:1;border:none;background:var(--metal);color:#0a0a0b;border-radius:14px;padding:15px;font-size:15px;font-weight:850;cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,.45)}
+  .rlSpin:disabled{opacity:.5}
+  .rlIcoBtn{flex:none;width:54px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--silver);border-radius:14px;font-size:18px;cursor:pointer}
+  .rlIcoBtn:disabled{opacity:.4}
   .kmRail{position:absolute;right:10px;bottom:128px;z-index:3;display:flex;flex-direction:column;gap:20px;align-items:center}
 
   /* progress scratch grid */
@@ -222,7 +240,20 @@
   .wishTab{border:none;background:none;color:var(--muted);font-size:11.5px;font-weight:800;padding:6px 13px;border-radius:999px;cursor:pointer}
   .wishTab.active{background:var(--metal);color:#0a0a0b}
   .wishGrid{display:flex;flex-direction:column;gap:14px;min-height:60px}
-  .wishGridInner{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .wishGridInner{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .dzIntro{font-size:12.5px;color:var(--muted2);line-height:1.5;margin:0 0 16px}
+  .wishTabsBig{width:100%;justify-content:center;margin-bottom:16px}
+  .wishTabsBig .wishTab{font-size:12.5px;padding:8px 18px}
+  #desejosBody .wishName{font-size:13px}
+  #desejosBody .wishType{font-size:10px}
+  #desejosBody .wishSecTitle{font-size:13.5px}
+  .prDesejos{width:100%;margin-top:18px;display:flex;align-items:center;gap:13px;border:1px solid var(--line2);border-radius:16px;background:linear-gradient(135deg,rgba(220,226,233,.10),rgba(255,255,255,.02));padding:14px;cursor:pointer;text-align:left}
+  .prDesejos:active{transform:scale(.99)}
+  .prDesejosIc{width:42px;height:42px;border-radius:12px;flex:none;display:grid;place-items:center;background:var(--metal);color:#0a0a0b;font-size:18px;font-weight:900;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+  .prDesejosTx{flex:1;display:flex;flex-direction:column;gap:2px}
+  .prDesejosTx b{font-size:14px;font-weight:850}
+  .prDesejosTx small{font-size:11px;color:var(--muted2)}
+  .prDesejosChev{color:var(--silver-dim);font-size:20px}
   .wishSec{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
   .wishSecHd{width:100%;display:flex;align-items:center;gap:8px;border:none;background:var(--surface2);color:#fff;padding:11px 13px;cursor:pointer;text-align:left}
   .wishSecTitle{font-size:12.5px;font-weight:850;flex:1}
@@ -295,6 +326,23 @@
     </div>
     <div class="scBody" id="perfilBody">
       <div class="center-msg" style="position:static"><div class="spin"></div></div>
+    </div>
+  </section>
+
+  <section class="screen" id="desejosScreen" aria-hidden="true">
+    <div class="scHd">
+      <button class="back" id="desejosBack" aria-label="Voltar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2>Intercâmbio de desejos</h2>
+    </div>
+    <div class="scBody" id="desejosBody">
+      <p class="dzIntro">O que vocês desejam realizar e o que já viveram juntos.</p>
+      <div class="wishTabs wishTabsBig">
+        <button type="button" class="wishTab active" data-scope="me">Seus</button>
+        <button type="button" class="wishTab" data-scope="partner">Do parceir@</button>
+      </div>
+      <div class="wishGrid" id="wishGrid"></div>
     </div>
   </section>
 
@@ -413,7 +461,7 @@ function buildSlides(list, startSlug){
         <div class="capUser">@inovandojuntos <span class="badge">Premium</span></div>
         <div class="capCat">${esc(it.category||'Desafio')}</div>
         <div class="capText">${esc(it.title||'')}</div>
-        <div class="soldline">✦ <span class="soldN">—</span> casais já viveram</div>
+        <div class="soldline">✦ <span class="soldN">—</span> casais já <span class="soldVerb">viveram</span></div>
       </div>
       <div class="lockOverlay">
         <div class="lockCard">
@@ -529,11 +577,13 @@ function setItemCaption(slide,item){
   if(slide.dataset.savedCat===undefined){ slide.dataset.savedCat=cat.textContent; slide.dataset.savedTxt=txt.textContent; }
   cat.textContent=item.category||'Produto';
   txt.textContent=item.name||'';
+  const sv=slide.querySelector('.soldVerb'); if(sv) sv.textContent='usaram';
 }
 function restoreCaption(slide){
   if(!slide||slide.dataset.savedCat===undefined) return;
   slide.querySelector('.capCat').textContent=slide.dataset.savedCat;
   slide.querySelector('.capText').textContent=slide.dataset.savedTxt||'';
+  const sv=slide.querySelector('.soldVerb'); if(sv) sv.textContent='viveram';
   delete slide.dataset.savedCat; delete slide.dataset.savedTxt;
 }
 function hideStill(slide){ const s=slide&&slide.querySelector('.itemStill'); if(s){ s.classList.remove('show'); s.removeAttribute('src'); } }
@@ -707,8 +757,9 @@ function renderExtras(){
         : (ext?ICON.link:ICON.book));
     const vid=String(it.video||'');
     const isKama=vid.startsWith('kamasutra://')||vid.startsWith('cadeira://');
+    const isRuleta=vid.startsWith('ruleta://');
     const tag = ext ? (isSpoty?'Ouvir no Spotify':'Abrir link')
-              : (isKama?'Abrir player':((it.video||it.audio)?'Reproduzir':'Ver guia'));
+              : (isRuleta?'Abrir roleta':(isKama?'Abrir player':((it.video||it.audio)?'Reproduzir':'Ver guia')));
     html+=`<div class="exCard ${isSpoty?'spotify':''}" data-idx="${idx}">
       <div class="exIcon">${iconHtml}</div>
       <div class="exBody">
@@ -734,6 +785,7 @@ function handleExtra(it){
   const vid=String(it.video||'');
   if(vid.startsWith('kamasutra://')){ closePanel(); openKamasutra('kamasutra', it.audio); return; }
   if(vid.startsWith('cadeira://')){ closePanel(); openKamasutra('cadeira', it.audio); return; }
+  if(vid.startsWith('ruleta://')){ closePanel(); openRuleta(); return; }
   if(it.video||it.audio){ playItem(it); return; }
   openExtraInfo(it);
 }
@@ -852,6 +904,120 @@ function closeKama(){
   const slide=currentSlide; if(slide){ currentSlide=null; activate(slide); }
 }
 
+/* ===== Roleta do Casal (perguntas + áudio) ===== */
+let ruleta={screen:null,cv:null,ctx:null,groups:[],byGroup:{},rot:0,spinning:false,audio:null,lastUrl:null,built:false,loaded:false};
+function buildRuletaScreen(){
+  if(ruleta.built) return;
+  const sc=document.createElement('section'); sc.className='ruletaScreen'; sc.id='ruletaScreen';
+  sc.innerHTML=`
+    <button class="rlClose" aria-label="Fechar">✕</button>
+    <div class="rlTitle">Roleta do Casal</div>
+    <div class="rlWheelWrap">
+      <div class="rlPin"></div>
+      <canvas class="rlWheel" width="600" height="600"></canvas>
+      <button class="rlHub" type="button"><span>GIRAR</span></button>
+    </div>
+    <div class="rlResult">
+      <div class="rlHint" id="rlHint">Toque em GIRAR para sortear uma pergunta.</div>
+      <div class="rlCat" id="rlCat" style="display:none"></div>
+      <div class="rlQ" id="rlQ" style="display:none"></div>
+    </div>
+    <div class="rlRow">
+      <button class="rlSpin" id="rlSpin">GIRAR</button>
+      <button class="rlIcoBtn" id="rlRepeat" disabled aria-label="Repetir áudio">↻</button>
+    </div>`;
+  $('#app').appendChild(sc);
+  ruleta.screen=sc; ruleta.cv=sc.querySelector('.rlWheel'); ruleta.ctx=ruleta.cv.getContext('2d');
+  sc.querySelector('.rlClose').addEventListener('click',closeRuleta);
+  sc.querySelector('#rlSpin').addEventListener('click',ruletaSpin);
+  sc.querySelector('.rlHub').addEventListener('click',ruletaSpin);
+  sc.querySelector('#rlRepeat').addEventListener('click',ruletaRepeat);
+  ruleta.built=true;
+}
+function drawRuleta(rot){
+  const ctx=ruleta.ctx, n=ruleta.groups.length; if(!ctx||!n) return;
+  const cx=300, cy=300, R=288, slice=Math.PI*2/n;
+  ctx.clearRect(0,0,600,600);
+  for(let i=0;i<n;i++){
+    const a0=rot+i*slice, a1=a0+slice;
+    const g=ctx.createLinearGradient(cx+Math.cos(a0)*R,cy+Math.sin(a0)*R,cx+Math.cos(a1)*R,cy+Math.sin(a1)*R);
+    if(i%2){ g.addColorStop(0,'#2b2d33'); g.addColorStop(1,'#141519'); }
+    else { g.addColorStop(0,'#3d4047'); g.addColorStop(1,'#1c1d22'); }
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,a0,a1); ctx.closePath();
+    ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='rgba(220,226,233,.30)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(a0+slice/2); ctx.textAlign='right';
+    ctx.fillStyle='#eef1f5'; ctx.font='800 22px -apple-system,system-ui,sans-serif';
+    ctx.fillText(ruleta.groups[i], R-20, 7); ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.strokeStyle='rgba(220,226,233,.55)'; ctx.lineWidth=4; ctx.stroke();
+}
+async function openRuleta(){
+  buildRuletaScreen();
+  ruleta.screen.classList.add('open');
+  master.pause(); try{ currentSlide?.querySelector('video')?.pause(); }catch(_){}
+  if(!ruleta.loaded){
+    try{
+      const {data}=await supabase.rpc('get_ruleta_perguntas');
+      const qs=(data&&data.perguntas)||[]; ruleta.groups=(data&&data.categorias)||[];
+      ruleta.byGroup={}; qs.forEach(q=>{ (ruleta.byGroup[q.categoria]=ruleta.byGroup[q.categoria]||[]).push(q); });
+      ruleta.loaded=ruleta.groups.length>0;
+    }catch(e){ console.error('[ruleta load]',e); }
+  }
+  const hint=ruleta.screen.querySelector('#rlHint');
+  if(!ruleta.groups.length){ if(hint) hint.textContent='Não foi possível carregar a roleta.'; return; }
+  ruleta.rot=0; drawRuleta(0);
+}
+function closeRuleta(){
+  if(ruleta.audio){ try{ ruleta.audio.pause(); }catch(_){} }
+  if(ruleta.screen) ruleta.screen.classList.remove('open');
+  const slide=currentSlide; if(slide){ currentSlide=null; activate(slide); }
+}
+function ruletaEase(t){ return 1-Math.pow(1-t,3); }
+function ruletaSpin(){
+  if(ruleta.spinning||!ruleta.groups.length) return;
+  ruleta.spinning=true;
+  const sp=ruleta.screen.querySelector('#rlSpin'); sp.disabled=true;
+  ruleta.screen.querySelector('#rlRepeat').disabled=true;
+  const n=ruleta.groups.length, slice=Math.PI*2/n;
+  const target=Math.floor(Math.random()*n), turns=5+Math.floor(Math.random()*3);
+  const start=ruleta.rot, pointer=-Math.PI/2;
+  let end=(pointer-(target*slice+slice/2))-Math.PI*2*turns;
+  while(end>start) end-=Math.PI*2;
+  const dur=3600, t0=performance.now();
+  function frame(now){
+    const p=Math.min(1,(now-t0)/dur);
+    ruleta.rot=start+(end-start)*ruletaEase(p);
+    drawRuleta(ruleta.rot);
+    if(p<1) requestAnimationFrame(frame);
+    else { ruleta.spinning=false; sp.disabled=false; if(navigator.vibrate)navigator.vibrate(30); ruletaPick(ruleta.groups[target]); }
+  }
+  requestAnimationFrame(frame);
+}
+async function ruletaPick(group){
+  const arr=ruleta.byGroup[group]||[]; if(!arr.length) return;
+  const q=arr[Math.floor(Math.random()*arr.length)];
+  const sc=ruleta.screen;
+  sc.querySelector('#rlHint').style.display='none';
+  const cat=sc.querySelector('#rlCat'), qe=sc.querySelector('#rlQ');
+  cat.textContent=group; cat.style.display='';
+  qe.textContent=q.pergunta; qe.style.display='';
+  await ruletaPlay(q.audio);
+}
+async function ruletaPlay(path){
+  const rep=ruleta.screen.querySelector('#rlRepeat');
+  if(!path){ rep.disabled=true; return; }
+  try{
+    const {data}=await supabase.storage.from('audios').createSignedUrl(path,3600);
+    if(data&&data.signedUrl){
+      if(!ruleta.audio) ruleta.audio=new Audio();
+      ruleta.lastUrl=data.signedUrl; ruleta.audio.src=data.signedUrl;
+      ruleta.audio.play().catch(()=>{}); rep.disabled=false;
+    } else rep.disabled=true;
+  }catch(e){ console.error('[ruleta audio]',e); rep.disabled=true; }
+}
+function ruletaRepeat(){ if(ruleta.audio&&ruleta.lastUrl){ try{ ruleta.audio.currentTime=0; ruleta.audio.play().catch(()=>{}); }catch(_){} } }
+
 function progressItems(res){
   const cand=[res?.desafios,res?.details,res?.items,res?.data,res?.progress].find(Array.isArray)||[];
   return cand.map((row,i)=>{
@@ -915,6 +1081,22 @@ function openPerfil(){ perfilScreen.classList.add('open'); perfilScreen.setAttri
 function closePerfil(){ perfilScreen.classList.remove('open'); perfilScreen.setAttribute('aria-hidden','true'); resetTabsToFeed(); }
 $('#perfilBack').onclick=closePerfil;
 
+const desejosScreen=$('#desejosScreen'); let desejosWired=false;
+function openDesejos(){
+  desejosScreen.classList.add('open'); desejosScreen.setAttribute('aria-hidden','false');
+  if(!desejosWired){
+    desejosScreen.querySelectorAll('.wishTab').forEach(t=>t.addEventListener('click',()=>{
+      desejosScreen.querySelectorAll('.wishTab').forEach(x=>x.classList.toggle('active',x===t));
+      loadWishes(t.dataset.scope);
+    }));
+    desejosWired=true;
+  }
+  desejosScreen.querySelectorAll('.wishTab').forEach((x,i)=>x.classList.toggle('active',i===0));
+  loadWishes('me');
+}
+function closeDesejos(){ desejosScreen.classList.remove('open'); desejosScreen.setAttribute('aria-hidden','true'); }
+$('#desejosBack').onclick=closeDesejos;
+
 async function loadPerfil(){
   perfilBody.innerHTML='<div class="center-msg" style="position:static"><div class="spin"></div></div>';
   let pr={};
@@ -961,25 +1143,16 @@ async function loadPerfil(){
       <input class="fInput" value="${esc(partner||'—')}" disabled style="opacity:.65">
     </div>
     <button class="prSave" id="pfSave">Salvar alterações</button>
-    <div class="wishWrap">
-      <div class="wishHd">
-        <span class="wishTitle">Seus desejos ♥</span>
-        <div class="wishTabs">
-          <button type="button" class="wishTab active" data-scope="me">Seus</button>
-          <button type="button" class="wishTab" data-scope="partner">Do parceir@</button>
-        </div>
-      </div>
-      <div class="wishGrid" id="wishGrid"></div>
-    </div>
+    <button type="button" class="prDesejos" id="pfDesejos">
+      <span class="prDesejosIc">♥</span>
+      <span class="prDesejosTx"><b>Intercâmbio de desejos</b><small>A realizar e já vividos · seus e do parceir@</small></span>
+      <span class="prDesejosChev">›</span>
+    </button>
     <button class="prOut" id="pfOut">Sair da conta</button>
     <p class="prMeta">Membro desde ${pr.created_at?new Date(pr.created_at).toLocaleDateString('pt-BR'):'—'}<br>Inovando Juntos · Premium</p>
   `;
   $('#pfSave').addEventListener('click',savePerfil);
-  perfilBody.querySelectorAll('.wishTab').forEach(t=>t.addEventListener('click',()=>{
-    perfilBody.querySelectorAll('.wishTab').forEach(x=>x.classList.toggle('active',x===t));
-    loadWishes(t.dataset.scope);
-  }));
-  loadWishes('me');
+  $('#pfDesejos').addEventListener('click',openDesejos);
   $('#pfOut').addEventListener('click',async()=>{ try{ await supabase.auth.signOut(); }catch(_){} location.replace('/login.html'); });
 }
 async function savePerfil(){
