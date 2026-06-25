@@ -36,6 +36,8 @@
   .slide .grad{position:absolute;inset:0;background:radial-gradient(70% 55% at 32% 26%,rgba(150,160,172,.28),transparent 60%),radial-gradient(60% 60% at 78% 82%,rgba(60,64,72,.55),transparent),linear-gradient(160deg,#16171b,#070708)}
   .slide video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent;opacity:0;transition:opacity .5s}
   .slide video.ready{opacity:1}
+  .itemStill{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transition:opacity .3s;pointer-events:none}
+  .itemStill.show{opacity:1}
   .scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.45) 0%,rgba(0,0,0,0) 24%,rgba(0,0,0,0) 52%,rgba(0,0,0,.88) 100%)}
   .lockOverlay{position:absolute;inset:0;z-index:36;display:none;align-items:center;justify-content:center;padding:28px;background:radial-gradient(80% 60% at 50% 40%,rgba(10,10,12,.55),rgba(0,0,0,.82));backdrop-filter:blur(3px)}
   .slide.locked .lockOverlay{display:flex}
@@ -398,6 +400,7 @@ function buildSlides(list, startSlug){
     s.innerHTML=`
       <div class="grad"></div>
       <video muted loop playsinline webkit-playsinline preload="none"></video>
+      <img class="itemStill" alt="">
       <div class="scrim"></div>
       <div class="playPing">${ICON.play}</div>
       <div class="rail">
@@ -462,7 +465,7 @@ async function getChallenge(slug){
 
 async function activate(slide){
   if(slide===currentSlide) { return; }
-  if(itemPlaying){ itemPlaying=false; currentItem=null; hideItemBar(); restoreCaption(currentSlide); }
+  if(itemPlaying){ itemPlaying=false; currentItem=null; hideItemBar(); restoreCaption(currentSlide); hideStill(currentSlide); }
   currentSlide=slide;
   const seq=++activeSeq;
   const slug=slide.dataset.slug, id=slide.dataset.id;
@@ -533,6 +536,7 @@ function restoreCaption(slide){
   slide.querySelector('.capText').textContent=slide.dataset.savedTxt||'';
   delete slide.dataset.savedCat; delete slide.dataset.savedTxt;
 }
+function hideStill(slide){ const s=slide&&slide.querySelector('.itemStill'); if(s){ s.classList.remove('show'); s.removeAttribute('src'); } }
 
 /* ===== Items helpers ===== */
 function challengeItems(){
@@ -644,18 +648,28 @@ async function playItem(item){
   const seq=++activeSeq;
   itemPlaying=true; currentItem=item;
   const v=slide.querySelector('video');
+  const still=slide.querySelector('.itemStill');
   master.pause();
   const vid=String(item.video||'');
-  try{
-    if(vid.startsWith('bunny:')){
-      const {data:vd}=await supabase.functions.invoke('get-video-url',{body:{guid:vid.slice(6)}});
-      if(seq!==activeSeq) return;
-      if(vd&&vd.url){ attachHls(v,vd.url); v.muted=true; v.play().catch(()=>{}); }
-    } else if(/\.(mp4|webm|m3u8)$/i.test(vid)){
-      if(v._hls){try{v._hls.destroy()}catch(_){}; v._hls=null;}
-      v.src=vid; v.muted=true; v.classList.add('ready'); v.play().catch(()=>{});
-    }
-  }catch(e){ console.error('[item video]',e); }
+  const hasVideo=vid.startsWith('bunny:')||/\.(mp4|webm|m3u8)$/i.test(vid);
+  if(hasVideo){
+    if(still) still.classList.remove('show');
+    try{
+      if(vid.startsWith('bunny:')){
+        const {data:vd}=await supabase.functions.invoke('get-video-url',{body:{guid:vid.slice(6)}});
+        if(seq!==activeSeq) return;
+        if(vd&&vd.url){ attachHls(v,vd.url); v.muted=true; v.play().catch(()=>{}); }
+      } else {
+        if(v._hls){try{v._hls.destroy()}catch(_){}; v._hls=null;}
+        v.src=vid; v.muted=true; v.classList.add('ready'); v.play().catch(()=>{});
+      }
+    }catch(e){ console.error('[item video]',e); }
+  } else {
+    try{ v.pause(); }catch(_){}
+    if(v._hls){try{v._hls.destroy()}catch(_){}; v._hls=null;}
+    v.removeAttribute('src'); v.classList.remove('ready');
+    if(still){ if(item.image){ still.src=item.image; still.classList.add('show'); } else { still.classList.remove('show'); } }
+  }
   const aud=String(item.audio||'');
   try{
     if(aud.startsWith('sbaudio:')){
@@ -672,7 +686,7 @@ async function playItem(item){
 function restoreChallenge(){
   itemPlaying=false; currentItem=null; hideItemBar();
   const slide=currentSlide; if(!slide) return;
-  restoreCaption(slide);
+  restoreCaption(slide); hideStill(slide);
   currentSlide=null; activate(slide);
 }
 
