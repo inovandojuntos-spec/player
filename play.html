@@ -395,6 +395,8 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const ICON={
   heart:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.2C.6 8.9 2 5.5 5.2 5.1 7 4.9 8.6 5.9 12 9c3.4-3.1 5-4.1 6.8-3.9C22 5.5 23.4 8.9 22 11.8 19.5 16.4 12 21 12 21z"/></svg>',
   comment:'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.5 7.2L3 20l1.3-4A8 8 0 1 1 21 11.5z"/></svg>',
+  check:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  checkMini:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 6L9 17l-5-5"/></svg>',
   flame:'<svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.9 3.2 5.2 4.4 5.2 8.3A5.2 5.2 0 0 1 6.8 11.3c0-1.7.7-3 1.6-4 .6 1 1.6 1.4 2 .2.4-1.2-.2-2.6 1.6-4.5z"/></svg>',
   play:'<svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
   playMini:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
@@ -462,13 +464,13 @@ function buildSlides(list, startSlug){
         <div class="avatarRail"><span>IJ</span></div>
         <button class="act likeBtn" aria-label="Curtir">${ICON.heart}<span class="cnt likeCnt">·</span></button>
         <button class="act cmtBtn" aria-label="Comentar">${ICON.comment}<span class="cnt cmtCnt">·</span></button>
-        <button class="act livedBtn lived" aria-label="Já vivemos">${ICON.flame}<span class="cnt livedCnt">·</span></button>
+        <button class="act livedBtn lived" aria-label="Já vivemos">${ICON.check}<span class="cnt livedCnt">·</span></button>
       </div>
       <div class="caption">
         <div class="capUser">@inovandojuntos <span class="badge">Premium</span></div>
         <div class="capCat">${esc(it.category||'Desafio')}</div>
         <div class="capText">${esc(it.title||'')}</div>
-        <div class="soldline">✦ <span class="soldN">—</span> casais já <span class="soldVerb">viveram</span></div>
+        <div class="soldline">${ICON.checkMini} <span class="soldN">—</span> casais já <span class="soldVerb">viveram</span></div>
       </div>
       <div class="lockOverlay">
         <div class="lockCard">
@@ -823,7 +825,7 @@ function buildKamaScreen(){
     <div class="kmRail">
       <button class="act kmLike" aria-label="Curtir">${ICON.heart}<span class="cnt">·</span></button>
       <button class="act kmCmt" aria-label="Comentar">${ICON.comment}<span class="cnt">·</span></button>
-      <button class="act lived kmLived" aria-label="Já vivemos">${ICON.flame}<span class="cnt">·</span></button>
+      <button class="act lived kmLived" aria-label="Já vivemos">${ICON.check}<span class="cnt">·</span></button>
     </div>
     <div class="kmInfo"><div class="kmNum"></div><div class="kmName"></div><div class="kmHint">Toque para a próxima posição</div></div>`;
   $('#app').appendChild(sc);
