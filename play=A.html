@@ -100,12 +100,6 @@
   .cItem{display:flex;gap:10px}
   .cAv{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;background:#15161a;color:var(--silver);font-size:13px;border:1px solid var(--line2)}
   .cBody .u{font-size:12.5px;font-weight:700}.cBody .t{font-size:13.5px;line-height:1.35;margin-top:2px}.cBody .m{font-size:11px;color:var(--muted2);margin-top:4px}
-  .cReplies{margin-top:8px;padding-left:10px;border-left:2px solid var(--line2);display:flex;flex-direction:column;gap:10px}
-  .cItem.reply .cAv{width:26px;height:26px;font-size:11px}
-  .cReplyBtn{border:none;background:none;color:var(--muted2);font-size:11px;font-weight:700;padding:0;margin-top:5px;cursor:pointer}
-  .cReplyBar{display:none;align-items:center;justify-content:space-between;gap:10px;padding:6px 14px;background:rgba(255,255,255,.05);border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
-  .cReplyBar.show{display:flex}
-  .cReplyBar button{border:none;background:none;color:var(--muted2);font-weight:700;cursor:pointer}
   .cForm{display:flex;gap:8px;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--surface)}
   .cForm input{flex:1;background:var(--surface2);border:1px solid var(--line2);color:#fff;border-radius:999px;padding:11px 16px;font-size:14px;outline:none}
   .cForm input:focus{border-color:var(--silver-dim)}
@@ -367,7 +361,6 @@
       <div class="grab"></div>
       <div class="sheetHd"><span>Comentários</span><button class="x" id="sheetX">✕</button></div>
       <div class="cList" id="cList"></div>
-      <div class="cReplyBar" id="cReplyBar"><span id="cReplyTxt"></span><button type="button" id="cReplyCancel">cancelar</button></div>
       <form class="cForm" id="cForm"><input id="cInput" maxlength="300" placeholder="Adicionar comentário..." /><button type="submit">Enviar</button></form>
     </div>
   </div>
@@ -1289,33 +1282,26 @@ feed.addEventListener('click',async(e)=>{
 async function refreshProgress(){ try{ const {data}=await supabase.rpc('get_my_desafios_feed'); const res=(data&&data.get_my_desafios_feed)?data.get_my_desafios_feed:data; if(res){ if(res.desafios)res.desafios=res.desafios; progressData=res; if(res.summary)updateRing(res.summary);} }catch(_){} }
 
 /* ===== Comments ===== */
-const sheet=$('#sheet'); let sheetTargetId=null, sheetTargetType='desafio'; let cReplyTo=null;
-function replyHtml(r){return `<div class="cItem reply"><div class="cAv">${esc((r.display_name||'U')[0])}</div><div class="cBody"><div class="u">${esc(r.display_name||'Usuário')}</div><div class="t">${esc(r.body||'')}</div></div></div>`;}
-function cmtHtml(c){const reps=Array.isArray(c.replies)?c.replies:[];const rh=reps.length?`<div class="cReplies">${reps.map(replyHtml).join('')}</div>`:'';return `<div class="cItem"><div class="cAv">${esc((c.display_name||'U')[0])}</div><div class="cBody"><div class="u">${esc(c.display_name||'Usuário')}</div><div class="t">${esc(c.body||'')}</div><button type="button" class="cReplyBtn" data-rid="${esc(c.id)}" data-rname="${esc(c.display_name||'Usuário')}">Responder</button>${rh}</div></div>`;}
-function cShowReply(){const b=$('#cReplyBar');if(!b)return;if(!cReplyTo){b.classList.remove('show');return;}$('#cReplyTxt').textContent='Respondendo a '+cReplyTo.name;b.classList.add('show');}
-function cClearReply(){cReplyTo=null;const b=$('#cReplyBar');if(b)b.classList.remove('show');const i=$('#cInput');if(i)i.placeholder='Adicionar comentário...';}
+const sheet=$('#sheet'); let sheetTargetId=null, sheetTargetType='desafio';
 async function openSheet(id,type){
   sheetTargetId=id; sheetTargetType=type||'desafio'; sheet.classList.add('open');
   const list=$('#cList'); list.innerHTML='<div style="color:var(--muted2);font-size:13px">Carregando…</div>';
   try{
     const {data}=await supabase.rpc('get_target_comments',{p_target_type:sheetTargetType,p_target_id:id,p_limit:50,p_offset:0});
     const arr=(data&&data.comments)||[];
-    list.innerHTML=arr.length?arr.map(cmtHtml).join(''):'<div style="color:var(--muted2);font-size:13px">Seja o primeiro a comentar.</div>';
+    list.innerHTML=arr.length?arr.map(c=>`<div class="cItem"><div class="cAv">${esc((c.display_name||'U')[0])}</div><div class="cBody"><div class="u">${esc(c.display_name||'Usuário')}</div><div class="t">${esc(c.body||'')}</div><div class="m">${esc(new Date(c.created_at).toLocaleDateString())}</div></div></div>`).join(''):'<div style="color:var(--muted2);font-size:13px">Seja o primeiro a comentar.</div>';
   }catch(e){ list.innerHTML='<div style="color:var(--muted2)">Erro ao carregar.</div>'; }
 }
-$('#sheetBd').onclick=()=>{sheet.classList.remove('open');cClearReply();};
-$('#sheetX').onclick=()=>{sheet.classList.remove('open');cClearReply();};
+$('#sheetBd').onclick=()=>sheet.classList.remove('open');
+$('#sheetX').onclick=()=>sheet.classList.remove('open');
 $('#cForm').addEventListener('submit',async(e)=>{
-  e.preventDefault(); const inp=$('#cInput'); const val=inp.value.trim(); if(!val||!sheetTargetId)return; inp.value=''; const _pid=cReplyTo?cReplyTo.id:null; cClearReply();
-  try{ await supabase.rpc('add_target_comment',{p_user_id:authUserId,p_target_type:sheetTargetType,p_target_id:sheetTargetId,p_body:val,p_parent_id:_pid}); openSheet(sheetTargetId,sheetTargetType);
+  e.preventDefault(); const inp=$('#cInput'); const val=inp.value.trim(); if(!val||!sheetTargetId)return; inp.value='';
+  try{ await supabase.rpc('add_target_comment',{p_user_id:authUserId,p_target_type:sheetTargetType,p_target_id:sheetTargetId,p_body:val}); openSheet(sheetTargetId,sheetTargetType);
     if(sheetTargetType==='desafio'&&currentSlide&&currentSlide.dataset.id===sheetTargetId) loadBundle(currentSlide,sheetTargetId);
     else if(sheetTargetType==='item'&&currentSlide&&itemPlaying&&currentItem&&currentItem.id===sheetTargetId) loadBundle(currentSlide,sheetTargetId,'item');
     else if(sheetTargetType==='position'&&kama.curId===sheetTargetId) loadKamaBundle(sheetTargetId);
   }catch(err){ toast('Não foi possível comentar'); }
 });
-
-$('#cList').addEventListener('click',(e)=>{const b=e.target.closest('.cReplyBtn');if(!b)return;cReplyTo={id:b.dataset.rid,name:b.dataset.rname};cShowReply();const i=$('#cInput');if(i){i.placeholder='Escreva sua resposta...';i.focus();}});
-$('#cReplyCancel')&&$('#cReplyCancel').addEventListener('click',()=>{cClearReply();const i=$('#cInput');if(i)i.focus();});
 
 /* ===== Nav / tabs ===== */
 function setActiveTab(name){
