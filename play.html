@@ -209,6 +209,13 @@
   .pgHeroL{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:700;margin-top:2px}
   .pgRing{--p:0;width:58px;height:58px;border-radius:50%;background:conic-gradient(#dfe3e8 calc(var(--p)*1%),rgba(255,255,255,.14) 0);display:grid;place-items:center;flex:none}
   .pgRing i{width:46px;height:46px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--silver-bright);font-variant-numeric:tabular-nums}
+  .pgLive{background:linear-gradient(135deg,rgba(255,77,109,.14),rgba(255,255,255,.02));border-color:rgba(255,77,109,.30)}
+  .pgHeart{position:relative;width:58px;height:58px;flex:none;filter:drop-shadow(0 0 10px rgba(255,77,109,.45))}
+  .pgHeart .hsvg{position:absolute;left:0;bottom:0;width:58px;height:58px}
+  .pgHeart .hb path{fill:none;stroke:rgba(255,255,255,.32);stroke-width:1.5}
+  .pgHeart .hfwrap{position:absolute;left:0;right:0;bottom:0;height:calc(var(--vp,0)*1%);overflow:hidden;transition:height .6s cubic-bezier(.22,1,.36,1)}
+  .pgHeart .hf path{fill:#ff4d6d}
+  .pgHeart .hp{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:850;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);font-variant-numeric:tabular-nums}
 
   /* ===== Profile full screen ===== */
   .screen{position:absolute;inset:0;z-index:55;background:#070708;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .32s cubic-bezier(.22,1,.36,1);visibility:hidden}
@@ -467,7 +474,7 @@ function buildSlides(list, startSlug){
         <button class="act livedBtn lived" aria-label="Já vivemos">${ICON.check}<span class="cnt livedCnt">·</span></button>
       </div>
       <div class="caption">
-        <div class="capUser">@inovandojuntos <span class="badge">Premium</span></div>
+        <div class="capUser">@inovandojuntoss <span class="badge">Premium</span></div>
         <div class="capCat">${esc(it.category||'Desafio')}</div>
         <div class="capText">${esc(it.title||'')}</div>
         <div class="soldline">${ICON.checkMini} <span class="soldN">—</span> casais já <span class="soldVerb">viveram</span></div>
@@ -648,7 +655,7 @@ $('#panelBd').onclick=closePanel; $('#panelX').onclick=closePanel;
 function renderItens(){
   panelTitle.textContent='Itens recomendados';
   const products=getProducts();
-  if(!products.length){ panelBody.innerHTML='<div class="empty">Nenhum item recomendado para este desafio.</div>'; return; }
+  if(!products.length){ panelBody.innerHTML='<div class="empty">Os itens íntimos recomendados serão exibidos apenas nos desafios .</div>'; return; }
   const groups={};
   products.forEach(it=>{ const c=it.category||'Outros'; (groups[c]=groups[c]||[]).push(it); });
   const flat=[];
@@ -1064,18 +1071,30 @@ function progressItems(res){
     .sort((a,b)=>a.sort-b.sort);
 }
 
-function renderProgresso(){
+async function renderProgresso(){
   panelTitle.textContent='Progresso';
   const res=progressData||{};
   const sm=res.summary||{};
   const TOTAL=20; // sempre 20 desafios (1 a 20)
   const items=progressItems(res).slice(0,TOTAL);
   const unlockedN=items.filter(x=>x.done).length; // liberados (escaneados)
-  const done=Number(sm.done||0); // "já vivemos" (favoritados)
   const pct=Math.round(unlockedN/TOTAL*100);
+  // "Vividos" = desafios que o casal marcou como "Já vivemos" (favoritos)
+  let vividosN=0;
+  try{ const {count}=await supabase.from('target_favorites').select('id',{count:'exact',head:true}).eq('user_id',authUserId).eq('target_type','desafio').neq('target_id',INTRO_ID); vividosN=Math.min(count||0,TOTAL); }catch(e){ console.error('[vividos]',e); }
+  const pctV=Math.round(vividosN/TOTAL*100);
+  const HP='M12 21s-7.5-4.6-10-9.2C.6 8.9 2 5.5 5.2 5.1 7 4.9 8.6 5.9 12 9c3.4-3.1 5-4.1 6.8-3.9C22 5.5 23.4 8.9 22 11.8 19.5 16.4 12 21 12 21z';
   let html=`<div class="pgHero">
       <div><div class="pgHeroN">${unlockedN}/${TOTAL}</div><div class="pgHeroL">Desbloqueados</div></div>
       <div class="pgRing" style="--p:${pct}"><i>${pct}%</i></div>
+    </div>
+    <div class="pgHero pgLive">
+      <div><div class="pgHeroN">${vividosN}/${TOTAL}</div><div class="pgHeroL">Vividos!!!</div></div>
+      <div class="pgHeart" style="--vp:${pctV}">
+        <svg class="hsvg hb" viewBox="0 0 24 24"><path d="${HP}"/></svg>
+        <div class="hfwrap"><svg class="hsvg hf" viewBox="0 0 24 24"><path d="${HP}"/></svg></div>
+        <span class="hp">${pctV}%</span>
+      </div>
     </div>
     <button type="button" class="pgIntro" id="pgIntroBtn">
       <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
@@ -1094,6 +1113,7 @@ function renderProgresso(){
   }
   html+='</div>';
   panelBody.innerHTML=html;
+  const _h=panelBody.querySelector('.pgHeart'); if(_h){ _h.style.setProperty('--vp',0); requestAnimationFrame(()=>requestAnimationFrame(()=>_h.style.setProperty('--vp',pctV))); }
   const goSlide=(slug)=>{
     const target=document.querySelector(`.slide[data-slug="${slug}"]`);
     closePanel();
