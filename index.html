@@ -173,7 +173,10 @@
     border-bottom:1px solid var(--edge);
   }
   .brand{ display:flex; align-items:center; gap:11px; }
-  .brand img{ width:34px; height:34px; object-fit:contain; opacity:.96; }
+  .brand img{ height:50px; width:auto; object-fit:contain; opacity:.97;
+    filter:drop-shadow(0 2px 12px rgba(0,0,0,.5)); transition:transform .3s ease, opacity .3s ease; }
+  .brand:hover img{ transform:scale(1.05); opacity:1; }
+  .nav.scrolled .brand img{ height:42px; }
   .brand .bt{ font-weight:800; letter-spacing:.18em; font-size:12px; color:var(--text); }
   .brand .bt small{ display:block; font-weight:500; letter-spacing:.34em; font-size:8.5px; color:var(--soft); }
 
@@ -473,10 +476,9 @@
 <!-- ====== NAV ====== -->
 <header class="nav" id="nav">
   <a class="brand" href="#top" aria-label="Inovando Juntos">
-    <img src="images/logo.png" alt="" onerror="this.style.display='none'" />
-    <span class="bt">INOVANDO JUNTOS<small>CONEXÃO • INTIMIDADE</small></span>
+    <img src="images/logo.png" alt="Inovando Juntos" onerror="this.style.display='none'" />
   </a>
-  <a class="btn buy" href="https://loja.inovandojuntos.com.br" data-buy>Viver a experiência</a>
+  <a class="btn buy" href="https://loja.inovandojuntos.com.br" data-buy>Comprar</a>
 </header>
 
 <!-- ====== HERO ====== -->
@@ -501,8 +503,6 @@
         <span class="ln"><span>INOVANDO</span></span>
         <span class="ln"><span>JUNTOS</span></span>
       </h1>
-      <p class="sub">Experiências Interativas para Casal</p>
-      <p class="desc">20 experiências guiadas por voz dentro da nossa plataforma digital.</p>
       <p class="sign"><img class="sign-img" src="images/firma.png" alt="Mario e Deise"
         onerror="this.replaceWith(document.createTextNode('Mario & Deise'))" /></p>
     </div>
