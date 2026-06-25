@@ -161,7 +161,7 @@
   .kmNum{font-size:11px;letter-spacing:.18em;color:var(--silver-dim);font-weight:800;text-transform:uppercase}
   .kmName{font-size:21px;font-weight:850;margin-top:4px}
   .kmHint{font-size:11px;color:var(--muted2);margin-top:9px}
-  .ruletaScreen{position:absolute;inset:0;z-index:59;background:radial-gradient(120% 80% at 50% 0%,#161617,#070708 62%,#000);display:none;flex-direction:column;align-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 20px;overflow-y:auto}
+  .ruletaScreen{position:absolute;top:0;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));z-index:59;background:radial-gradient(120% 80% at 50% 0%,#161617,#070708 62%,#000);display:none;flex-direction:column;align-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 20px;overflow-y:auto}
   .ruletaScreen.open{display:flex}
   .rlClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:rgba(0,0,0,.5);color:#fff;font-size:17px;cursor:pointer}
   .rlTitle{font-size:13px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;background:var(--metal);-webkit-background-clip:text;background-clip:text;color:transparent;margin:2px 0 8px}
@@ -757,9 +757,10 @@ function renderExtras(){
         : (ext?ICON.link:ICON.book));
     const vid=String(it.video||'');
     const isKama=vid.startsWith('kamasutra://')||vid.startsWith('cadeira://');
-    const isRuleta=vid.startsWith('ruleta://');
-    const tag = ext ? (isSpoty?'Ouvir no Spotify':'Abrir link')
-              : (isRuleta?'Abrir roleta':(isKama?'Abrir player':((it.video||it.audio)?'Reproduzir':'Ver guia')));
+    const isRuleta=vid.startsWith('ruleta://')||/rulet[\w=.\-]*\.html/i.test(vid)||/rulet[\w=.\-]*\.html/i.test(String(it.external_url||''));
+    const tag = isRuleta?'Abrir roleta'
+              : (ext ? (isSpoty?'Ouvir no Spotify':'Abrir link')
+              : (isKama?'Abrir player':((it.video||it.audio)?'Reproduzir':'Ver guia')));
     html+=`<div class="exCard ${isSpoty?'spotify':''}" data-idx="${idx}">
       <div class="exIcon">${iconHtml}</div>
       <div class="exBody">
@@ -777,6 +778,8 @@ function renderExtras(){
 
 function handleExtra(it){
   if(!it) return;
+  const _rv=String(it.video||''), _rex=String(it.external_url||'');
+  if(_rv.startsWith('ruleta://')||/rulet[\w=.\-]*\.html/i.test(_rv)||/rulet[\w=.\-]*\.html/i.test(_rex)){ closePanel(); openRuleta(); return; }
   if(isExternal(it)){
     const u=(it.external_url||it.video||'').trim();
     if(u){ closePanel(); openLink(u); } else toast('Link não configurado');
@@ -1293,6 +1296,7 @@ $('#nav').addEventListener('click',(e)=>{
   const tab=t.dataset.tab;
   // close any open surfaces first
   panel.classList.remove('open'); closePerfilSilent();
+  if(ruleta&&ruleta.screen&&ruleta.screen.classList.contains('open')) closeRuleta();
   if(tab==='home'){ setActiveTab('home'); document.body.classList.remove('modal-open'); if(itemPlaying) restoreChallenge(); return; }
   setActiveTab(tab);
   if(tab==='itens'){ renderItens(); openPanel(); }
