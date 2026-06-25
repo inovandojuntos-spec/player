@@ -441,7 +441,7 @@ async function loadFeed(){
   let list=(res&&res.desafios)||[];
   // INTRODUÇÃO sempre no topo do feed e sempre desbloqueada
   if(!list.some(d=>String(d.slug||'').toLowerCase()==='intro')){
-    list=[{slug:'intro',desafio_id:INTRO_ID,title:'Antes de começar, conectem o áudio a uma caixa de som ou usem fones. Reservem alguns minutos para ouvir esta introdução juntos, sem distrações.',category:'INTRODUÇÃO',sort_order:0,play_count:1,unlocked:true},...list];
+    list=[{slug:'intro',desafio_id:INTRO_ID,title:'INTRODUÇÃO',category:'INTRODUÇÃO',description:'Antes de começar, conectem o áudio a uma caixa de som ou usem fones. Reservem alguns minutos para ouvir esta introdução juntos, sem distrações.',sort_order:0,play_count:1,unlocked:true},...list];
   }
   progressData.desafios=list;
   if(res&&res.summary){ updateRing(res.summary); }
@@ -475,8 +475,8 @@ function buildSlides(list, startSlug){
       </div>
       <div class="caption">
         <div class="capUser">@inovandojuntoss <span class="badge">Premium</span></div>
-        <div class="capCat">${esc(it.category||'Desafio')}</div>
-        <div class="capText">${esc(it.title||'')}</div>
+        <div class="capCat">${esc(it.title||'Desafio')}</div>
+        <div class="capText">${esc(it.description||'')}</div>
         <div class="soldline">${ICON.checkMini} <span class="soldN">—</span> casais já <span class="soldVerb">viveram</span></div>
       </div>
       <div class="lockOverlay">
