@@ -35,7 +35,7 @@
 <!-- ====== Fonts ====== -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;0,6..96,700;1,6..96,500&family=Manrope:wght@300;400;500;600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Manrope:wght@300;400;500;600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet" />
 
 <!-- ====== JSON-LD ====== -->
 <script type="application/ld+json">
@@ -244,14 +244,14 @@
   }
   .hero-bg{ position:absolute; inset:0; z-index:0; will-change:transform; }
   .hero-bg img, .hero-bg video{
-    position:absolute; inset:-6%; width:112%; height:112%; object-fit:cover; object-position:center 28%;
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%;
     filter:grayscale(1) contrast(1.08) brightness(.92);
-    will-change:transform; transform-origin:60% 40%;
+    will-change:transform; transform-origin:center center;
     animation:kenburns 26s ease-in-out infinite alternate;
   }
   @keyframes kenburns{
-    0%{ transform:scale(1.04) translate3d(0,0,0); }
-    100%{ transform:scale(1.16) translate3d(-2%,-2.5%,0); }
+    0%{ transform:scale(1.12) translate3d(0,0,0); }
+    100%{ transform:scale(1.22) translate3d(-1.5%,-2%,0); }
   }
   .hero-bg video{ z-index:1; opacity:0; transition:opacity 1.2s ease; }   /* aparece al estar listo */
   .hero-bg video.ready{ opacity:1; }
@@ -274,9 +274,8 @@
     src:url("fonts/bodoni-moda/BodoniModa.ttf") format("truetype");
     font-weight:100 900; font-style:normal; font-display:swap;
   }
-  .hero h1{ font-family:"Bodoni Moda Local", "Bodoni Moda", "Didot", "Times New Roman", serif;
-    font-size:clamp(44px,8vw,112px); font-weight:650; letter-spacing:.02em; line-height:1.06;
-    font-variation-settings:"opsz" 24, "wght" 650;
+  .hero h1{ font-family:"Jost", "Century Gothic", "Futura", system-ui, sans-serif;
+    font-size:clamp(40px,7.2vw,104px); font-weight:400; letter-spacing:.12em; line-height:1.12;
     text-transform:uppercase; margin-bottom:4px; }
   .hero h1 .ln{ display:block; overflow:visible; }              /* sin recorte de letras */
   .hero h1 .ln span{
