@@ -980,13 +980,15 @@
 
     function device(){ var w = window.innerWidth; return w<=600?"mobile":(w<=1024?"tablet":"desktop"); }
 
+    var geo = null; try{ geo = JSON.parse(get(SS,"ij_geo")||"null"); }catch(e){}
+
     function track(name, extra){
       var body = {
         player_id: visitorId, session_id: sessionId,
         event_type: "landing", event_name: name, event_source: "landing.html",
         page_url: location.href.slice(0,600), referrer: (document.referrer||"").slice(0,600),
         payload: Object.assign({ device: device(), screen: window.innerWidth+"x"+window.innerHeight,
-          lang: navigator.language||"", first_touch: firstTouch, last_touch: lastTouch }, extra||{})
+          lang: navigator.language||"", geo: geo||undefined, first_touch: firstTouch, last_touch: lastTouch }, extra||{})
       };
       try{
         var json = JSON.stringify(body);
@@ -995,7 +997,15 @@
       }catch(e){}
     }
 
-    track("page_view");
+    // Geolocalización aproximada por IP (1 vez por sesión, no bloquea; si falla, se omite)
+    function firstView(){ track("page_view"); }
+    if(geo){ firstView(); }
+    else {
+      var sent=false, to=setTimeout(function(){ if(!sent){ sent=true; firstView(); } }, 1200);
+      fetch("https://ipwho.is/").then(function(r){ return r.json(); }).then(function(g){
+        if(g && g.success){ geo = { country:g.country, cc:g.country_code, region:g.region, city:g.city }; put(SS,"ij_geo",JSON.stringify(geo)); }
+      }).catch(function(){}).then(function(){ if(!sent){ sent=true; clearTimeout(to); firstView(); } });
+    }
 
     var cta = document.querySelector(".hero-scroll");
     if(cta) cta.addEventListener("click", function(){ track("cta_click",{cta:"hero_scroll"}); });
