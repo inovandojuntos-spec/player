@@ -325,13 +325,23 @@
   }
   .hero-bg video{ z-index:1; opacity:1; transition:opacity 1.2s ease; }   /* video como fondo (sobre la foto) */
   .hero-bg video.ready{ opacity:1; }
+
+  /* ====== HERO video en PC: centrado al 80% (10% negro a cada lado), zoom mínimo. Celular < 1000px igual ====== */
+  @media (min-width:1000px){
+    .hero-bg video{
+      width:80%; height:100%;
+      left:50%; top:0; right:auto; bottom:auto;
+      transform:translateX(-50%);
+      object-fit:cover; object-position:center 28%;
+      animation:kenburns-pc 32s ease-in-out infinite alternate;
+    }
+    @keyframes kenburns-pc{
+      0%{   transform:translateX(-50%) scale(1); }
+      100%{ transform:translateX(-50%) scale(1.04); }
+    }
+  }
   /* fallback elegante si no hay imagen ni video */
-  .hero-fallback{ position:absolute; inset:0; z-index:0;
-    background:
-      radial-gradient(60% 50% at 72% 22%, rgba(255,255,255,.07), rgba(0,0,0,0) 60%),
-      radial-gradient(70% 60% at 20% 90%, rgba(255,255,255,.04), rgba(0,0,0,0) 60%),
-      repeating-linear-gradient(135deg, rgba(255,255,255,.015) 0 16px, rgba(255,255,255,0) 16px 32px),
-      #000; }
+  .hero-fallback{ position:absolute; inset:0; z-index:0; background:#000; }
   .hero-scrim{ position:absolute; inset:0; z-index:2; pointer-events:none;
     background:
       linear-gradient(90deg, rgba(0,0,0,.88) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.12) 68%, rgba(0,0,0,.35) 100%),
@@ -1079,23 +1089,4 @@
       } catch(e){}
     }
 
-    canvas.addEventListener("pointerdown", function(e){ drawing = true; scratch(e); });
-    window.addEventListener("pointerup", function(){ drawing = false; });
-    canvas.addEventListener("pointermove", scratch);
-    canvas.addEventListener("touchstart", function(e){ drawing = true; scratch(e); }, { passive:true });
-    canvas.addEventListener("touchmove", function(e){ scratch(e); }, { passive:true });
-    canvas.addEventListener("touchend", function(){ drawing = false; });
-
-    if (reduce){
-      canvas.style.display = "none";
-      if (hint) hint.style.display = "none";
-    } else {
-      window.addEventListener("resize", function(){ if (!cleared) sizeCanvas(); });
-      sizeCanvas();
-    }
-  }
-})();
-</script>
-<script src="store.js"></script>
-</body>
-</html>
+    canvas.addEventListener("pointerdown", function(e){ drawing = true; 
