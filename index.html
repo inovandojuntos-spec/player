@@ -9,7 +9,7 @@
 <meta name="description" content="Inovando Juntos: 20 experiências guiadas por voz para casais. Uma raspadinha física com QR Codes que desbloqueia uma plataforma digital exclusiva. Conexão, comunicação e intimidade. Frete grátis." />
 <meta name="theme-color" content="#000000" />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://inovandojuntos.com/" />
+<link rel="canonical" href="https://inovandojuntos.com.br/" />
 <!-- TODO Mario: confirmar dominio canónico (.com vs .com.br) -->
 
 <!-- ====== OpenGraph ====== -->
@@ -18,8 +18,8 @@
 <meta property="og:locale" content="pt_BR" />
 <meta property="og:title" content="Inovando Juntos | Jogos Interativos Para Casal" />
 <meta property="og:description" content="20 experiências guiadas por voz para casais. Raspe, escaneie o QR Code e descubra sua próxima experiência." />
-<meta property="og:url" content="https://inovandojuntos.com/" />
-<meta property="og:image" content="https://inovandojuntos.com/images/hero_poster.jpg" />
+<meta property="og:url" content="https://inovandojuntos.com.br/" />
+<meta property="og:image" content="https://inovandojuntos.com.br/images/hero_poster.jpg" />
 <meta property="og:image:alt" content="Inovando Juntos — experiência para casais" />
 
 <!-- ====== Twitter Card ====== -->
@@ -340,7 +340,8 @@
       100%{ transform:translateX(-50%) scale(1.04); }
     }
   }
-  /* fallback elegante si no hay imagen ni video */
+
+  /* fallback / costados: negro puro (sin líneas) */
   .hero-fallback{ position:absolute; inset:0; z-index:0; background:#000; }
   .hero-scrim{ position:absolute; inset:0; z-index:2; pointer-events:none;
     background:
@@ -1089,4 +1090,23 @@
       } catch(e){}
     }
 
-    canvas.addEventListener("pointerdown", function(e){ drawing = true; 
+    canvas.addEventListener("pointerdown", function(e){ drawing = true; scratch(e); });
+    window.addEventListener("pointerup", function(){ drawing = false; });
+    canvas.addEventListener("pointermove", scratch);
+    canvas.addEventListener("touchstart", function(e){ drawing = true; scratch(e); }, { passive:true });
+    canvas.addEventListener("touchmove", function(e){ scratch(e); }, { passive:true });
+    canvas.addEventListener("touchend", function(){ drawing = false; });
+
+    if (reduce){
+      canvas.style.display = "none";
+      if (hint) hint.style.display = "none";
+    } else {
+      window.addEventListener("resize", function(){ if (!cleared) sizeCanvas(); });
+      sizeCanvas();
+    }
+  }
+})();
+</script>
+<script src="store.js"></script>
+</body>
+</html>
