@@ -186,7 +186,7 @@
   /* Botón Menu (izquierda) con ícono hamburguesa */
   .nav-menu{ display:inline-flex; align-items:center; gap:10px; background:transparent; border:0; cursor:pointer;
     color:var(--text); font-family:inherit; font-weight:600; font-size:13px; letter-spacing:.04em; padding:6px 2px;
-    z-index:60; }
+    z-index:60; visibility:hidden; pointer-events:none; }   /* oculto (se conserva el espacio del layout) */
   .nav-menu .ham{ display:inline-flex; flex-direction:column; gap:5px; width:22px; }
   .nav-menu .ham i{ display:block; height:1.5px; background:currentColor; border-radius:2px;
     transition:transform .3s ease, width .3s ease, opacity .3s ease; }
@@ -345,7 +345,7 @@
     color:var(--soft); font-weight:600; margin-bottom:clamp(14px,2.4vw,22px);
     text-shadow:0 2px 14px rgba(0,0,0,.6); opacity:0; animation:fadeUp .8s ease .2s forwards;
   }
-  .hero-eyebrow .amp{ flex:none; font:inherit; color:inherit; }
+  .hero-eyebrow .amp{ flex:none; font:inherit; color:inherit; font-size:1.3em; }
   /* ====== Fuente auto-alojada (plug & play): suelta el archivo en fonts/bodoni-moda/ ====== */
   @font-face{
     font-family:"Bodoni Moda Local";
