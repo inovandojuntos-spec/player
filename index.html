@@ -175,11 +175,38 @@
     -webkit-backdrop-filter:blur(14px) saturate(120%);
     border-bottom:1px solid var(--edge);
   }
-  .brand{ display:flex; align-items:center; gap:11px; }
-  .brand img{ height:50px; width:auto; object-fit:contain; opacity:.36;   /* mesmo cinza/plomo que "Descubra" (var(--soft)) */
-    filter:drop-shadow(0 2px 12px rgba(0,0,0,.5)); transition:transform .3s ease, opacity .3s ease; }
-  .brand:hover img{ transform:scale(1.05); opacity:.55; }
-  .nav.scrolled .brand img{ height:40px; }
+  /* Nombre de marca centrado en letras (estilo wordmark) */
+  .brand{ position:absolute; left:50%; transform:translateX(-50%); text-decoration:none; white-space:nowrap;
+    font-family:"Jost Local","Jost","Century Gothic","Futura",system-ui,sans-serif;
+    font-weight:600; letter-spacing:.30em; text-transform:uppercase; color:var(--text);
+    font-size:clamp(12px,1.7vw,16px); text-shadow:0 2px 14px rgba(0,0,0,.5);
+    transition:opacity .25s ease; }
+  .brand:hover{ opacity:.78; }
+  .nav.scrolled .brand{ font-size:clamp(11px,1.5vw,14px); }
+  /* Botón Menu (izquierda) con ícono hamburguesa */
+  .nav-menu{ display:inline-flex; align-items:center; gap:10px; background:transparent; border:0; cursor:pointer;
+    color:var(--text); font-family:inherit; font-weight:600; font-size:13px; letter-spacing:.04em; padding:6px 2px;
+    z-index:60; }
+  .nav-menu .ham{ display:inline-flex; flex-direction:column; gap:5px; width:22px; }
+  .nav-menu .ham i{ display:block; height:1.5px; background:currentColor; border-radius:2px;
+    transition:transform .3s ease, width .3s ease, opacity .3s ease; }
+  .nav-menu .ham i:nth-child(1){ width:22px; }
+  .nav-menu .ham i:nth-child(2){ width:15px; }
+  .nav-menu:hover .ham i:nth-child(2){ width:22px; }
+  .nav-menu-label{ color:var(--text); }
+  body.menu-open .nav-menu .ham i:nth-child(1){ transform:translateY(3.25px) rotate(45deg); width:22px; }
+  body.menu-open .nav-menu .ham i:nth-child(2){ transform:translateY(-3.25px) rotate(-45deg); width:22px; }
+  /* Panel de menú a pantalla completa */
+  .menu-panel{ position:fixed; inset:0; z-index:55; background:rgba(0,0,0,.96);
+    -webkit-backdrop-filter:blur(18px) saturate(120%); backdrop-filter:blur(18px) saturate(120%);
+    display:flex; flex-direction:column; justify-content:center; align-items:center; gap:clamp(18px,4.5vh,38px);
+    opacity:0; visibility:hidden; transition:opacity .4s ease, visibility .4s ease; }
+  body.menu-open .menu-panel{ opacity:1; visibility:visible; }
+  .menu-panel a{ color:var(--text); text-decoration:none; opacity:.82;
+    font-family:"Jost Local","Jost","Century Gothic","Futura",system-ui,sans-serif;
+    text-transform:uppercase; letter-spacing:.18em; font-weight:400; font-size:clamp(22px,5.2vw,42px);
+    transition:opacity .25s ease, letter-spacing .35s ease; }
+  .menu-panel a:hover{ opacity:1; letter-spacing:.26em; }
   /* Botón carrito minimalista: solo ícono + número en gris. Oculto en el hero, aparece al scrollear. */
   .cart-ico{ display:inline-flex; align-items:center; gap:8px; background:transparent; border:0; cursor:pointer;
     color:#6f7378; padding:6px 4px; font-family:inherit; font-weight:700; font-size:16px; line-height:1;
@@ -255,8 +282,8 @@
 
   /* ====== HERO (imagen/video a pantalla completa) ====== */
   .hero{
-    position:relative; min-height:100svh; display:flex; align-items:flex-end;
-    padding:120px clamp(16px,4vw,40px) clamp(48px,9vh,96px); overflow:hidden; background:#000;
+    position:relative; min-height:100svh; display:flex; align-items:flex-start;
+    padding:clamp(96px,15vh,150px) clamp(16px,4vw,40px) clamp(48px,9vh,96px); overflow:hidden; background:#000;
   }
   .hero-bg{ position:absolute; inset:0; z-index:0; will-change:transform; }
   .hero-bg img, .hero-bg video{
@@ -269,7 +296,7 @@
     0%{ transform:scale(1.12) translate3d(0,0,0); }
     100%{ transform:scale(1.22) translate3d(-1.5%,-2%,0); }
   }
-  .hero-bg video{ z-index:1; opacity:0; transition:opacity 1.2s ease; }   /* aparece al estar listo */
+  .hero-bg video{ z-index:1; opacity:1; transition:opacity 1.2s ease; }   /* video como fondo (sobre la foto) */
   .hero-bg video.ready{ opacity:1; }
   /* fallback elegante si no hay imagen ni video */
   .hero-fallback{ position:absolute; inset:0; z-index:0;
@@ -284,6 +311,16 @@
       linear-gradient(0deg, rgba(0,0,0,.9) 0%, rgba(0,0,0,.2) 40%, rgba(0,0,0,.5) 100%); }
   .hero-inner{ position:relative; z-index:3; width:100%; max-width:var(--maxw); margin:0 auto; }
   .hero-copy{ max-width:min(880px,94vw); }
+  /* ====== Eyebrow del hero (estilo "FOR THOSE WHO KNOW") ====== */
+  .hero-eyebrow{
+    display:inline-flex; align-items:center; gap:12px;
+    font-size:clamp(11px,1.5vw,13px); letter-spacing:.32em; text-transform:uppercase;
+    color:var(--soft); font-weight:600; margin-bottom:clamp(14px,2.4vw,22px);
+    text-shadow:0 2px 14px rgba(0,0,0,.6); opacity:0; animation:fadeUp .8s ease .2s forwards;
+  }
+  .hero-eyebrow .dot{ width:9px; height:9px; border-radius:50%; flex:none;
+    background:radial-gradient(circle at 35% 30%, #ffffff, #d2d7dd 55%, #8b9097);
+    box-shadow:0 0 14px 2px rgba(255,255,255,.5); }
   /* ====== Fuente auto-alojada (plug & play): suelta el archivo en fonts/bodoni-moda/ ====== */
   @font-face{
     font-family:"Bodoni Moda Local";
@@ -496,11 +533,20 @@
 
 <!-- ====== NAV ====== -->
 <header class="nav" id="nav">
-  <a class="brand" href="#top" aria-label="Inovando Juntos">
-    <img src="images/LOGO_IJ.svg" alt="Inovando Juntos" onerror="this.style.display='none'" />
-  </a>
+  <button class="nav-menu" id="navMenu" aria-label="Menu" aria-expanded="false" aria-controls="menuPanel">
+    <span class="ham" aria-hidden="true"><i></i><i></i></span><span class="nav-menu-label">Menu</span>
+  </button>
+  <a class="brand" href="#top" aria-label="Inovando Juntos">Inovando Juntos</a>
   <button class="cart-ico" id="navCart" data-ij-cart aria-label="Carrinho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span data-ij-cart-count>0</span></button>
 </header>
+
+<!-- ====== Menu overlay ====== -->
+<nav class="menu-panel" id="menuPanel" aria-hidden="true">
+  <a href="#jogo">O Jogo</a>
+  <a href="#plataforma">Plataforma</a>
+  <a href="#como-funciona">Como Funciona</a>
+  <a href="#comprar">Comprar</a>
+</nav>
 
 <!-- ====== HERO ====== -->
 <section class="hero" id="top">
@@ -513,16 +559,22 @@
            onerror="this.style.display='none';" />
     </picture>
     <!-- Loop de fondo: images/video_prueba.mp4 (corto, mudo). Se reproduce en B&N sobre la foto. -->
-    <video id="heroVideo" poster="images/web01.jpeg" muted loop playsinline preload="none"
-           data-src="images/video_prueba.mp4"></video>
+    <video id="heroVideo" poster="images/web01.jpeg" muted loop autoplay playsinline preload="auto"
+           src="images/video_prueba.mp4"></video>
   </div>
   <div class="hero-scrim" aria-hidden="true"></div>
 
   <div class="hero-inner">
-    <div class="hero-copy"></div>
+    <div class="hero-copy">
+      <span class="hero-eyebrow">Para quem quer sair da rotina <span class="dot"></span></span>
+      <h1>
+        <span class="ln"><span>Inovando</span></span>
+        <span class="ln"><span>Juntos</span></span>
+      </h1>
+    </div>
   </div>
   <a class="hero-scroll" href="#jogo" aria-label="Rolar para baixo">
-    <span>Descubra</span><span class="mw"></span>
+    <span>Descubra a Experiência</span><span class="mw"></span>
   </a>
 </section>
 
@@ -859,6 +911,21 @@
       v.addEventListener("canplay", function(){ v.classList.add("ready"); v.play().catch(function(){}); });
       v.load();
     }).catch(function(){});
+  })();
+
+  /* ---- Menu overlay (abrir/cerrar) ---- */
+  (function(){
+    var btn = document.getElementById("navMenu");
+    var panel = document.getElementById("menuPanel");
+    if (!btn || !panel) return;
+    function set(open){
+      document.body.classList.toggle("menu-open", open);
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      panel.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+    btn.addEventListener("click", function(){ set(!document.body.classList.contains("menu-open")); });
+    panel.querySelectorAll("a").forEach(function(a){ a.addEventListener("click", function(){ set(false); }); });
+    document.addEventListener("keydown", function(e){ if (e.key === "Escape") set(false); });
   })();
 
   /* ---- Scratch card (canvas) ---- */
