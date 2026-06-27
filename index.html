@@ -29,8 +29,10 @@
 <meta name="twitter:image" content="https://inovandojuntos.com.br/images/web01.jpeg" />
 
 <!-- ====== Favicon ====== -->
-<link rel="icon" type="image/png" href="images/logo.png" />
-<link rel="apple-touch-icon" href="images/logo.png" />
+<link rel="icon" href="favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16.png" />
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
 
 <!-- ====== Fonts ====== -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -58,7 +60,7 @@
   "brand": { "@type": "Brand", "name": "Inovando Juntos" },
   "offers": {
     "@type": "Offer",
-    "url": "https://loja.inovandojuntos.com.br",
+    "url": "/loja.html",
     "priceCurrency": "BRL",
     "price": "189.90",
     "availability": "https://schema.org/InStock"
@@ -103,6 +105,7 @@
     --glass:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
     --maxw:1180px;
     --font:"Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --display:"Jost", "Century Gothic", system-ui, sans-serif;   /* mesma tipografia da loja */
     --script:"Dancing Script", cursive;
   }
 
@@ -228,7 +231,7 @@
   .ic:hover .ico{ transform:translateY(-3px) scale(1.06); }
   .ic .ico svg{ width:19px; height:19px; stroke:#000; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
 
-  h1,h2,h3{ margin:0; font-weight:800; letter-spacing:-.02em; line-height:1.05; }
+  h1,h2,h3{ margin:0; font-family:var(--display); font-weight:500; letter-spacing:0; line-height:1.1; }
   h2.title{ font-size:clamp(28px,4.6vw,52px); margin-bottom:18px; }
   .lead{ color:var(--muted); font-size:clamp(15px,1.6vw,18px); max-width:62ch; }
   .sign{ font-family:var(--script); font-size:30px; color:var(--soft); margin-top:18px; }
@@ -406,7 +409,7 @@
       radial-gradient(70% 80% at 80% 0%, rgba(255,255,255,.12), rgba(0,0,0,0) 60%),
       var(--glass), var(--card);
     box-shadow:0 50px 130px var(--shadow); }
-  .price{ font-size:clamp(40px,7vw,76px); font-weight:800; letter-spacing:-.03em; line-height:1; }
+  .price{ font-family:var(--display); font-size:clamp(40px,7vw,76px); font-weight:500; letter-spacing:0; line-height:1; }
   .price small{ font-size:.3em; font-weight:700; color:var(--soft); letter-spacing:.08em; vertical-align:super; }
   .price .cents{ font-size:.5em; }
   .pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px;
@@ -489,7 +492,10 @@
   <a class="brand" href="#top" aria-label="Inovando Juntos">
     <img src="images/logo.png" alt="Inovando Juntos" onerror="this.style.display='none'" />
   </a>
-  <a class="btn buy" href="https://loja.inovandojuntos.com.br" data-buy>Comprar</a>
+  <button class="btn buy" data-ij-cart aria-label="Carrinho" style="display:inline-flex; align-items:center; gap:8px;">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+    Carrinho <span data-ij-cart-count style="min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:800;">0</span>
+  </button>
 </header>
 
 <!-- ====== HERO ====== -->
@@ -509,14 +515,7 @@
   <div class="hero-scrim" aria-hidden="true"></div>
 
   <div class="hero-inner">
-    <div class="hero-copy">
-      <h1>
-        <span class="ln"><span>INOVANDO</span></span>
-        <span class="ln"><span>JUNTOS</span></span>
-      </h1>
-      <p class="sign"><img class="sign-img" src="images/firma.png" alt="Mario e Deise"
-        onerror="this.replaceWith(document.createTextNode('Mario & Deise'))" /></p>
-    </div>
+    <div class="hero-copy"></div>
   </div>
   <a class="hero-scroll" href="#jogo" aria-label="Rolar para baixo">
     <span>Descubra</span><span class="mw"></span>
@@ -632,7 +631,12 @@
         </div>
         <div class="reveal d3">
           <h4 style="color:var(--soft); letter-spacing:.18em; font-size:12px; text-transform:uppercase; margin:0 0 12px;">Onde compro?</h4>
-          <a class="btn btn--lg buy" href="https://loja.inovandojuntos.com.br" data-buy>Clique aqui</a>
+          <button class="btn btn--lg"
+            data-ij-add
+            data-variant-id="1538741502"
+            data-name="Jogo para casais — Inovando Juntos"
+            data-price="189.90"
+            data-image="https://dcdn-us.mitiendanube.com/stores/005/452/146/products/4e2f4c36-486d-435b-ab3e-d39b29a01dee-41a627f92725d275d517807721262797-1024-1024.png">Adicionar ao carrinho</button>
           <div class="coupon">Cupom de desconto 5%: <b>PRIMEIRACOMPRA</b></div>
         </div>
       </div>
@@ -667,7 +671,7 @@
       </div>
       <div class="foot-col">
         <h4>Contato</h4>
-        <a href="https://loja.inovandojuntos.com.br" data-buy>Loja oficial</a>
+        <a href="/loja.html" data-buy>Loja oficial</a>
         <a href="https://instagram.com/" target="_blank" rel="noopener">Instagram</a>
         <a href="mailto:contato@inovandojuntos.com.br">E-mail</a>
       </div>
@@ -683,6 +687,8 @@
     <span>Feito com cuidado para casais.</span>
   </div>
 </footer>
+
+<!-- Carrinho + checkout: injetados por store.js -->
 
 <!-- ====== Cookie banner (LGPD) ====== -->
 <div class="cookie" id="cookie" role="dialog" aria-label="Aviso de cookies">
@@ -796,6 +802,8 @@
       });
     }
   } catch(e){}
+
+  /* ---- Carrinho + checkout: gerenciados por store.js ---- */
 
   /* ---- Newsletter (placeholder: conectar a Supabase/Resend) ---- */
   var nf = document.getElementById("newsForm");
@@ -917,5 +925,6 @@
   }
 })();
 </script>
+<script src="store.js"></script>
 </body>
 </html>
