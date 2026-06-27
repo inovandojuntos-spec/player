@@ -196,17 +196,44 @@
   .nav-menu-label{ color:var(--text); }
   body.menu-open .nav-menu .ham i:nth-child(1){ transform:translateY(3.25px) rotate(45deg); width:22px; }
   body.menu-open .nav-menu .ham i:nth-child(2){ transform:translateY(-3.25px) rotate(-45deg); width:22px; }
-  /* Panel de menú a pantalla completa */
-  .menu-panel{ position:fixed; inset:0; z-index:55; background:rgba(0,0,0,.96);
-    -webkit-backdrop-filter:blur(18px) saturate(120%); backdrop-filter:blur(18px) saturate(120%);
-    display:flex; flex-direction:column; justify-content:center; align-items:center; gap:clamp(18px,4.5vh,38px);
-    opacity:0; visibility:hidden; transition:opacity .4s ease, visibility .4s ease; }
+  /* Panel de menú a pantalla completa (premium, plata) */
+  .menu-panel{ position:fixed; inset:0; z-index:55;
+    background:
+      radial-gradient(80% 60% at 50% 0%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%),
+      radial-gradient(70% 60% at 50% 100%, rgba(255,255,255,.05), rgba(0,0,0,0) 60%),
+      rgba(6,6,7,.97);
+    -webkit-backdrop-filter:blur(22px) saturate(125%); backdrop-filter:blur(22px) saturate(125%);
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    opacity:0; visibility:hidden; transition:opacity .45s ease, visibility .45s ease; }
   body.menu-open .menu-panel{ opacity:1; visibility:visible; }
-  .menu-panel a{ color:var(--text); text-decoration:none; opacity:.82;
-    font-family:"Jost Local","Jost","Century Gothic","Futura",system-ui,sans-serif;
-    text-transform:uppercase; letter-spacing:.18em; font-weight:400; font-size:clamp(22px,5.2vw,42px);
-    transition:opacity .25s ease, letter-spacing .35s ease; }
-  .menu-panel a:hover{ opacity:1; letter-spacing:.26em; }
+  .menu-links{ display:flex; flex-direction:column; align-items:center; gap:clamp(10px,2.6vh,26px); width:min(92vw,640px); }
+  .menu-panel a{ position:relative; display:flex; align-items:baseline; gap:clamp(12px,2vw,22px);
+    text-decoration:none; padding:clamp(6px,1.2vh,12px) 6px; opacity:0;
+    transform:translateY(18px); transition:transform .5s cubic-bezier(.2,.8,.2,1), opacity .5s ease; }
+  body.menu-open .menu-panel a{ opacity:1; transform:translateY(0); }
+  body.menu-open .menu-panel a:nth-child(1){ transition-delay:.10s; }
+  body.menu-open .menu-panel a:nth-child(2){ transition-delay:.17s; }
+  body.menu-open .menu-panel a:nth-child(3){ transition-delay:.24s; }
+  body.menu-open .menu-panel a:nth-child(4){ transition-delay:.31s; }
+  .menu-panel .mi{ font-family:"Jost Local","Jost",system-ui,sans-serif; font-size:clamp(11px,1.5vw,14px);
+    letter-spacing:.2em; color:var(--soft); font-weight:600; transform:translateY(-.15em); }
+  .menu-panel .mt{ font-family:"Jost Local","Jost","Century Gothic","Futura",system-ui,sans-serif;
+    text-transform:uppercase; letter-spacing:.16em; font-weight:400; font-size:clamp(26px,6vw,52px); line-height:1;
+    background:linear-gradient(100deg,#f7f8fa 0%,#aab0ba 26%,#ffffff 47%,#868c96 67%,#e9ebef 100%);
+    background-size:220% auto; -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)) drop-shadow(0 4px 22px rgba(255,255,255,.12));
+    transition:letter-spacing .35s ease, background-position .6s ease; }
+  .menu-panel a:hover .mt{ letter-spacing:.22em; background-position:100% center; }
+  /* Botón cerrar (arriba a la derecha) */
+  .menu-close{ position:absolute; top:clamp(18px,3vw,30px); right:clamp(16px,4vw,40px);
+    display:inline-flex; align-items:center; gap:9px; background:transparent; cursor:pointer;
+    border:1px solid var(--edge2); border-radius:999px; padding:9px 16px 9px 13px; color:var(--text);
+    font-family:inherit; font-weight:600; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    transition:background .25s ease, border-color .25s ease; }
+  .menu-close:hover{ background:rgba(255,255,255,.07); border-color:var(--edge); }
+  .menu-close svg{ width:18px; height:18px; transition:transform .35s ease; }
+  .menu-close:hover svg{ transform:rotate(90deg); }
   /* Botón carrito minimalista: solo ícono + número en gris. Oculto en el hero, aparece al scrollear. */
   .cart-ico{ display:inline-flex; align-items:center; gap:8px; background:transparent; border:0; cursor:pointer;
     color:#6f7378; padding:6px 4px; font-family:inherit; font-weight:700; font-size:16px; line-height:1;
@@ -542,10 +569,16 @@
 
 <!-- ====== Menu overlay ====== -->
 <nav class="menu-panel" id="menuPanel" aria-hidden="true">
-  <a href="#jogo">O Jogo</a>
-  <a href="#plataforma">Plataforma</a>
-  <a href="#como-funciona">Como Funciona</a>
-  <a href="#comprar">Comprar</a>
+  <button class="menu-close" id="menuClose" aria-label="Fechar menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    <span>Fechar</span>
+  </button>
+  <div class="menu-links">
+    <a href="#jogo"><span class="mt">O Jogo</span></a>
+    <a href="#plataforma"><span class="mt">Plataforma</span></a>
+    <a href="#como-funciona"><span class="mt">Como Funciona</span></a>
+    <a href="#comprar"><span class="mt">Comprar</span></a>
+  </div>
 </nav>
 
 <!-- ====== HERO ====== -->
@@ -923,7 +956,9 @@
       btn.setAttribute("aria-expanded", open ? "true" : "false");
       panel.setAttribute("aria-hidden", open ? "false" : "true");
     }
+    var closeBtn = document.getElementById("menuClose");
     btn.addEventListener("click", function(){ set(!document.body.classList.contains("menu-open")); });
+    if (closeBtn) closeBtn.addEventListener("click", function(){ set(false); });
     panel.querySelectorAll("a").forEach(function(a){ a.addEventListener("click", function(){ set(false); }); });
     document.addEventListener("keydown", function(e){ if (e.key === "Escape") set(false); });
   })();
