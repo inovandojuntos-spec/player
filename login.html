@@ -312,6 +312,18 @@
       .logoWrap{ margin-bottom:12px; }
       .logoWrap img{ width:64px; height:64px; }
     }
+
+    /* Indicador de requisitos de senha (modo cadastro) */
+    .passReqs{ margin:9px 2px 0; }
+    .passReqs.is-hidden{ display:none; }
+    .passReqs-title{ margin:0 0 6px; font-size:12px; color:rgba(255,255,255,.55); }
+    .passReqs ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px; }
+    .passReqs li{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:rgba(255,255,255,.50); transition:color .2s ease; }
+    .passReqs li .dot{ width:15px; height:15px; border-radius:50%; border:1.5px solid rgba(255,255,255,.30); flex:none; position:relative; transition:all .2s ease; }
+    .passReqs li.ok{ color:#7fce8f; }
+    .passReqs li.ok .dot{ background:#2e7d32; border-color:#2e7d32; }
+    .passReqs li.ok .dot::after{ content:"✓"; position:absolute; inset:0; color:#fff; font-size:10px; line-height:15px; text-align:center; }
+    .passReqs li em{ font-style:normal; color:rgba(255,255,255,.35); }
   </style>
 </head>
 
@@ -347,6 +359,14 @@
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
             </button>
+          </div>
+          <div class="passReqs is-hidden" id="passReqs" aria-live="polite">
+            <p class="passReqs-title">Sua senha precisa de:</p>
+            <ul>
+              <li data-req="len"><span class="dot"></span>Pelo menos 6 caracteres</li>
+              <li data-req="alpha"><span class="dot"></span>Pelo menos uma letra (não apenas números)</li>
+              <li data-req="num"><span class="dot"></span>Pelo menos um número <em>(recomendado)</em></li>
+            </ul>
           </div>
         </div>
 
@@ -404,8 +424,21 @@
     const loginTab = document.getElementById("loginTab");
     const registerTab = document.getElementById("registerTab");
     const modeCopy = document.getElementById("modeCopy");
+    const passReqs = document.getElementById("passReqs");
 
     let mode = "login";
+
+    function updatePassReqs(){
+      const v = passwordEl.value;
+      setReq("len", v.length >= 6);
+      setReq("alpha", /[a-zA-Z]/.test(v));
+      setReq("num", /[0-9]/.test(v));
+    }
+    function setReq(name, ok){
+      const li = passReqs.querySelector('[data-req="' + name + '"]');
+      if (li) li.classList.toggle("ok", ok);
+    }
+    passwordEl.addEventListener("input", function(){ if (mode === "register") updatePassReqs(); });
 
     init();
 
@@ -480,6 +513,9 @@
 
       forgotPasswordBtn.classList.toggle("is-hidden", isRegister);
 
+      passReqs.classList.toggle("is-hidden", !isRegister);
+      if (isRegister) updatePassReqs();
+
       if (!isRegister) {
         activationCodeEl.value = "";
         ageConfirmEl.checked = false;
@@ -545,6 +581,12 @@
     async function register(){
       const credentials = getCredentials();
       if (!credentials) return;
+
+      if (/^\d+$/.test(credentials.password)){
+        showStatus("A senha não pode conter apenas números. Use letras e números.", "error");
+        passwordEl.focus();
+        return;
+      }
 
       const activationCode = getActivationCode();
       if (!activationCode) return;
@@ -732,6 +774,7 @@
     function getFriendlyAuthError(error){
       const msg = String(error?.message || "Erro de autenticação");
 
+      // --- Erros de autenticação do Supabase (em inglês) → português ---
       if (/invalid login credentials/i.test(msg)){
         return "Email ou senha incorretos.";
       }
@@ -745,11 +788,47 @@
         return "Este email já está registrado. Entre com sua senha.";
       }
 
+      // Senha fraca / comum / vazada (ex.: apenas números)
+      if (/weak|easy to guess|pwned|leaked|compromis/i.test(msg)){
+        return "Esta senha é muito fraca ou comum. Escolha uma senha mais forte — misture letras e números (evite apenas números).";
+      }
+
+      // Requisitos de senha
+      if (/password.*(should contain|at least one|requirement|insufficient|complexity)|requirements/i.test(msg)){
+        return "A senha não atende aos requisitos. Use uma combinação de letras e números (e símbolos, se possível).";
+      }
+
+      // Senha curta
+      if (/password.*(at least.*6|6 characters|too short|short)/i.test(msg)){
+        return "A senha deve ter pelo menos 6 caracteres.";
+      }
+
+      // Muitas tentativas
+      if (/rate limit|too many|over_email_send_rate/i.test(msg)){
+        return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+      }
+
+      // Conexão
+      if (/failed to fetch|networkerror|network error|load failed/i.test(msg)){
+        return "Falha de conexão. Verifique sua internet e tente novamente.";
+      }
+
+      // Email inválido
+      if (/invalid.*email|email.*invalid|unable to validate email/i.test(msg)){
+        return "O email informado não é válido.";
+      }
+
       if (/perfil_nao_encontrado/i.test(msg)){
         return "Perfil de usuário não encontrado. Verifique se o gatilho de criação de perfil está ativo.";
       }
 
-      return msg;
+      // Mensagens que já estão em português (nossas RPCs: código, senha, perfil...) → repassa
+      if (/[áàâãéêíóôõúç]/i.test(msg) || /\b(senha|c[óo]digo|perfil|inv[áa]lid|usu[áa]rio|ativa|conta|limite)\b/i.test(msg)){
+        return msg;
+      }
+
+      // Qualquer outro erro (provavelmente em inglês): mensagem genérica em português, sem vazar inglês
+      return "Não foi possível concluir. Verifique os dados e tente novamente.";
     }
 
     window.login = login;
