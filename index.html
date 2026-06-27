@@ -46,7 +46,7 @@
   "@type": "Organization",
   "name": "Inovando Juntos",
   "url": "https://inovandojuntos.com.br/",
-  "logo": "https://inovandojuntos.com.br/images/logo.png",
+  "logo": "https://inovandojuntos.com.br/images/LOGO_IJ.png",
   "slogan": "Conexão • Comunicação • Intimidade"
 }
 </script>
@@ -176,10 +176,17 @@
     border-bottom:1px solid var(--edge);
   }
   .brand{ display:flex; align-items:center; gap:11px; }
-  .brand img{ height:38px; width:auto; object-fit:contain; opacity:.97;
+  .brand img{ height:50px; width:auto; object-fit:contain; opacity:.36;   /* mesmo cinza/plomo que "Descubra" (var(--soft)) */
     filter:drop-shadow(0 2px 12px rgba(0,0,0,.5)); transition:transform .3s ease, opacity .3s ease; }
-  .brand:hover img{ transform:scale(1.05); opacity:1; }
-  .nav.scrolled .brand img{ height:32px; }
+  .brand:hover img{ transform:scale(1.05); opacity:.55; }
+  .nav.scrolled .brand img{ height:40px; }
+  /* Botón carrito minimalista: solo ícono + número en gris. Oculto en el hero, aparece al scrollear. */
+  .cart-ico{ display:inline-flex; align-items:center; gap:8px; background:transparent; border:0; cursor:pointer;
+    color:#6f7378; padding:6px 4px; font-family:inherit; font-weight:700; font-size:16px; line-height:1;
+    opacity:0; visibility:hidden; pointer-events:none; transition:color .2s ease, opacity .35s ease; }
+  .cart-ico.show{ opacity:1; visibility:visible; pointer-events:auto; }
+  .cart-ico:hover{ color:#c7ccd4; }
+  .cart-ico svg{ width:29px; height:29px; }
   .brand .bt{ font-weight:800; letter-spacing:.18em; font-size:12px; color:var(--text); }
   .brand .bt small{ display:block; font-weight:500; letter-spacing:.34em; font-size:8.5px; color:var(--soft); }
 
@@ -433,7 +440,7 @@
     padding:56px clamp(16px,4vw,40px) 40px; background:#040404; }
   .foot-grid{ max-width:var(--maxw); margin:0 auto; display:flex; flex-wrap:wrap; gap:28px; justify-content:space-between; align-items:flex-start; }
   .foot-brand{ display:flex; flex-direction:column; gap:14px; max-width:320px; }
-  .foot-brand img{ width:46px; opacity:.95; }
+  .foot-brand img{ width:124px; opacity:.36; }
   .foot-tag{ letter-spacing:.28em; font-size:11px; color:var(--soft); font-weight:700; }
   .foot-links{ display:flex; gap:40px; flex-wrap:wrap; }
   .foot-col h4{ font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--soft); margin:0 0 12px; font-weight:800; }
@@ -490,12 +497,9 @@
 <!-- ====== NAV ====== -->
 <header class="nav" id="nav">
   <a class="brand" href="#top" aria-label="Inovando Juntos">
-    <img src="images/logo.png" alt="Inovando Juntos" onerror="this.style.display='none'" />
+    <img src="images/LOGO_IJ.svg" alt="Inovando Juntos" onerror="this.style.display='none'" />
   </a>
-  <button class="btn buy" data-ij-cart aria-label="Carrinho" style="display:inline-flex; align-items:center; gap:8px;">
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-    Carrinho <span data-ij-cart-count style="min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:800;">0</span>
-  </button>
+  <button class="cart-ico" id="navCart" data-ij-cart aria-label="Carrinho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg><span data-ij-cart-count>0</span></button>
 </header>
 
 <!-- ====== HERO ====== -->
@@ -508,9 +512,9 @@
       <img src="images/web01.jpeg" alt="Casal Inovando Juntos" fetchpriority="high"
            onerror="this.style.display='none';" />
     </picture>
-    <!-- Loop opcional: coloca images/hero_loop.mp4 (corto, mudo, < 5MB) y se reproducirá sobre la foto. -->
+    <!-- Loop de fondo: images/video_prueba.mp4 (corto, mudo). Se reproduce en B&N sobre la foto. -->
     <video id="heroVideo" poster="images/web01.jpeg" muted loop playsinline preload="none"
-           data-src="images/hero_loop.mp4"></video>
+           data-src="images/video_prueba.mp4"></video>
   </div>
   <div class="hero-scrim" aria-hidden="true"></div>
 
@@ -658,7 +662,7 @@
 <footer>
   <div class="foot-grid">
     <div class="foot-brand">
-      <img src="images/logo.png" alt="Inovando Juntos" onerror="this.style.display='none'" />
+      <img src="images/LOGO_IJ.svg" alt="Inovando Juntos" onerror="this.style.display='none'" />
       <div class="foot-tag">CONEXÃO • COMUNICAÇÃO • INTIMIDADE</div>
       <span class="age">+18 · Conteúdo para maiores</span>
     </div>
@@ -710,9 +714,12 @@
   /* ---- Navbar scroll + progress ---- */
   var nav = document.getElementById("nav");
   var progress = document.getElementById("progress");
+  var navCart = document.getElementById("navCart");
   function onScroll(){
     var y = window.scrollY || document.documentElement.scrollTop;
     nav.classList.toggle("scrolled", y > 24);
+    // Carrinho aparece ao passar do hero (1ª slide)
+    if (navCart) navCart.classList.toggle("show", y > window.innerHeight * 0.8);
     var h = document.documentElement.scrollHeight - window.innerHeight;
     progress.style.width = (h > 0 ? (y / h) * 100 : 0) + "%";
   }
@@ -842,8 +849,7 @@
     var v = document.getElementById("heroVideo");
     if (!v) return;
     var saveData = navigator.connection && navigator.connection.saveData;
-    var bigScreen = window.matchMedia("(min-width:761px)").matches;
-    if (reduce || saveData || !bigScreen) return;   // móvil/datos/reduce → solo foto
+    if (reduce || saveData) return;   // respeta data-saver y reduce-motion; en móvil sí carga (video liviano)
     var src = v.getAttribute("data-src");
     if (!src) return;
     // sólo intenta si el archivo existe (HEAD), evita 404 ruidoso
