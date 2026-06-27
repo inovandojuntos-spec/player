@@ -450,35 +450,6 @@ async function requireAuth(){
 }
 
 const INTRO_ID='16859d64-1209-4b70-8de4-e8d16f8c8df7';
-// ---- Estatísticas: registra views (vídeo / introdução) atribuídas ao perfil ----
-function _uuid(){ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID(); return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
-let _statsSid=null;
-function statsSid(){ if(_statsSid) return _statsSid; try{_statsSid=sessionStorage.getItem('ij_player_sid');}catch(_){} if(!_statsSid){_statsSid=_uuid(); try{sessionStorage.setItem('ij_player_sid',_statsSid);}catch(_){}} return _statsSid; }
-const _viewedSlugs=new Set();
-async function track(name, slug, extra){
-  try{
-    if(!authUserId) return;
-    await supabase.functions.invoke('IJ_events',{ body:{
-      player_id: authUserId, session_id: statsSid(),
-      event_type:'player', event_name:name, event_source:'player_V4_live.html',
-      data1: slug||null, page_url: location.href.slice(0,600),
-      payload: Object.assign({ email: authEmail||undefined }, extra||{})
-    }});
-  }catch(_){}
-}
-function trackView(slug, extra){
-  if(!slug || _viewedSlugs.has(slug)) return; _viewedSlugs.add(slug);
-  track(slug==='intro'?'intro_view':'video_view', slug, extra);
-}
-// Progresso de escuta baseado no ÁUDIO (master). Marca 25/50/75/100% uma vez por slug/sessão.
-const _audioMiles={};
-function trackAudioProgress(slug, ratio){
-  if(!slug || !isFinite(ratio) || ratio<=0) return;
-  const pct = ratio>=0.98?100 : ratio>=0.75?75 : ratio>=0.50?50 : ratio>=0.25?25 : 0;
-  if(pct<=0 || (_audioMiles[slug]||0) >= pct) return;
-  _audioMiles[slug]=pct;
-  track(pct===100?'audio_complete':'audio_progress', slug, {percent:pct});
-}
 function getParamSlug(){
   try{ const u=new URL(location.href); return (u.searchParams.get('id')||u.searchParams.get('slug')||'').trim(); }catch(_){ return ''; }
 }
@@ -595,7 +566,6 @@ async function activate(slide){
   const ch=await getChallenge(slug);
   if(seq!==activeSeq) return;
   updateTabBadges(ch);
-  trackView(slug, { desafio_id:id, title: ch&&ch.title });
 
   const v=slide.querySelector('video');
   if(ch&&ch.media&&String(ch.media).startsWith('bunny:')){
@@ -620,8 +590,7 @@ async function activate(slide){
 
 function bindProgress(slide){
   pfill.style.width='0%';
-  const slug=slide.dataset.slug;
-  master.ontimeupdate=()=>{ if(master.duration){ const ratio=master.currentTime/master.duration; pfill.style.width=(ratio*100)+'%'; trackAudioProgress(slug, ratio); } };
+  master.ontimeupdate=()=>{ if(master.duration){ pfill.style.width=(master.currentTime/master.duration*100)+'%'; } };
 }
 
 async function loadBundle(slide,id,type){
