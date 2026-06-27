@@ -590,7 +590,7 @@
            onerror="this.style.display='none';" />
     </picture>
     <!-- Loop de fondo: images/video_prueba.mp4 (corto, mudo). Se reproduce en B&N sobre la foto. -->
-    <video id="heroVideo" poster="images/web01.jpeg" muted loop autoplay playsinline preload="auto"
+    <video id="heroVideo" poster="images/hero_poster.jpg" muted loop autoplay playsinline webkit-playsinline preload="auto"
            src="images/video_prueba.mp4"></video>
   </div>
   <div class="hero-scrim" aria-hidden="true"></div>
@@ -927,21 +927,20 @@
   document.getElementById("ckAccept").addEventListener("click", function(){ setConsent("accept"); });
   document.getElementById("ckReject").addEventListener("click", function(){ setConsent("reject"); });
 
-  /* ---- Hero video opcional (carga solo si conviene) ---- */
+  /* ---- Hero video: autoplay robusto (iOS incluido) ---- */
   (function(){
     var v = document.getElementById("heroVideo");
     if (!v) return;
-    var saveData = navigator.connection && navigator.connection.saveData;
-    if (reduce || saveData) return;   // respeta data-saver y reduce-motion; en móvil sí carga (video liviano)
-    var src = v.getAttribute("data-src");
-    if (!src) return;
-    // sólo intenta si el archivo existe (HEAD), evita 404 ruidoso
-    fetch(src, { method:"HEAD" }).then(function(r){
-      if (!r.ok) return;
-      v.src = src;
-      v.addEventListener("canplay", function(){ v.classList.add("ready"); v.play().catch(function(){}); });
-      v.load();
-    }).catch(function(){});
+    v.muted = true; v.defaultMuted = true; v.setAttribute("muted", "");   // iOS exige muted explícito
+    function tryPlay(){ var p = v.play(); if (p && p.catch) p.catch(function(){}); }
+    if (v.readyState >= 2) tryPlay();
+    v.addEventListener("loadeddata", tryPlay);
+    v.addEventListener("canplay", tryPlay);
+    // Reintento al primer gesto del usuario (iOS Low Power Mode bloquea el autoplay)
+    function once(){ tryPlay(); ["touchstart","click","scroll"].forEach(function(ev){ window.removeEventListener(ev, once); }); }
+    ["touchstart","click","scroll"].forEach(function(ev){ window.addEventListener(ev, once, { passive:true }); });
+    // Reanuda al volver a la pestaña
+    document.addEventListener("visibilitychange", function(){ if (!document.hidden) tryPlay(); });
   })();
 
   /* ---- Menu overlay (abrir/cerrar) ---- */
@@ -959,6 +958,68 @@
     if (closeBtn) closeBtn.addEventListener("click", function(){ set(false); });
     panel.querySelectorAll("a").forEach(function(a){ a.addEventListener("click", function(){ set(false); }); });
     document.addEventListener("keydown", function(e){ if (e.key === "Escape") set(false); });
+  })();
+
+  /* ---- Tracking propio (first-party) -> Supabase IJ_events ---- */
+  (function(){
+    var ENDPOINT = "https://rsordtljnvxonaygyuxd.supabase.co/functions/v1/IJ_events";
+    var LS = window.localStorage, SS = window.sessionStorage;
+    function uuid(){
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c){
+        var r = Math.random()*16|0, v = c==="x"?r:(r&0x3|0x8); return v.toString(16);
+      });
+    }
+    function get(s,k){ try{ return s.getItem(k); }catch(e){ return null; } }
+    function put(s,k,v){ try{ s.setItem(k,v); }catch(e){} }
+
+    var visitorId = get(LS,"ij_vid"); if(!visitorId){ visitorId = uuid(); put(LS,"ij_vid",visitorId); }
+    var sessionId = get(SS,"ij_sid"); if(!sessionId){ sessionId = uuid(); put(SS,"ij_sid",sessionId); }
+
+    // Atribución: first-touch (persistente) + last-touch (esta visita)
+    var qs = new URLSearchParams(location.search);
+    var keys = ["utm_source","utm_medium","utm_campaign","utm_term","utm_content","fbclid","gclid","ttclid","msclkid"];
+    var firstTouch = {}; try{ firstTouch = JSON.parse(get(LS,"ij_first_touch")||"{}"); }catch(e){}
+    var lastTouch = {}, hasNew = false;
+    keys.forEach(function(k){ var val = qs.get(k); if(val){ lastTouch[k]=val; if(!firstTouch[k]){ firstTouch[k]=val; hasNew=true; } } });
+    if(hasNew) put(LS,"ij_first_touch",JSON.stringify(firstTouch));
+
+    function device(){ var w = window.innerWidth; return w<=600?"mobile":(w<=1024?"tablet":"desktop"); }
+
+    function track(name, extra){
+      var body = {
+        player_id: visitorId, session_id: sessionId,
+        event_type: "landing", event_name: name, event_source: "landing.html",
+        page_url: location.href.slice(0,600), referrer: (document.referrer||"").slice(0,600),
+        payload: Object.assign({ device: device(), screen: window.innerWidth+"x"+window.innerHeight,
+          lang: navigator.language||"", first_touch: firstTouch, last_touch: lastTouch }, extra||{})
+      };
+      try{
+        var json = JSON.stringify(body);
+        if(navigator.sendBeacon){ navigator.sendBeacon(ENDPOINT, new Blob([json],{type:"application/json"})); }
+        else { fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:json,keepalive:true}).catch(function(){}); }
+      }catch(e){}
+    }
+
+    track("page_view");
+
+    var cta = document.querySelector(".hero-scroll");
+    if(cta) cta.addEventListener("click", function(){ track("cta_click",{cta:"hero_scroll"}); });
+    document.querySelectorAll('[data-ij-cart], a[href="#comprar"]').forEach(function(el){
+      el.addEventListener("click", function(){ track("comprar_click"); });
+    });
+
+    var marks = {25:false,50:false,75:false,100:false};
+    window.addEventListener("scroll", function(){
+      var h = document.documentElement, sc = h.scrollTop||document.body.scrollTop, max = h.scrollHeight-h.clientHeight;
+      var pct = max>0 ? Math.round(sc/max*100) : 0;
+      [25,50,75,100].forEach(function(m){ if(!marks[m] && pct>=m){ marks[m]=true; track("scroll_depth",{depth:m}); } });
+    }, {passive:true});
+
+    var t0 = Date.now();
+    window.addEventListener("pagehide", function(){ track("page_exit",{seconds:Math.round((Date.now()-t0)/1000)}); });
+
+    window.ijTrack = track;   // disponible para disparar eventos personalizados
   })();
 
   /* ---- Scratch card (canvas) ---- */
