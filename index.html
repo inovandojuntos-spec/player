@@ -10,8 +10,7 @@
 <meta name="theme-color" content="#000000" />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://inovandojuntos.com/" />
-<link rel="alternate" hreflang="pt-br" href="https://inovandojuntos.com.br/" />
-<link rel="alternate" hreflang="x-default" href="https://inovandojuntos.com/" />
+<!-- TODO Mario: confirmar dominio canónico (.com vs .com.br) -->
 
 <!-- ====== OpenGraph ====== -->
 <meta property="og:type" content="website" />
@@ -27,7 +26,7 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Inovando Juntos | Jogos Interativos Para Casal" />
 <meta name="twitter:description" content="20 experiências guiadas por voz para casais. Conexão, comunicação e intimidade." />
-<meta name="twitter:image" content="https://inovandojuntos.com/images/hero_poster.jpg" />
+<meta name="twitter:image" content="https://inovandojuntos.com.br/images/hero_poster.jpg" />
 
 <!-- ====== Favicon ====== -->
 <link rel="icon" href="favicon.ico" sizes="any" />
@@ -46,8 +45,8 @@
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "Inovando Juntos",
-  "url": "https://inovandojuntos.com/",
-  "logo": "https://inovandojuntos.com/images/LOGO_IJ.png",
+  "url": "https://inovandojuntos.com.br/",
+  "logo": "https://inovandojuntos.com.br/images/LOGO_IJ.png",
   "slogan": "Conexão • Comunicação • Intimidade"
 }
 </script>
@@ -57,7 +56,7 @@
   "@type": "Product",
   "name": "Inovando Juntos — Jogo Interativo Para Casal",
   "description": "Uma raspadinha física com 20 desafios e QR Codes exclusivos que desbloqueiam uma plataforma digital com experiências guiadas por voz para casais.",
-  "image": "https://inovandojuntos.com/images/hero_poster.jpg",
+  "image": "https://inovandojuntos.com.br/images/hero_poster.jpg",
   "brand": { "@type": "Brand", "name": "Inovando Juntos" },
   "offers": {
     "@type": "Offer",
@@ -1080,4 +1079,23 @@
       } catch(e){}
     }
 
-    canvas.addEventListener("pointerdown", function(e){ drawing = true; 
+    canvas.addEventListener("pointerdown", function(e){ drawing = true; scratch(e); });
+    window.addEventListener("pointerup", function(){ drawing = false; });
+    canvas.addEventListener("pointermove", scratch);
+    canvas.addEventListener("touchstart", function(e){ drawing = true; scratch(e); }, { passive:true });
+    canvas.addEventListener("touchmove", function(e){ scratch(e); }, { passive:true });
+    canvas.addEventListener("touchend", function(){ drawing = false; });
+
+    if (reduce){
+      canvas.style.display = "none";
+      if (hint) hint.style.display = "none";
+    } else {
+      window.addEventListener("resize", function(){ if (!cleared) sizeCanvas(); });
+      sizeCanvas();
+    }
+  }
+})();
+</script>
+<script src="store.js"></script>
+</body>
+</html>
