@@ -470,15 +470,37 @@ function trackView(slug, extra){
   if(!slug || _viewedSlugs.has(slug)) return; _viewedSlugs.add(slug);
   track(slug==='intro'?'intro_view':'video_view', slug, extra);
 }
-// Progresso de escuta baseado no ÁUDIO (master). Marca 25/50/75/100% uma vez por slug/sessão.
+// Progresso de escuta baseado no ÁUDIO (master). Marca de 10 em 10% (10,20,…,100), uma vez por marco/slug/sessão.
 const _audioMiles={};
 function trackAudioProgress(slug, ratio){
   if(!slug || !isFinite(ratio) || ratio<=0) return;
-  const pct = ratio>=0.98?100 : ratio>=0.75?75 : ratio>=0.50?50 : ratio>=0.25?25 : 0;
-  if(pct<=0 || (_audioMiles[slug]||0) >= pct) return;
-  _audioMiles[slug]=pct;
-  track(pct===100?'audio_complete':'audio_progress', slug, {percent:pct});
+  const pct = ratio>=0.995 ? 100 : Math.floor(ratio*10)*10;   // 10,20,...,100
+  if(pct<=0) return;
+  const last=_audioMiles[slug]||0;
+  if(pct<=last) return;
+  for(let m=last+10; m<=pct; m+=10){                          // dispara cada marco de 10% alcançado
+    _audioMiles[slug]=m;
+    track(m===100?'audio_complete':'audio_progress', slug, {percent:m});
+  }
 }
+// Só conta áudio do desafío quando o master está tocando o desafío (não item/kamasutra/roleta).
+function isChallengeAudio(){
+  try{
+    if(itemPlaying) return false;
+    if(kama && kama.screen && kama.screen.classList.contains('open')) return false;
+    if(ruleta && ruleta.screen && ruleta.screen.classList.contains('open')) return false;
+  }catch(_){}
+  return true;
+}
+// Segundos totais escutados por desafío/sessão (soma de deltas de reprodução real).
+const _listen={slug:null,last:0,sec:0};
+function listenFlush(){ if(_listen.slug && _listen.sec>=2){ track('listen_seconds', _listen.slug, {seconds:Math.round(_listen.sec)}); _listen.sec=0; } }
+master.addEventListener('pause', listenFlush);
+master.addEventListener('ended', listenFlush);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) listenFlush(); });
+window.addEventListener('pagehide', listenFlush);
+// Dedup de posições do Kamasutra já registradas nesta sessão.
+const _posViewed=new Set();
 function getParamSlug(){
   try{ const u=new URL(location.href); return (u.searchParams.get('id')||u.searchParams.get('slug')||'').trim(); }catch(_){ return ''; }
 }
@@ -621,7 +643,16 @@ async function activate(slide){
 function bindProgress(slide){
   pfill.style.width='0%';
   const slug=slide.dataset.slug;
-  master.ontimeupdate=()=>{ if(master.duration){ const ratio=master.currentTime/master.duration; pfill.style.width=(ratio*100)+'%'; trackAudioProgress(slug, ratio); } };
+  listenFlush();                       // fecha a contagem do desafío anterior
+  _listen.slug=slug; _listen.last=0; _listen.sec=0;
+  master.ontimeupdate=()=>{
+    if(!master.duration) return;
+    const ratio=master.currentTime/master.duration; pfill.style.width=(ratio*100)+'%';
+    if(!isChallengeAudio()) return;    // ignora áudio de item/kamasutra
+    trackAudioProgress(slug, ratio);
+    const t=master.currentTime, d=t-_listen.last; _listen.last=t;
+    if(_listen.slug===slug && d>0 && d<2) _listen.sec+=d;   // acumula só reprodução real
+  };
 }
 
 async function loadBundle(slide,id,type){
@@ -714,6 +745,7 @@ function renderItens(){
   panelTitle.textContent='Itens recomendados';
   const products=getProducts();
   if(!products.length){ panelBody.innerHTML='<div class="empty">Os itens íntimos recomendados serão exibidos apenas nos desafios .</div>'; return; }
+  track('items_open', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {count:products.length});
   const groups={};
   products.forEach(it=>{ const c=it.category||'Outros'; (groups[c]=groups[c]||[]).push(it); });
   const flat=[];
@@ -744,11 +776,12 @@ function renderItens(){
   panelBody.innerHTML=html;
   panelBody.querySelectorAll('.itemCard').forEach(c=>{
     c.addEventListener('click',(e)=>{
-      const pill=e.target.closest('.itemPill.ghost');
-      if(pill){ e.stopPropagation(); openLink(pill.dataset.link); return; }
       const it=flat[Number(c.dataset.idx)];
-      if(it&&(it.video||it.audio)) playItem(it);
-      else if(it&&(it.external_url||'').trim()) openLink(it.external_url);
+      const sslug=currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug;
+      const pill=e.target.closest('.itemPill.ghost');
+      if(pill){ e.stopPropagation(); track('item_buy_click', sslug, {item_id:it&&it.id, name:it&&it.name, url:pill.dataset.link}); openLink(pill.dataset.link); return; }
+      if(it&&(it.video||it.audio)){ track('item_play', sslug, {item_id:it.id, name:it.name}); playItem(it); }
+      else if(it&&(it.external_url||'').trim()){ track('item_buy_click', sslug, {item_id:it.id, name:it.name, url:it.external_url}); openLink(it.external_url); }
       else toast('Sem mídia disponível');
     });
   });
@@ -931,6 +964,7 @@ function kamaPath(pos){ const b=String(pos&&pos.svg||'').split('/').pop()||''; r
 async function openKamasutra(mode,audioRef){
   buildKamaScreen();
   kama.screen.classList.add('open');
+  track('kamasutra_view', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {mode});
   master.pause(); try{ currentSlide?.querySelector('video')?.pause(); }catch(_){}
   kama.screen.querySelector('.kmName').textContent='Carregando…';
   kama.screen.querySelector('.kmNum').textContent='';
@@ -972,7 +1006,8 @@ async function kamaNext(){
   kama.img.src=url;
   kama.screen.querySelector('.kmName').textContent=pos.nombre||'';
   kama.screen.querySelector('.kmNum').textContent=pos.numero?('Nº '+pos.numero):'';
-  if(pos.id) loadKamaBundle(pos.id);
+  if(pos.id){ loadKamaBundle(pos.id);
+    if(!_posViewed.has(pos.id)){ _posViewed.add(pos.id); track('position_view', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {position_id:pos.id, numero:pos.numero, nome:pos.nombre}); } }
   // pré-carrega a próxima
   const nx=kama.list[(kama.idx+1)%kama.list.length];
   if(nx) kamaPreload(nx.svg);
@@ -1093,6 +1128,7 @@ function ruletaSpin(){
 async function ruletaPick(group){
   const arr=ruleta.byGroup[group]||[]; if(!arr.length) return;
   const q=arr[Math.floor(Math.random()*arr.length)];
+  track('roleta_spin', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {categoria:group, pergunta:(q&&q.pergunta||'').slice(0,120)});
   const sc=ruleta.screen;
   sc.querySelector('#rlHint').style.display='none';
   const cat=sc.querySelector('#rlCat'), qe=sc.querySelector('#rlQ');
