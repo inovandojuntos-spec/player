@@ -449,6 +449,21 @@ async function requireAuth(){
   authUserId=data.user.id; authEmail=data.user.email||''; return true;
 }
 
+// Contrato de boas-vindas: se o casal ainda não preencheu E assinou, envia ao contrato antes de ouvir.
+// Fail-open: qualquer erro/latência NÃO bloqueia o acesso ao player.
+const WELCOME_SLUG='intro';
+async function requireWelcomeContract(){
+  try{
+    const {data,error}=await supabase.rpc('get_contract_response',{p_desafio_slug:WELCOME_SLUG});
+    if(error) return true;
+    const row=Array.isArray(data)?data[0]:data;
+    const signed=row&&(String(row.status||'').toLowerCase()==='submitted'||!!row.submitted_at||!!row.signed_at);
+    if(signed) return true;
+    location.replace('/contrato.html?slug='+encodeURIComponent(WELCOME_SLUG)); // não assinado → boas-vindas
+    return false;
+  }catch(_){ return true; }
+}
+
 const INTRO_ID='16859d64-1209-4b70-8de4-e8d16f8c8df7';
 // ---- Estatísticas: registra views (vídeo / introdução) atribuídas ao perfil ----
 function _uuid(){ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID(); return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
@@ -1470,7 +1485,7 @@ startOv.addEventListener('click',beginPlayback);
 $('#app').addEventListener('click',function once(){ if(!started){ startOv.style.display='none'; started=true; master.play().catch(()=>{}); } },{once:true});
 
 /* ===== Init ===== */
-(async()=>{ if(await requireAuth()){ await loadFeed(); startOv.style.display='flex'; } })();
+(async()=>{ if(await requireAuth()){ if(!(await requireWelcomeContract())) return; await loadFeed(); startOv.style.display='flex'; } })();
 </script>
 </body>
 </html>
