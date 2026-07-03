@@ -79,8 +79,8 @@
   .act:active svg{transform:scale(.82)}
   .act .cnt{font-size:12px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.7);font-variant-numeric:tabular-nums}
   .act.liked svg{color:var(--silver-bright);fill:var(--silver-bright);filter:drop-shadow(0 0 10px var(--glow));animation:pop .35s}
-  .act.lived.on svg{color:var(--silver-bright);stroke:var(--silver-bright);fill:none;filter:drop-shadow(0 0 12px var(--glow))}
-  .act.lived.on .cnt{color:var(--silver-bright)}
+  .act.lived.on svg{color:#f5b301;stroke:#f5b301;stroke-width:3.2;fill:none;filter:drop-shadow(0 0 12px rgba(245,179,1,.65));animation:pop .35s}
+  .act.lived.on .cnt{color:#f5b301;font-weight:800}
   @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
   .avatarRail{width:48px;height:48px;border-radius:50%;padding:2px;background:var(--metal);margin-bottom:4px}
   .avatarRail span{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:#15161a;font-weight:800;font-size:14px;color:var(--silver-bright)}
@@ -449,6 +449,21 @@ async function requireAuth(){
   authUserId=data.user.id; authEmail=data.user.email||''; return true;
 }
 
+// Contrato de boas-vindas: se o casal ainda não preencheu E assinou, envia ao contrato antes de ouvir.
+// Fail-open: qualquer erro/latência NÃO bloqueia o acesso ao player.
+const WELCOME_SLUG='intro';
+async function requireWelcomeContract(){
+  try{
+    const {data,error}=await supabase.rpc('get_contract_response',{p_desafio_slug:WELCOME_SLUG});
+    if(error) return true;
+    const row=Array.isArray(data)?data[0]:data;
+    const signed=row&&(String(row.status||'').toLowerCase()==='submitted'||!!row.submitted_at||!!row.signed_at);
+    if(signed) return true;
+    location.replace('/contrato.html?slug='+encodeURIComponent(WELCOME_SLUG)); // não assinado → boas-vindas
+    return false;
+  }catch(_){ return true; }
+}
+
 const INTRO_ID='16859d64-1209-4b70-8de4-e8d16f8c8df7';
 // ---- Estatísticas: registra views (vídeo / introdução) atribuídas ao perfil ----
 function _uuid(){ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID(); return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
@@ -470,15 +485,37 @@ function trackView(slug, extra){
   if(!slug || _viewedSlugs.has(slug)) return; _viewedSlugs.add(slug);
   track(slug==='intro'?'intro_view':'video_view', slug, extra);
 }
-// Progresso de escuta baseado no ÁUDIO (master). Marca 25/50/75/100% uma vez por slug/sessão.
+// Progresso de escuta baseado no ÁUDIO (master). Marca de 10 em 10% (10,20,…,100), uma vez por marco/slug/sessão.
 const _audioMiles={};
 function trackAudioProgress(slug, ratio){
   if(!slug || !isFinite(ratio) || ratio<=0) return;
-  const pct = ratio>=0.98?100 : ratio>=0.75?75 : ratio>=0.50?50 : ratio>=0.25?25 : 0;
-  if(pct<=0 || (_audioMiles[slug]||0) >= pct) return;
-  _audioMiles[slug]=pct;
-  track(pct===100?'audio_complete':'audio_progress', slug, {percent:pct});
+  const pct = ratio>=0.995 ? 100 : Math.floor(ratio*10)*10;   // 10,20,...,100
+  if(pct<=0) return;
+  const last=_audioMiles[slug]||0;
+  if(pct<=last) return;
+  for(let m=last+10; m<=pct; m+=10){                          // dispara cada marco de 10% alcançado
+    _audioMiles[slug]=m;
+    track(m===100?'audio_complete':'audio_progress', slug, {percent:m});
+  }
 }
+// Só conta áudio do desafío quando o master está tocando o desafío (não item/kamasutra/roleta).
+function isChallengeAudio(){
+  try{
+    if(itemPlaying) return false;
+    if(kama && kama.screen && kama.screen.classList.contains('open')) return false;
+    if(ruleta && ruleta.screen && ruleta.screen.classList.contains('open')) return false;
+  }catch(_){}
+  return true;
+}
+// Segundos totais escutados por desafío/sessão (soma de deltas de reprodução real).
+const _listen={slug:null,last:0,sec:0};
+function listenFlush(){ if(_listen.slug && _listen.sec>=2){ track('listen_seconds', _listen.slug, {seconds:Math.round(_listen.sec)}); _listen.sec=0; } }
+master.addEventListener('pause', listenFlush);
+master.addEventListener('ended', listenFlush);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) listenFlush(); });
+window.addEventListener('pagehide', listenFlush);
+// Dedup de posições do Kamasutra já registradas nesta sessão.
+const _posViewed=new Set();
 function getParamSlug(){
   try{ const u=new URL(location.href); return (u.searchParams.get('id')||u.searchParams.get('slug')||'').trim(); }catch(_){ return ''; }
 }
@@ -621,7 +658,16 @@ async function activate(slide){
 function bindProgress(slide){
   pfill.style.width='0%';
   const slug=slide.dataset.slug;
-  master.ontimeupdate=()=>{ if(master.duration){ const ratio=master.currentTime/master.duration; pfill.style.width=(ratio*100)+'%'; trackAudioProgress(slug, ratio); } };
+  listenFlush();                       // fecha a contagem do desafío anterior
+  _listen.slug=slug; _listen.last=0; _listen.sec=0;
+  master.ontimeupdate=()=>{
+    if(!master.duration) return;
+    const ratio=master.currentTime/master.duration; pfill.style.width=(ratio*100)+'%';
+    if(!isChallengeAudio()) return;    // ignora áudio de item/kamasutra
+    trackAudioProgress(slug, ratio);
+    const t=master.currentTime, d=t-_listen.last; _listen.last=t;
+    if(_listen.slug===slug && d>0 && d<2) _listen.sec+=d;   // acumula só reprodução real
+  };
 }
 
 async function loadBundle(slide,id,type){
@@ -714,6 +760,7 @@ function renderItens(){
   panelTitle.textContent='Itens recomendados';
   const products=getProducts();
   if(!products.length){ panelBody.innerHTML='<div class="empty">Os itens íntimos recomendados serão exibidos apenas nos desafios .</div>'; return; }
+  track('items_open', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {count:products.length});
   const groups={};
   products.forEach(it=>{ const c=it.category||'Outros'; (groups[c]=groups[c]||[]).push(it); });
   const flat=[];
@@ -744,11 +791,12 @@ function renderItens(){
   panelBody.innerHTML=html;
   panelBody.querySelectorAll('.itemCard').forEach(c=>{
     c.addEventListener('click',(e)=>{
-      const pill=e.target.closest('.itemPill.ghost');
-      if(pill){ e.stopPropagation(); openLink(pill.dataset.link); return; }
       const it=flat[Number(c.dataset.idx)];
-      if(it&&(it.video||it.audio)) playItem(it);
-      else if(it&&(it.external_url||'').trim()) openLink(it.external_url);
+      const sslug=currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug;
+      const pill=e.target.closest('.itemPill.ghost');
+      if(pill){ e.stopPropagation(); track('item_buy_click', sslug, {item_id:it&&it.id, name:it&&it.name, url:pill.dataset.link}); openLink(pill.dataset.link); return; }
+      if(it&&(it.video||it.audio)){ track('item_play', sslug, {item_id:it.id, name:it.name}); playItem(it); }
+      else if(it&&(it.external_url||'').trim()){ track('item_buy_click', sslug, {item_id:it.id, name:it.name, url:it.external_url}); openLink(it.external_url); }
       else toast('Sem mídia disponível');
     });
   });
@@ -931,6 +979,7 @@ function kamaPath(pos){ const b=String(pos&&pos.svg||'').split('/').pop()||''; r
 async function openKamasutra(mode,audioRef){
   buildKamaScreen();
   kama.screen.classList.add('open');
+  track('kamasutra_view', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {mode});
   master.pause(); try{ currentSlide?.querySelector('video')?.pause(); }catch(_){}
   kama.screen.querySelector('.kmName').textContent='Carregando…';
   kama.screen.querySelector('.kmNum').textContent='';
@@ -972,7 +1021,8 @@ async function kamaNext(){
   kama.img.src=url;
   kama.screen.querySelector('.kmName').textContent=pos.nombre||'';
   kama.screen.querySelector('.kmNum').textContent=pos.numero?('Nº '+pos.numero):'';
-  if(pos.id) loadKamaBundle(pos.id);
+  if(pos.id){ loadKamaBundle(pos.id);
+    if(!_posViewed.has(pos.id)){ _posViewed.add(pos.id); track('position_view', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {position_id:pos.id, numero:pos.numero, nome:pos.nombre}); } }
   // pré-carrega a próxima
   const nx=kama.list[(kama.idx+1)%kama.list.length];
   if(nx) kamaPreload(nx.svg);
@@ -1093,6 +1143,7 @@ function ruletaSpin(){
 async function ruletaPick(group){
   const arr=ruleta.byGroup[group]||[]; if(!arr.length) return;
   const q=arr[Math.floor(Math.random()*arr.length)];
+  track('roleta_spin', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {categoria:group, pergunta:(q&&q.pergunta||'').slice(0,120)});
   const sc=ruleta.screen;
   sc.querySelector('#rlHint').style.display='none';
   const cat=sc.querySelector('#rlCat'), qe=sc.querySelector('#rlQ');
@@ -1434,7 +1485,7 @@ startOv.addEventListener('click',beginPlayback);
 $('#app').addEventListener('click',function once(){ if(!started){ startOv.style.display='none'; started=true; master.play().catch(()=>{}); } },{once:true});
 
 /* ===== Init ===== */
-(async()=>{ if(await requireAuth()){ await loadFeed(); startOv.style.display='flex'; } })();
+(async()=>{ if(await requireAuth()){ if(!(await requireWelcomeContract())) return; await loadFeed(); startOv.style.display='flex'; } })();
 </script>
 </body>
 </html>
