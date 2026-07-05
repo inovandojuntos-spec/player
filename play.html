@@ -218,7 +218,12 @@
   .rlCat{align-self:center;font-size:11px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:#0a0a0b;background:var(--metal);padding:5px 16px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.6)}
   .rlQ{font-size:16px;line-height:1.5;font-weight:650;color:#fff;letter-spacing:.01em}
   .rlHint{font-size:12.5px;color:var(--muted2);line-height:1.55}
-  .rlRow{display:flex;gap:11px;width:min(94%,420px);margin:26px auto 0}
+  .rlHistory{display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:7px;width:min(94%,420px);margin:14px auto 0;max-height:96px;overflow-y:auto}
+  .rlBall{flex:none;width:25px;height:25px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;color:var(--silver-dim);background:rgba(255,255,255,.06);border:0.5px solid var(--line)}
+  .rlBall.last{color:#0a0a0b;background:var(--metal);border-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.6)}
+  .rlBall.new{animation:rlBallPop .4s cubic-bezier(.2,.9,.25,1)}
+  @keyframes rlBallPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.18)}100%{transform:scale(1);opacity:1}}
+  .rlRow{display:flex;gap:11px;width:min(94%,420px);margin:18px auto 0}
   .rlSpin{position:relative;flex:1;border:none;background:var(--metal);color:#0a0a0b;border-radius:15px;padding:16px;font-size:15px;font-weight:850;letter-spacing:.04em;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.6);overflow:hidden;transition:transform .12s}
   .rlSpin::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-18deg);animation:rlBtnShine 3.4s ease-in-out infinite}
   @keyframes rlBtnShine{0%,72%{left:-70%}88%,100%{left:130%}}
@@ -1058,7 +1063,7 @@ function closeKama(){
 }
 
 /* ===== Roleta do Casal (perguntas + áudio) ===== */
-let ruleta={screen:null,cv:null,ctx:null,groups:[],byGroup:{},rot:0,spinning:false,audio:null,lastUrl:null,built:false,loaded:false};
+let ruleta={screen:null,cv:null,ctx:null,groups:[],byGroup:{},allQ:[],bag:[],lastShown:null,history:[],rot:0,spinning:false,audio:null,lastUrl:null,built:false,loaded:false};
 function buildRuletaScreen(){
   if(ruleta.built) return;
   const sc=document.createElement('section'); sc.className='ruletaScreen'; sc.id='ruletaScreen';
@@ -1077,6 +1082,7 @@ function buildRuletaScreen(){
       <div class="rlCat" id="rlCat" style="display:none"></div>
       <div class="rlQ" id="rlQ" style="display:none"></div>
     </div>
+    <div class="rlHistory" id="rlHistory" aria-label="Perguntas já sorteadas"></div>
     <div class="rlRow">
       <button class="rlSpin" id="rlSpin">GIRAR</button>
       <button class="rlIcoBtn" id="rlRepeat" disabled aria-label="Repetir áudio">↻</button>
@@ -1134,6 +1140,7 @@ async function openRuleta(){
       const {data}=await supabase.rpc('get_ruleta_perguntas');
       const qs=(data&&data.perguntas)||[]; ruleta.groups=(data&&data.categorias)||[];
       ruleta.byGroup={}; qs.forEach(q=>{ (ruleta.byGroup[q.categoria]=ruleta.byGroup[q.categoria]||[]).push(q); });
+      ruleta.allQ=qs; ruleta.bag=[]; ruleta.lastShown=null; ruleta.history=[];
       ruleta.loaded=ruleta.groups.length>0;
     }catch(e){ console.error('[ruleta load]',e); }
   }
@@ -1143,6 +1150,7 @@ async function openRuleta(){
   if(sub){ const nq=Object.values(ruleta.byGroup).reduce((a,b)=>a+b.length,0);
     sub.textContent=`${ruleta.groups.length} categorias · ${nq} perguntas`; }
   ruleta.rot=0; drawRuleta(0);
+  renderRuletaHistory();
 }
 function closeRuleta(){
   if(ruleta.audio){ try{ ruleta.audio.pause(); }catch(_){} }
@@ -1170,7 +1178,10 @@ function ruletaSpin(){
   ruleta.screen.querySelector('#rlRepeat').disabled=true;
   const wrap=ruleta.screen.querySelector('#rlWrap'); if(wrap) wrap.classList.add('rlSpinning');
   const n=ruleta.groups.length, slice=Math.PI*2/n, full=Math.PI*2;
-  const target=Math.floor(Math.random()*n), turns=5+Math.floor(Math.random()*3);
+  ruletaEnsureBag();
+  const q=ruleta.bag.pop(); ruleta.lastShown=q;
+  let target=ruleta.groups.indexOf(q&&q.categoria); if(target<0) target=Math.floor(Math.random()*n);
+  const turns=5+Math.floor(Math.random()*3);
   const start=ruleta.rot, pointer=-Math.PI/2;
   const base=pointer-(target*slice+slice/2);
   let diff=(start-base)%full; if(diff<0) diff+=full;
@@ -1183,21 +1194,51 @@ function ruletaSpin(){
     const passed=Math.floor((start-ruleta.rot)/slice);
     if(passed>lastTick){ lastTick=passed; ruletaTick(1-p*0.8); }
     if(p<1) requestAnimationFrame(frame);
-    else { ruleta.spinning=false; sp.disabled=false; if(wrap) wrap.classList.remove('rlSpinning'); drawRuleta(ruleta.rot,target); if(navigator.vibrate)navigator.vibrate(30); ruletaPick(ruleta.groups[target]); }
+    else { ruleta.spinning=false; sp.disabled=false; if(wrap) wrap.classList.remove('rlSpinning'); drawRuleta(ruleta.rot,target); if(navigator.vibrate)navigator.vibrate(30); ruletaPick(q); }
   }
   requestAnimationFrame(frame);
 }
-async function ruletaPick(group){
-  const arr=ruleta.byGroup[group]||[]; if(!arr.length) return;
-  const q=arr[Math.floor(Math.random()*arr.length)];
-  track('roleta_spin', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {categoria:group, pergunta:(q&&q.pergunta||'').slice(0,120)});
+// Baraja el pool completo de preguntas (Fisher-Yates) y evita que la próxima
+// a salir sea la misma que la última mostrada (para no repetir justo al reiniciar el ciclo).
+function ruletaEnsureBag(){
+  if(ruleta.bag&&ruleta.bag.length) return;
+  // Se ya se sortearon todas las preguntas del ciclo anterior, arranca un ciclo nuevo
+  // y limpia el "cartón" de bolitas para que el usuario vea que empezó de nuevo.
+  if(ruleta.allQ.length&&ruleta.history.length>=ruleta.allQ.length){ ruleta.history=[]; renderRuletaHistory(); }
+  const all=(ruleta.allQ||[]).slice();
+  for(let i=all.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=all[i]; all[i]=all[j]; all[j]=t; }
+  if(ruleta.lastShown&&all.length>1&&all[all.length-1]&&all[all.length-1].no===ruleta.lastShown.no){
+    const j=Math.floor(Math.random()*(all.length-1));
+    const t=all[all.length-1]; all[all.length-1]=all[j]; all[j]=t;
+  }
+  ruleta.bag=all;
+}
+async function ruletaPick(q){
+  if(!q) return;
+  track('roleta_spin', currentSlide&&currentSlide.dataset&&currentSlide.dataset.slug, {categoria:q.categoria, pergunta:(q.pergunta||'').slice(0,120)});
   const sc=ruleta.screen;
   sc.querySelector('#rlHint').style.display='none';
   const cat=sc.querySelector('#rlCat'), qe=sc.querySelector('#rlQ'), res=sc.querySelector('.rlResult');
-  cat.textContent=group; cat.style.display='';
+  cat.textContent=q.categoria; cat.style.display='';
   qe.textContent=q.pergunta; qe.style.display='';
   if(res){ res.classList.remove('reveal'); void res.offsetWidth; res.classList.add('reveal'); }
+  ruleta.history.push(q.no); addRuletaBall(q.no);
   await ruletaPlay(q.audio);
+}
+// Cartón de bingo: una bolita por cada pregunta ya sorteada en este ciclo.
+function renderRuletaHistory(){
+  const box=ruleta.screen&&ruleta.screen.querySelector('#rlHistory'); if(!box) return;
+  box.innerHTML='';
+  ruleta.history.forEach((no,i)=>{
+    const b=document.createElement('span'); b.className='rlBall'+(i===ruleta.history.length-1?' last':'');
+    b.textContent=no; box.appendChild(b);
+  });
+}
+function addRuletaBall(no){
+  const box=ruleta.screen&&ruleta.screen.querySelector('#rlHistory'); if(!box) return;
+  const prev=box.querySelector('.rlBall.last'); if(prev) prev.classList.remove('last');
+  const b=document.createElement('span'); b.className='rlBall last new'; b.textContent=no;
+  box.appendChild(b); box.scrollTop=box.scrollHeight;
 }
 async function ruletaPlay(path){
   const rep=ruleta.screen.querySelector('#rlRepeat');
