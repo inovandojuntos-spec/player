@@ -210,6 +210,7 @@
   .rlHub span{font-size:22px;font-weight:900;color:#0a0a0b;letter-spacing:.02em}
   .rlResult{position:relative;width:min(94%,420px);margin:22px auto 0;border:0.5px solid var(--line);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));padding:18px 16px;text-align:center;min-height:138px;display:flex;flex-direction:column;gap:10px;justify-content:center;box-shadow:0 14px 34px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
   .rlResult.reveal::after{content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.14),transparent);animation:rlSheen .8s ease-out}
+  .rlResult.spinning{background:#000;border-color:transparent;box-shadow:none}
   @keyframes rlSheen{to{left:120%}}
   .rlResult.reveal{animation:rlReveal .45s cubic-bezier(.2,.9,.25,1)}
   @keyframes rlReveal{0%{transform:scale(.96);opacity:.4}100%{transform:scale(1);opacity:1}}
@@ -1175,6 +1176,14 @@ function ruletaSpin(){
   const sp=ruleta.screen.querySelector('#rlSpin'); sp.disabled=true;
   ruleta.screen.querySelector('#rlRepeat').disabled=true;
   const wrap=ruleta.screen.querySelector('#rlWrap'); if(wrap) wrap.classList.add('rlSpinning');
+  // Vacía el cuadro de resultado y lo deja en negro puro mientras gira.
+  if(ruleta.audio){ try{ ruleta.audio.pause(); }catch(_){} }
+  const sc0=ruleta.screen;
+  const hint0=sc0.querySelector('#rlHint'), cat0=sc0.querySelector('#rlCat'), qe0=sc0.querySelector('#rlQ'), res0=sc0.querySelector('.rlResult');
+  if(hint0) hint0.style.display='none';
+  if(cat0){ cat0.style.display='none'; cat0.textContent=''; }
+  if(qe0){ qe0.style.display='none'; qe0.textContent=''; }
+  if(res0){ res0.classList.remove('reveal'); res0.classList.add('spinning'); }
   const n=ruleta.groups.length, slice=Math.PI*2/n, full=Math.PI*2;
   ruletaEnsureBag();
   const q=ruleta.bag.pop(); ruleta.lastShown=q;
@@ -1219,7 +1228,7 @@ async function ruletaPick(q){
   const cat=sc.querySelector('#rlCat'), qe=sc.querySelector('#rlQ'), res=sc.querySelector('.rlResult');
   cat.textContent=q.categoria; cat.style.display='';
   qe.textContent=q.pergunta; qe.style.display='';
-  if(res){ res.classList.remove('reveal'); void res.offsetWidth; res.classList.add('reveal'); }
+  if(res){ res.classList.remove('spinning'); res.classList.remove('reveal'); void res.offsetWidth; res.classList.add('reveal'); }
   ruleta.history.push(q.no); addRuletaBall(q.no);
   await ruletaPlay(q.audio);
 }
