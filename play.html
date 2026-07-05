@@ -187,14 +187,12 @@
   .kmNum{font-size:11px;letter-spacing:.18em;color:var(--silver-dim);font-weight:800;text-transform:uppercase}
   .kmName{font-size:21px;font-weight:850;margin-top:4px}
   .kmHint{font-size:11px;color:var(--muted2);margin-top:9px}
-  .ruletaScreen{position:absolute;top:0;left:0;right:0;bottom:0;z-index:59;background:radial-gradient(120% 80% at 50% 0%,#161617,#070708 62%,#000);display:none;flex-direction:column;align-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%}
+  .ruletaScreen{position:absolute;top:0;left:0;right:0;bottom:0;z-index:59;background:#000;display:none;flex-direction:column;align-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden;width:100%;max-width:100%}
   .ruletaScreen.open{display:flex}
   .rlClose{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:rgba(0,0,0,.5);color:#fff;font-size:17px;cursor:pointer}
   .rlTitle{font-size:14px;font-weight:850;letter-spacing:.16em;text-transform:uppercase;background:var(--metal);-webkit-background-clip:text;background-clip:text;color:transparent;margin:2px 0 2px}
   .rlSub{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--silver-dim);margin:0 0 10px;font-weight:700}
   .rlWheelWrap{position:relative;flex:0 0 auto;width:min(82vw,344px);aspect-ratio:1/1;display:grid;place-items:center;margin:max(9vh,52px) auto 0;isolation:isolate}
-  .rlWheelWrap::before{content:"";position:absolute;inset:-14%;border-radius:50%;background:radial-gradient(closest-side,rgba(200,205,211,.16),rgba(200,205,211,0) 72%);filter:blur(4px);z-index:-1;animation:rlHalo 5s ease-in-out infinite}
-  @keyframes rlHalo{0%,100%{opacity:.55}50%{opacity:1}}
   .rlWheel{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:50%;box-shadow:0 30px 70px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.5)}
   .rlBulbs{position:absolute;inset:0;z-index:2;pointer-events:none}
   .rlBulbs i{position:absolute;inset:0;transform:rotate(var(--a))}
