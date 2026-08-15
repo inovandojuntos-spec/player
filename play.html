@@ -1063,6 +1063,48 @@ function closeKama(){
 
 /* ===== Roleta do Casal (perguntas + áudio) ===== */
 let ruleta={screen:null,cv:null,ctx:null,groups:[],byGroup:{},allQ:[],bag:[],lastShown:null,history:[],rot:0,spinning:false,audio:null,lastUrl:null,built:false,loaded:false};
+
+/* --- Modo gravação: força uma sequência de perguntas nos primeiros giros. ---
+   Se arma com um link tipo  play.html?id=intro&rldemo=91-96  (aceita "91-96" ou "91,92,93"
+   e um &rln=N opcional para repetir a lista até N giros). O link só arma uma vez: o
+   parâmetro é apagado da URL e a fila fica no localStorage, então sobrevive a recarregar
+   a página e se autoextingue sozinha quando a fila acaba. Sem link, nada muda. */
+const RL_DEMO_KEY='ij_rl_demo';
+let _rlDemoArmed=false;
+function rlDemoParse(spec){
+  const out=[];
+  String(spec||'').split(',').forEach(part=>{
+    const m=/^\s*(\d+)\s*-\s*(\d+)\s*$/.exec(part);
+    if(m){ const a=+m[1], b=+m[2]; for(let i=Math.min(a,b);i<=Math.max(a,b);i++) out.push(i); }
+    else { const n=parseInt(part,10); if(!isNaN(n)) out.push(n); }
+  });
+  return out;
+}
+function rlDemoArm(){
+  if(_rlDemoArmed) return; _rlDemoArmed=true;
+  try{
+    const p=new URLSearchParams(location.search);
+    if(!p.has('rldemo')) return;
+    const nos=rlDemoParse(p.get('rldemo'));
+    const n=parseInt(p.get('rln'),10);
+    const queue=(n>0&&nos.length)?Array.from({length:n},(_,i)=>nos[i%nos.length]):nos;
+    if(queue.length) localStorage.setItem(RL_DEMO_KEY,JSON.stringify({queue}));
+    p.delete('rldemo'); p.delete('rln');
+    const qs=p.toString();
+    history.replaceState(null,'',location.pathname+(qs?'?'+qs:'')+location.hash);
+  }catch(_){}
+}
+function rlDemoNext(){
+  let st=null;
+  try{ st=JSON.parse(localStorage.getItem(RL_DEMO_KEY)||'null'); }catch(_){}
+  if(!st||!Array.isArray(st.queue)||!st.queue.length) return null;
+  const no=st.queue.shift();
+  try{
+    if(st.queue.length) localStorage.setItem(RL_DEMO_KEY,JSON.stringify(st));
+    else localStorage.removeItem(RL_DEMO_KEY);   // fila esgotada: se autoextingue
+  }catch(_){}
+  return (ruleta.allQ||[]).find(x=>x&&x.no===no)||null;
+}
 function buildRuletaScreen(){
   if(ruleta.built) return;
   const sc=document.createElement('section'); sc.className='ruletaScreen'; sc.id='ruletaScreen';
@@ -1131,6 +1173,7 @@ function drawRuleta(rot,sel){
   ctx.beginPath(); ctx.arc(cx,cy,48,0,Math.PI*2); ctx.strokeStyle='rgba(238,241,245,.3)'; ctx.lineWidth=1; ctx.stroke();
 }
 async function openRuleta(){
+  rlDemoArm();
   buildRuletaScreen();
   ruleta.screen.classList.add('open');
   master.pause(); try{ currentSlide?.querySelector('video')?.pause(); }catch(_){}
@@ -1185,8 +1228,12 @@ function ruletaSpin(){
   if(qe0){ qe0.style.display='none'; qe0.textContent=''; }
   if(res0){ res0.classList.remove('reveal'); res0.classList.add('spinning'); }
   const n=ruleta.groups.length, slice=Math.PI*2/n, full=Math.PI*2;
-  ruletaEnsureBag();
-  const q=ruleta.bag.pop(); ruleta.lastShown=q;
+  // Se o modo gravação está armado, a pergunta forçada tem prioridade sobre o sorteio
+  // normal (e sai da bolsa, para não repetir logo depois no ciclo aleatório).
+  let q=rlDemoNext();
+  if(q){ ruleta.bag=(ruleta.bag||[]).filter(x=>x&&x.no!==q.no); }
+  else { ruletaEnsureBag(); q=ruleta.bag.pop(); }
+  ruleta.lastShown=q;
   let target=ruleta.groups.indexOf(q&&q.categoria); if(target<0) target=Math.floor(Math.random()*n);
   const turns=5+Math.floor(Math.random()*3);
   const start=ruleta.rot, pointer=-Math.PI/2;
