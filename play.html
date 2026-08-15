@@ -1071,6 +1071,21 @@ let ruleta={screen:null,cv:null,ctx:null,groups:[],byGroup:{},allQ:[],bag:[],las
    a página e se autoextingue sozinha quando a fila acaba. Sem link, nada muda. */
 const RL_DEMO_KEY='ij_rl_demo';
 let _rlDemoArmed=false;
+/* Abrir a roleta direto pelo link: ?roleta=1 (ou qualquer link com &rldemo=...).
+   A roleta não é um slide, é um material extra, então o ?id= nunca chega nela. */
+const RL_AUTO_OPEN=(()=>{ try{ const p=new URLSearchParams(location.search);
+  return p.has('rldemo')||/^(1|true|sim|si|yes)$/i.test(p.get('roleta')||''); }catch(_){ return false; } })();
+/* Cache de URLs assinadas + áudios pré-carregados (o link assinado dura 1h). */
+const RL_URL_TTL=45*60*1000;
+const rlUrlCache={}; const _rlPreloaded=[];
+function rlSignedUrl(path){
+  const hit=rlUrlCache[path];
+  if(hit&&(Date.now()-hit.t)<RL_URL_TTL) return Promise.resolve(hit.url);
+  return supabase.storage.from('audios').createSignedUrl(path,3600).then(({data})=>{
+    const url=data&&data.signedUrl; if(url) rlUrlCache[path]={url,t:Date.now()};
+    return url||null;
+  });
+}
 function rlDemoParse(spec){
   const out=[];
   String(spec||'').split(',').forEach(part=>{
@@ -1104,6 +1119,21 @@ function rlDemoNext(){
     else localStorage.removeItem(RL_DEMO_KEY);   // fila esgotada: se autoextingue
   }catch(_){}
   return (ruleta.allQ||[]).find(x=>x&&x.no===no)||null;
+}
+/* Baixa os áudios que ainda faltam na fila, para que o giro não espere pela rede. */
+function rlDemoPreload(){
+  let st=null;
+  try{ st=JSON.parse(localStorage.getItem(RL_DEMO_KEY)||'null'); }catch(_){}
+  if(!st||!Array.isArray(st.queue)||!st.queue.length) return;
+  const paths=[...new Set(st.queue
+    .map(no=>((ruleta.allQ||[]).find(x=>x&&x.no===no)||{}).audio)
+    .filter(Boolean))];
+  paths.forEach(p=>{
+    rlSignedUrl(p).then(url=>{
+      if(!url) return;
+      const a=new Audio(); a.preload='auto'; a.src=url; _rlPreloaded.push(a);
+    }).catch(()=>{});
+  });
 }
 function buildRuletaScreen(){
   if(ruleta.built) return;
@@ -1188,6 +1218,7 @@ async function openRuleta(){
   }
   const hint=ruleta.screen.querySelector('#rlHint');
   if(!ruleta.groups.length){ if(hint) hint.textContent='Não foi possível carregar a roleta.'; return; }
+  rlDemoPreload();
   const sub=ruleta.screen.querySelector('#rlSub');
   if(sub){ const nq=Object.values(ruleta.byGroup).reduce((a,b)=>a+b.length,0);
     sub.textContent=`${ruleta.groups.length} categorias · ${nq} perguntas`; }
@@ -1298,10 +1329,10 @@ async function ruletaPlay(path){
   const rep=ruleta.screen.querySelector('#rlRepeat');
   if(!path){ rep.disabled=true; return; }
   try{
-    const {data}=await supabase.storage.from('audios').createSignedUrl(path,3600);
-    if(data&&data.signedUrl){
+    const signed=await rlSignedUrl(path);   // usa o link já assinado/pré-carregado, se houver
+    if(signed){
       if(!ruleta.audio) ruleta.audio=new Audio();
-      ruleta.lastUrl=data.signedUrl; ruleta.audio.src=data.signedUrl;
+      ruleta.lastUrl=signed; ruleta.audio.src=signed;
       ruleta.audio.play().catch(()=>{}); rep.disabled=false;
     } else rep.disabled=true;
   }catch(e){ console.error('[ruleta audio]',e); rep.disabled=true; }
@@ -1623,7 +1654,9 @@ function closePerfilSilent(){ perfilScreen.classList.remove('open'); perfilScree
 
 /* ===== Start gesture ===== */
 const startOv=$('#startOverlay');
-function beginPlayback(){ started=true; startOv.style.display='none'; master.play().catch(()=>{}); currentSlide?.querySelector('video')?.play().catch(()=>{}); }
+function beginPlayback(){ started=true; startOv.style.display='none'; master.play().catch(()=>{}); currentSlide?.querySelector('video')?.play().catch(()=>{});
+  // Link direto para a roleta: abre aqui, já com o gesto do usuário que libera o áudio.
+  if(RL_AUTO_OPEN&&!ruleta.screen) openRuleta(); }
 startOv.addEventListener('click',beginPlayback);
 $('#app').addEventListener('click',function once(){ if(!started){ startOv.style.display='none'; started=true; master.play().catch(()=>{}); } },{once:true});
 
